@@ -41,9 +41,9 @@ public class KeywordFilterGuardrailConfig implements Config {
     }
 
     public Set<String> blockedWords() {
-        return ConfigStore.getInstance()
-                .get(BLOCKED_WORDS.asNamed(prefix))
-                .map(s -> {
+        ConfigModule module = BLOCKED_WORDS.asNamed(prefix);
+        Optional<String> value = ConfigStore.getInstance().get(module);
+        return value.map(s -> {
                     Set<String> words = new HashSet<>();
                     Arrays.stream(s.split(","))
                             .map(String::trim)

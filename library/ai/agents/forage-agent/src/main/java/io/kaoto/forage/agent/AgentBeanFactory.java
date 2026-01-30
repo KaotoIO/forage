@@ -1,5 +1,7 @@
 package io.kaoto.forage.agent;
 
+import dev.langchain4j.guardrail.InputGuardrail;
+import dev.langchain4j.guardrail.OutputGuardrail;
 import dev.langchain4j.memory.chat.ChatMemoryProvider;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
@@ -10,14 +12,16 @@ import io.kaoto.forage.core.annotations.FactoryType;
 import io.kaoto.forage.core.annotations.ForageBean;
 import io.kaoto.forage.core.annotations.ForageFactory;
 import io.kaoto.forage.core.common.BeanFactory;
+import io.kaoto.forage.core.guardrails.InputGuardrailProvider;
+import io.kaoto.forage.core.guardrails.OutputGuardrailProvider;
 import io.kaoto.forage.core.util.config.ConfigHelper;
 import io.kaoto.forage.core.util.config.ConfigStore;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
 import org.apache.camel.CamelContext;
 import org.apache.camel.component.langchain4j.agent.api.Agent;
-import org.apache.camel.component.langchain4j.agent.api.AgentConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -154,12 +158,95 @@ public class AgentBeanFactory implements BeanFactory {
 
         // Configure the agent
         if (agent instanceof ConfigurationAware configurationAware) {
-            AgentConfiguration agentConfiguration = new AgentConfiguration();
+            ForageAgentConfiguration agentConfiguration = new ForageAgentConfiguration();
             agentConfiguration.withChatModel(chatModel).withChatMemoryProvider(chatMemoryProvider);
+
+            // Load input guardrail instances via ServiceLoader
+            List<InputGuardrail> inputGuardrails = loadInputGuardrails(name);
+            if (!inputGuardrails.isEmpty()) {
+                agentConfiguration.withInputGuardrails(inputGuardrails);
+                LOG.info("Configured {} input guardrails for agent '{}'", inputGuardrails.size(), name);
+            }
+
+            // Load output guardrail instances via ServiceLoader
+            List<OutputGuardrail> outputGuardrails = loadOutputGuardrails(name);
+            if (!outputGuardrails.isEmpty()) {
+                agentConfiguration.withOutputGuardrails(outputGuardrails);
+                LOG.info("Configured {} output guardrails for agent '{}'", outputGuardrails.size(), name);
+            }
+
             configurationAware.configure(agentConfiguration);
         }
 
         return agent;
+    }
+
+    private List<InputGuardrail> loadInputGuardrails(String agentName) {
+        List<InputGuardrail> guardrails = new ArrayList<>();
+        List<ServiceLoader.Provider<InputGuardrailProvider>> providers = findInputGuardrailProviders();
+
+        LOG.info("Found {} input guardrail providers for agent '{}'", providers.size(), agentName);
+
+        for (ServiceLoader.Provider<InputGuardrailProvider> provider : providers) {
+            try {
+                InputGuardrailProvider guardrailProvider = provider.get();
+                String prefix = DEFAULT_AGENT.equals(agentName) ? null : agentName;
+                LOG.info(
+                        "Creating guardrail from provider {} with prefix '{}'",
+                        provider.type().getName(),
+                        prefix);
+                InputGuardrail guardrail = guardrailProvider.create(prefix);
+                if (guardrail != null) {
+                    guardrails.add(guardrail);
+                    LOG.info("Loaded input guardrail: {}", guardrail.getClass().getName());
+                }
+            } catch (Exception e) {
+                LOG.warn(
+                        "Skipping input guardrail provider {}: {}",
+                        provider.type().getName(),
+                        e.getMessage());
+            }
+        }
+
+        LOG.info("Total input guardrails loaded: {}", guardrails.size());
+        return guardrails;
+    }
+
+    private List<OutputGuardrail> loadOutputGuardrails(String agentName) {
+        List<OutputGuardrail> guardrails = new ArrayList<>();
+        List<ServiceLoader.Provider<OutputGuardrailProvider>> providers = findOutputGuardrailProviders();
+
+        for (ServiceLoader.Provider<OutputGuardrailProvider> provider : providers) {
+            try {
+                OutputGuardrailProvider guardrailProvider = provider.get();
+                String prefix = DEFAULT_AGENT.equals(agentName) ? null : agentName;
+                OutputGuardrail guardrail = guardrailProvider.create(prefix);
+                if (guardrail != null) {
+                    guardrails.add(guardrail);
+                    LOG.debug(
+                            "Loaded output guardrail: {}", guardrail.getClass().getName());
+                }
+            } catch (Exception e) {
+                LOG.debug(
+                        "Skipping output guardrail provider {}: {}",
+                        provider.type().getName(),
+                        e.getMessage());
+            }
+        }
+
+        return guardrails;
+    }
+
+    private List<ServiceLoader.Provider<InputGuardrailProvider>> findInputGuardrailProviders() {
+        ServiceLoader<InputGuardrailProvider> loader =
+                ServiceLoader.load(InputGuardrailProvider.class, camelContext.getApplicationContextClassLoader());
+        return loader.stream().toList();
+    }
+
+    private List<ServiceLoader.Provider<OutputGuardrailProvider>> findOutputGuardrailProviders() {
+        ServiceLoader<OutputGuardrailProvider> loader =
+                ServiceLoader.load(OutputGuardrailProvider.class, camelContext.getApplicationContextClassLoader());
+        return loader.stream().toList();
     }
 
     private ChatModel createChatModel(AgentConfig config, String modelKind, String agentName) {

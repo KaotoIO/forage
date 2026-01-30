@@ -1,8 +1,11 @@
 package io.kaoto.forage.agent.simple;
 
 import dev.langchain4j.data.message.Content;
+import dev.langchain4j.guardrail.InputGuardrail;
+import dev.langchain4j.guardrail.OutputGuardrail;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.tool.ToolProvider;
+import io.kaoto.forage.agent.ForageAgentConfiguration;
 import io.kaoto.forage.agent.factory.ConfigurationAware;
 import java.util.List;
 import org.apache.camel.component.langchain4j.agent.api.Agent;
@@ -102,14 +105,22 @@ public class SimpleAgent implements Agent, ConfigurationAware {
             builder.retrievalAugmentor(configuration.getRetrievalAugmentor());
         }
 
-        // Input Guardrails
-        if (configuration.getInputGuardrailClasses() != null
+        // Input Guardrails - prefer instances over classes
+        if (configuration instanceof ForageAgentConfiguration forageConfig && forageConfig.hasInputGuardrails()) {
+            List<InputGuardrail> inputGuardrails = forageConfig.getInputGuardrails();
+            builder.inputGuardrails(inputGuardrails.toArray(new InputGuardrail[0]));
+            LOG.debug("Using {} input guardrail instances", inputGuardrails.size());
+        } else if (configuration.getInputGuardrailClasses() != null
                 && !configuration.getInputGuardrailClasses().isEmpty()) {
             builder.inputGuardrailClasses((List) configuration.getInputGuardrailClasses());
         }
 
-        // Output Guardrails
-        if (configuration.getOutputGuardrailClasses() != null
+        // Output Guardrails - prefer instances over classes
+        if (configuration instanceof ForageAgentConfiguration forageConfig && forageConfig.hasOutputGuardrails()) {
+            List<OutputGuardrail> outputGuardrails = forageConfig.getOutputGuardrails();
+            builder.outputGuardrails(outputGuardrails.toArray(new OutputGuardrail[0]));
+            LOG.debug("Using {} output guardrail instances", outputGuardrails.size());
+        } else if (configuration.getOutputGuardrailClasses() != null
                 && !configuration.getOutputGuardrailClasses().isEmpty()) {
             builder.outputGuardrailClasses((List) configuration.getOutputGuardrailClasses());
         }

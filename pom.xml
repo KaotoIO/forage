@@ -25,7 +25,7 @@
         <citrus.version>4.9.0</citrus.version>
         <groovy.version>4.0.28</groovy.version>
         <ibmmq-client.version>9.4.4.1</ibmmq-client.version>
-        <jackson.version>2.15.2</jackson.version>
+        <jackson.version>2.20.1</jackson.version>
         <javaparser.version>3.27.1</javaparser.version>
         <jsonschema-maven-plugin.version>4.38.0</jsonschema-maven-plugin.version>
         <junit-jupiter-suite.version>1.13.4</junit-jupiter-suite.version>

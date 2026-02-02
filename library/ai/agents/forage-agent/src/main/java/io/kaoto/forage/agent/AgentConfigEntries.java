@@ -243,6 +243,16 @@ public final class AgentConfigEntries extends ConfigEntries {
             false,
             ConfigTag.COMMON);
 
+    public static final ConfigModule RAG_RETRIEVAL_AUGMENTOR_BEAN_NAME = ConfigModule.of(
+            AgentConfig.class,
+            "forage.agent.rag.augmentor.bean.name",
+            "Name of the RetrievalAugmentator bean",
+            "RetrievalAugmentor bean name",
+            null,
+            "string",
+            false,
+            ConfigTag.COMMON);
+
     private static final Map<ConfigModule, ConfigEntry> CONFIG_MODULES = new ConcurrentHashMap<>();
 
     static {
@@ -279,6 +289,9 @@ public final class AgentConfigEntries extends ConfigEntries {
         CONFIG_MODULES.put(MEMORY_REDIS_PASSWORD, ConfigEntry.fromModule());
         CONFIG_MODULES.put(MEMORY_INFINISPAN_SERVER_LIST, ConfigEntry.fromModule());
         CONFIG_MODULES.put(MEMORY_INFINISPAN_CACHE_NAME, ConfigEntry.fromModule());
+
+        // RAG
+        CONFIG_MODULES.put(RAG_RETRIEVAL_AUGMENTOR_BEAN_NAME, ConfigEntry.fromModule());
     }
 
     public static Map<ConfigModule, ConfigEntry> entries() {

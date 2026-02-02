@@ -176,4 +176,12 @@ public class AgentConfig implements Config {
                 .get(MEMORY_INFINISPAN_CACHE_NAME.asNamed(prefix))
                 .orElse("chat-memory");
     }
+
+    // RAG
+
+    public String ragRetrievalAugmentorBeanName() {
+        return ConfigStore.getInstance()
+                .get(RAG_RETRIEVAL_AUGMENTOR_BEAN_NAME.asNamed(prefix))
+                .orElse(null);
+    }
 }

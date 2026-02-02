@@ -5,6 +5,7 @@ import dev.langchain4j.guardrail.OutputGuardrail;
 import dev.langchain4j.memory.chat.ChatMemoryProvider;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.rag.RetrievalAugmentor;
 import io.kaoto.forage.agent.factory.ConfigurationAware;
 import io.kaoto.forage.core.ai.ChatMemoryBeanProvider;
 import io.kaoto.forage.core.ai.ModelProvider;
@@ -173,6 +174,24 @@ public class AgentBeanFactory implements BeanFactory {
             if (!outputGuardrails.isEmpty()) {
                 agentConfiguration.withOutputGuardrails(outputGuardrails);
                 LOG.info("Configured {} output guardrails for agent '{}'", outputGuardrails.size(), name);
+            }
+
+            // RAG
+
+            if (config.ragRetrievalAugmentorBeanName() != null) {
+                try {
+                    Object augmentatorBean = camelContext.getRegistry().lookupByName(config.ragRetrievalAugmentorBeanName());
+                    if (augmentatorBean instanceof RetrievalAugmentor) {
+                        agentConfiguration.withRetrievalAugmentor((RetrievalAugmentor) augmentatorBean);
+                    } else {
+                        LOG.warn(
+                                "Failed to find a retrieval augmentor bean with a name: {}",
+                                config.ragRetrievalAugmentorBeanName());
+                    }
+                } catch (Exception e) {
+                    LOG.warn("Failed to create default agent: {}", e.getMessage());
+                    LOG.debug("Agent creation exception details", e);
+                }
             }
 
             configurationAware.configure(agentConfiguration);

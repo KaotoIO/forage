@@ -1,8 +1,8 @@
 package io.kaoto.forage.vectordb.infinispan;
 
 import dev.langchain4j.store.embedding.infinispan.InfinispanEmbeddingStore;
+import io.kaoto.forage.core.ai.EmbeddingStoreProvider;
 import io.kaoto.forage.core.annotations.ForageBean;
-import io.kaoto.forage.core.vectordb.EmbeddingStoreProvider;
 import org.infinispan.client.hotrod.configuration.ClientIntelligence;
 import org.infinispan.client.hotrod.configuration.ConfigurationBuilder;
 import org.slf4j.Logger;

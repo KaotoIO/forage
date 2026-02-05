@@ -46,7 +46,9 @@ public class KeywordFilterGuardrailProvider implements InputGuardrailProvider {
                 wholeWordMatch);
 
         if (blockedWords.isEmpty()) {
-            LOG.warn("KeywordFilterGuardrail has no blocked words configured for id={}, guardrail will have no effect", id);
+            LOG.warn(
+                    "KeywordFilterGuardrail has no blocked words configured for id={}, guardrail will have no effect",
+                    id);
         }
 
         return KeywordFilterGuardrail.builder()

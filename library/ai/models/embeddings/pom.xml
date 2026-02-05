@@ -11,6 +11,10 @@
     </parent>
 
     <artifactId>embeddings</artifactId>
+    <packaging>pom</packaging>
     <name>Forage :: Library :: AI :: Models :: Embeddings</name>
 
+    <modules>
+        <module>forage-model-embeddings-ollama</module>
+    </modules>
 </project>

@@ -1,13 +1,22 @@
 package io.kaoto.forage.agent;
 
+import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.guardrail.InputGuardrail;
 import dev.langchain4j.guardrail.OutputGuardrail;
 import dev.langchain4j.memory.chat.ChatMemoryProvider;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.rag.RetrievalAugmentor;
+import dev.langchain4j.store.embedding.EmbeddingStore;
 import io.kaoto.forage.agent.factory.ConfigurationAware;
 import io.kaoto.forage.core.ai.ChatMemoryBeanProvider;
+import io.kaoto.forage.core.ai.EmbeddingModelAware;
+import io.kaoto.forage.core.ai.EmbeddingModelProvider;
+import io.kaoto.forage.core.ai.EmbeddingStoreAware;
+import io.kaoto.forage.core.ai.EmbeddingStoreProvider;
 import io.kaoto.forage.core.ai.ModelProvider;
+import io.kaoto.forage.core.ai.RetrievalAugmentorProvider;
 import io.kaoto.forage.core.annotations.FactoryType;
 import io.kaoto.forage.core.annotations.ForageBean;
 import io.kaoto.forage.core.annotations.ForageFactory;
@@ -161,6 +170,17 @@ public class AgentBeanFactory implements BeanFactory {
             ForageAgentConfiguration agentConfiguration = new ForageAgentConfiguration();
             agentConfiguration.withChatModel(chatModel).withChatMemoryProvider(chatMemoryProvider);
 
+            EmbeddingModel embeddingModel = createEmbeddingModel(config, modelKind, name);
+            EmbeddingStore<TextSegment> embeddingStore = createEmbeddingStore(config, modelKind, name, embeddingModel);
+
+            // Create RetrievalAugmentor
+            RetrievalAugmentor retrievalAugmentor =
+                    createRetrievalAugmentor(config, modelKind, name, embeddingModel, embeddingStore);
+
+            if (retrievalAugmentor != null) {
+                agentConfiguration.withRetrievalAugmentor(retrievalAugmentor);
+            }
+
             // Load input guardrail instances via ServiceLoader
             List<InputGuardrail> inputGuardrails = loadInputGuardrails(name);
             if (!inputGuardrails.isEmpty()) {
@@ -269,6 +289,67 @@ public class AgentBeanFactory implements BeanFactory {
         return null;
     }
 
+    private EmbeddingModel createEmbeddingModel(AgentConfig config, String modelKind, String agentName) {
+        // Find model provider by kind using ServiceLoader
+        List<ServiceLoader.Provider<EmbeddingModelProvider>> providers = findEmbeddingModelProviders();
+
+        for (ServiceLoader.Provider<EmbeddingModelProvider> provider : providers) {
+            Class<? extends EmbeddingModelProvider> providerClass = provider.type();
+            ForageBean annotation = providerClass.getAnnotation(ForageBean.class);
+            if (annotation != null && annotation.value().equals(modelKind)) {
+                LOG.debug("Found embedding model provider for kind '{}': {}", modelKind, providerClass.getName());
+                EmbeddingModelProvider modelProvider = provider.get();
+
+                // Create model using unified config
+                return createEmbeddingModelFromConfig(config, modelKind, modelProvider, agentName);
+            }
+        }
+
+        LOG.warn("No model provider found for kind: {}", modelKind);
+        return null;
+    }
+
+    private EmbeddingStore<TextSegment> createEmbeddingStore(
+            AgentConfig config, String modelKind, String agentName, EmbeddingModel model) {
+        // Find model provider by kind using ServiceLoader
+        List<ServiceLoader.Provider<EmbeddingStoreProvider>> providers = findEmbeddingStoreProviders();
+
+        for (ServiceLoader.Provider<EmbeddingStoreProvider> provider : providers) {
+            Class<? extends EmbeddingStoreProvider> providerClass = provider.type();
+            LOG.debug("Found embedding store provider for kind '{}': {}", modelKind, providerClass.getName());
+            EmbeddingStoreProvider modelProvider = provider.get();
+
+            // Create model using unified config
+            return createEmbeddingStoreFromConfig(config, modelKind, modelProvider, agentName, model);
+        }
+
+        LOG.warn("No model provider found for kind: {}", modelKind);
+        return null;
+    }
+
+    private RetrievalAugmentor createRetrievalAugmentor(
+            AgentConfig config,
+            String modelKind,
+            String agentName,
+            EmbeddingModel embeddingModel,
+            EmbeddingStore<TextSegment> embeddingStore) {
+        // Find model provider by kind using ServiceLoader
+        List<ServiceLoader.Provider<RetrievalAugmentorProvider>> providers = findRetrievalAugmentorProviders();
+
+        for (ServiceLoader.Provider<RetrievalAugmentorProvider> provider : providers) {
+            Class<? extends RetrievalAugmentorProvider> providerClass = provider.type();
+            LOG.debug("Found retrieval augmentor provider for kind '{}': {}", modelKind, providerClass.getName());
+            RetrievalAugmentorProvider retrievalAugmentorProvider = provider.get();
+
+            // Create model using unified config
+            return createRetrievalAugmentorFromConfig(
+                    config, modelKind, retrievalAugmentorProvider, agentName, embeddingModel, embeddingStore);
+        }
+
+        LOG.warn("No model provider found for kind: {}", modelKind);
+        return null;
+    }
+
     private ChatModel createChatModelFromConfig(
             AgentConfig config, String modelKind, ModelProvider modelProvider, String agentName) {
         // Map unified agent config values to provider-specific config keys
@@ -293,6 +374,80 @@ public class AgentBeanFactory implements BeanFactory {
         setSystemPropertyIfNotNull(prefix, providerPrefix, "log.responses", config.logResponses());
 
         return modelProvider.create(prefix);
+    }
+
+    private EmbeddingModel createEmbeddingModelFromConfig(
+            AgentConfig config, String modelKind, EmbeddingModelProvider modelProvider, String agentName) {
+        // Map unified agent config values to provider-specific config keys
+        // Provider configs expect keys like: {prefix}.{provider}.api.key
+        // We have values in: {prefix}.agent.api.key
+        // So we need to set system properties that the provider's loadOverrides will pick up
+
+        String providerPrefix = getProviderConfigPrefix(modelKind);
+        String prefix = DEFAULT_AGENT.equals(agentName) ? null : agentName;
+
+        // Set provider config values as system properties (provider's loadOverrides will pick these up)
+        setSystemPropertyIfNotNull(prefix, providerPrefix, "embedding.model.name", config.embeddingModelName());
+        setSystemPropertyIfNotNull(prefix, providerPrefix, "embedding.model.timeout", config.embeddingModelTimeout());
+        setSystemPropertyIfNotNull(prefix, providerPrefix, "embedding.max.retries", config.embeddingModelMaxRetries());
+        setSystemPropertyIfNotNull(prefix, providerPrefix, "embedding.base.url", config.embeddingModelBaseUrl());
+
+        return modelProvider.create(prefix);
+    }
+
+    private EmbeddingStore<TextSegment> createEmbeddingStoreFromConfig(
+            AgentConfig config,
+            String modelKind,
+            EmbeddingStoreProvider embeddingStoreProvider,
+            String agentName,
+            EmbeddingModel embeddingModel) {
+        // Map unified agent config values to provider-specific config keys
+        // Provider configs expect keys like: {prefix}.{provider}.api.key
+        // We have values in: {prefix}.agent.api.key
+        // So we need to set system properties that the provider's loadOverrides will pick up
+
+        String providerPrefix = getProviderConfigPrefix(modelKind);
+        String prefix = DEFAULT_AGENT.equals(agentName) ? null : agentName;
+
+        // Set provider config values as system properties (provider's loadOverrides will pick these up)
+        setSystemPropertyIfNotNull(null, providerPrefix, "in.memory.store.file.source", config.fileSource());
+        setSystemPropertyIfNotNull(null, providerPrefix, "in.memory.store.max.size", config.embeddingStoreMaxSize());
+        setSystemPropertyIfNotNull(
+                null, providerPrefix, "in.memory.store.overlap.size", config.embeddingStoreOverlapSize());
+
+        if (embeddingStoreProvider instanceof EmbeddingModelAware) {
+            ((EmbeddingModelAware) embeddingStoreProvider).withEmbeddingModel(embeddingModel);
+        }
+
+        return embeddingStoreProvider.create(prefix);
+    }
+
+    private RetrievalAugmentor createRetrievalAugmentorFromConfig(
+            AgentConfig config,
+            String modelKind,
+            RetrievalAugmentorProvider retrievalAugmentorProvider,
+            String agentName,
+            EmbeddingModel embeddingModel,
+            EmbeddingStore<TextSegment> embeddingStore) {
+        // Map unified agent config values to provider-specific config keys
+        // Provider configs expect keys like: {prefix}.{provider}.api.key
+        // We have values in: {prefix}.agent.api.key
+        // So we need to set system properties that the provider's loadOverrides will pick up
+
+        String providerPrefix = getProviderConfigPrefix(modelKind);
+        String prefix = DEFAULT_AGENT.equals(agentName) ? null : agentName;
+
+        setSystemPropertyIfNotNull(null, providerPrefix, "rag.max.results", config.defaultRagMaxResults());
+        setSystemPropertyIfNotNull(null, providerPrefix, "rag.min.score", config.defaultRagMinScore());
+
+        if (retrievalAugmentorProvider instanceof EmbeddingModelAware) {
+            ((EmbeddingModelAware) retrievalAugmentorProvider).withEmbeddingModel(embeddingModel);
+        }
+        if (retrievalAugmentorProvider instanceof EmbeddingStoreAware) {
+            ((EmbeddingStoreAware) retrievalAugmentorProvider).withEmbeddingStore(embeddingStore);
+        }
+
+        return retrievalAugmentorProvider.create(prefix);
     }
 
     private void setSystemPropertyIfNotNull(String prefix, String providerPrefix, String key, Object value) {
@@ -323,7 +478,7 @@ public class AgentBeanFactory implements BeanFactory {
     }
 
     private ChatMemoryProvider createMemoryProvider(AgentConfig config, String memoryKind) {
-        List<ServiceLoader.Provider<ChatMemoryBeanProvider>> providers = findMemoryProviders();
+        List<ServiceLoader.Provider<ChatMemoryBeanProvider>> providers = findMChatModelProviders();
 
         for (ServiceLoader.Provider<ChatMemoryBeanProvider> provider : providers) {
             Class<? extends ChatMemoryBeanProvider> providerClass = provider.type();
@@ -361,9 +516,27 @@ public class AgentBeanFactory implements BeanFactory {
         return loader.stream().toList();
     }
 
-    private List<ServiceLoader.Provider<ChatMemoryBeanProvider>> findMemoryProviders() {
+    private List<ServiceLoader.Provider<ChatMemoryBeanProvider>> findMChatModelProviders() {
         ServiceLoader<ChatMemoryBeanProvider> loader =
                 ServiceLoader.load(ChatMemoryBeanProvider.class, camelContext.getApplicationContextClassLoader());
+        return loader.stream().toList();
+    }
+
+    private List<ServiceLoader.Provider<EmbeddingModelProvider>> findEmbeddingModelProviders() {
+        ServiceLoader<EmbeddingModelProvider> loader =
+                ServiceLoader.load(EmbeddingModelProvider.class, camelContext.getApplicationContextClassLoader());
+        return loader.stream().toList();
+    }
+
+    private List<ServiceLoader.Provider<EmbeddingStoreProvider>> findEmbeddingStoreProviders() {
+        ServiceLoader<EmbeddingStoreProvider> loader =
+                ServiceLoader.load(EmbeddingStoreProvider.class, camelContext.getApplicationContextClassLoader());
+        return loader.stream().toList();
+    }
+
+    private List<ServiceLoader.Provider<RetrievalAugmentorProvider>> findRetrievalAugmentorProviders() {
+        ServiceLoader<RetrievalAugmentorProvider> loader =
+                ServiceLoader.load(RetrievalAugmentorProvider.class, camelContext.getApplicationContextClassLoader());
         return loader.stream().toList();
     }
 

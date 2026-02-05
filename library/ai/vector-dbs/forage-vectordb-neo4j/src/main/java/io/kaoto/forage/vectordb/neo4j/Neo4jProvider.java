@@ -3,8 +3,8 @@ package io.kaoto.forage.vectordb.neo4j;
 import dev.langchain4j.community.store.embedding.neo4j.Neo4jEmbeddingStore;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingStore;
+import io.kaoto.forage.core.ai.EmbeddingStoreProvider;
 import io.kaoto.forage.core.annotations.ForageBean;
-import io.kaoto.forage.core.vectordb.EmbeddingStoreProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,8 +1,8 @@
 package io.kaoto.forage.vectordb.chroma;
 
 import dev.langchain4j.store.embedding.chroma.ChromaEmbeddingStore;
+import io.kaoto.forage.core.ai.EmbeddingStoreProvider;
 import io.kaoto.forage.core.annotations.ForageBean;
-import io.kaoto.forage.core.vectordb.EmbeddingStoreProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

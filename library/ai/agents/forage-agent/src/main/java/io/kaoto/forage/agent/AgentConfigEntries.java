@@ -243,6 +243,119 @@ public final class AgentConfigEntries extends ConfigEntries {
             false,
             ConfigTag.COMMON);
 
+    // EMBEDDING STORE
+
+    public static final ConfigModule EMBEDDING_STORE_FILE_SOURCE = ConfigModule.of(
+            AgentConfig.class,
+            "forage.agent.in.memory.store.file.source",
+            "Path to a file to be loaded into store.",
+            "File source",
+            null,
+            "string",
+            true,
+            ConfigTag.COMMON);
+
+    public static final ConfigModule EMBEDDING_STORE_MAX_SIZE = ConfigModule.of(
+            AgentConfig.class,
+            "forage.agent.in.memory.store.max.size",
+            "The maximum size of the segment, defined in characters.",
+            "Max size",
+            null,
+            "int",
+            false,
+            ConfigTag.COMMON);
+
+    public static final ConfigModule EMBEDDING_STORE_OVERLAP_SIZE = ConfigModule.of(
+            AgentConfig.class,
+            "forage.agent.in.memory.store.overlap.size",
+            "The maximum size of the overlap, defined in characters.",
+            "Overlap size",
+            null,
+            "int",
+            false,
+            ConfigTag.COMMON);
+
+    // RAG
+
+    // embedding model
+    public static final ConfigModule EMBEDDING_MODEL_API_KEY = ConfigModule.of(
+            AgentConfig.class,
+            "forage.agent.api.key",
+            "API key for authentication with the model provider",
+            "API Key",
+            null,
+            "password",
+            false,
+            ConfigTag.SECURITY);
+
+    public static final ConfigModule EMBEDDING_MODEL_BASE_URL = ConfigModule.of(
+            AgentConfig.class,
+            "forage.agent.base.url",
+            "Base URL for the model provider API",
+            "Base URL",
+            null,
+            "string",
+            false,
+            ConfigTag.COMMON);
+
+    public static final ConfigModule EMBEDDING_MODEL_MODEL_NAME = ConfigModule.of(
+            AgentConfig.class,
+            "forage.agent.embedding.model.name",
+            "The specific model name to use",
+            "Model Name",
+            null,
+            "string",
+            false,
+            ConfigTag.COMMON);
+    //    public static final ConfigModule EMBEDDING_MODEL_CUSTOM_HEADERS = ConfigModule.of(
+    //            AgentConfig.class,
+    //            "forage.agent.embedding.model.custom.headers",
+    //            "todo",
+    //            "Custom Headers",
+    //            null,
+    //            "map",
+    //            false,
+    //            ConfigTag.COMMON);
+    public static final ConfigModule EMBEDDING_MODEL_TIMEOUT = ConfigModule.of(
+            AgentConfig.class,
+            "forage.agent.embedding.model.timeout",
+            "Used for the HttpClientBuilder that will be used to communicate with Ollama",
+            "Timeout",
+            null,
+            "Duration",
+            false,
+            ConfigTag.COMMON);
+    public static final ConfigModule EMBEDDING_MODEL_MAX_RETRIES = ConfigModule.of(
+            AgentConfig.class,
+            "forage.agent.embedding.model.max.retries",
+            "Used for the HttpClientBuilder that will be used to communicate with Ollama",
+            "Max retries",
+            null,
+            "int",
+            false,
+            ConfigTag.COMMON);
+
+    // rag
+
+    public static final ConfigModule DEFAULT_RAG_MAX_RESULTS = ConfigModule.of(
+            AgentConfig.class,
+            "forage.agent.rag.max.results",
+            "The maximum number of Contents to retrieve.",
+            "Max results",
+            null,
+            "int",
+            false,
+            ConfigTag.COMMON);
+    public static final ConfigModule DEFAULT_RAG_MIN_SCORE = ConfigModule.of(
+            AgentConfig.class,
+            "forage.agent.rag.min.score",
+            "The minimum relevance score for the returned Contents.",
+            "Min score",
+            null,
+            "double",
+            false,
+            ConfigTag.COMMON);
+
     private static final Map<ConfigModule, ConfigEntry> CONFIG_MODULES = new ConcurrentHashMap<>();
 
     static {
@@ -279,6 +392,22 @@ public final class AgentConfigEntries extends ConfigEntries {
         CONFIG_MODULES.put(MEMORY_REDIS_PASSWORD, ConfigEntry.fromModule());
         CONFIG_MODULES.put(MEMORY_INFINISPAN_SERVER_LIST, ConfigEntry.fromModule());
         CONFIG_MODULES.put(MEMORY_INFINISPAN_CACHE_NAME, ConfigEntry.fromModule());
+
+        // embedding store
+        CONFIG_MODULES.put(EMBEDDING_STORE_FILE_SOURCE, ConfigEntry.fromModule());
+        CONFIG_MODULES.put(EMBEDDING_STORE_MAX_SIZE, ConfigEntry.fromModule());
+        CONFIG_MODULES.put(EMBEDDING_STORE_OVERLAP_SIZE, ConfigEntry.fromModule());
+
+        // RAG
+        CONFIG_MODULES.put(EMBEDDING_MODEL_API_KEY, ConfigEntry.fromModule());
+        CONFIG_MODULES.put(EMBEDDING_MODEL_BASE_URL, ConfigEntry.fromModule());
+        CONFIG_MODULES.put(EMBEDDING_MODEL_MODEL_NAME, ConfigEntry.fromModule());
+        //        CONFIG_MODULES.put(EMBEDDING_MODEL_CUSTOM_HEADERS, ConfigEntry.fromModule());
+        CONFIG_MODULES.put(EMBEDDING_MODEL_TIMEOUT, ConfigEntry.fromModule());
+        CONFIG_MODULES.put(EMBEDDING_MODEL_MAX_RETRIES, ConfigEntry.fromModule());
+
+        CONFIG_MODULES.put(DEFAULT_RAG_MAX_RESULTS, ConfigEntry.fromModule());
+        CONFIG_MODULES.put(DEFAULT_RAG_MIN_SCORE, ConfigEntry.fromModule());
     }
 
     public static Map<ConfigModule, ConfigEntry> entries() {

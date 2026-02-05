@@ -85,7 +85,7 @@ forage/
 Components are discovered via Java ServiceLoader:
 - `io.kaoto.forage.core.ai.ModelProvider` - Chat models
 - `io.kaoto.forage.core.ai.ChatMemoryBeanProvider` - Memory providers
-- `io.kaoto.forage.core.vectordb.EmbeddingStoreProvider` - Vector databases
+- `io.kaoto.forage.core.ai.EmbeddingStoreProvider` - Vector databases
 
 ### 2. BeanProvider Pattern
 

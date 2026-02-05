@@ -53,6 +53,7 @@
     <modules>
         <module>forage-vectordb-default</module>
         <module>forage-vectordb-chroma</module>
+        <module>forage-vectordb-in-memory-store</module>
         <module>forage-vectordb-infinispan</module>
         <module>forage-vectordb-mariadb</module>
         <module>forage-vectordb-milvus</module>

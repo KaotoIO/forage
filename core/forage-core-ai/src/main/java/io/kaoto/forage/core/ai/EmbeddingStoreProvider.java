@@ -1,4 +1,4 @@
-package io.kaoto.forage.core.vectordb;
+package io.kaoto.forage.core.ai;
 
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingStore;

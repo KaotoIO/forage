@@ -19,6 +19,7 @@
         <module>chat-memory</module>
         <module>guardrails</module>
         <module>models</module>
+        <module>rag</module>
         <module>vector-dbs</module>
     </modules>
 

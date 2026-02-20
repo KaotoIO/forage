@@ -399,7 +399,7 @@ public class OpenAIConfig implements Config {
         return ConfigStore.getInstance()
                 .get(TIMEOUT.asNamed(prefix))
                 .map(Duration::parse)
-                .orElseThrow(null);
+                .orElse(null);
     }
 
     public Boolean http1_1() {

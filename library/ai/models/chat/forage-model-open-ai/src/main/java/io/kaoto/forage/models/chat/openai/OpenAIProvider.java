@@ -125,7 +125,7 @@ public class OpenAIProvider implements ModelProvider {
             builder.timeout(config.timeout());
         }
 
-        if (config.http1_1()) {
+        if (Boolean.TRUE.equals(config.http1_1())) {
             JdkHttpClientBuilder clientBuilder = new JdkHttpClientBuilder();
 
             clientBuilder.httpClientBuilder(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1));

@@ -11,7 +11,7 @@
     <name>Forage :: Library :: JDBC :: DB2</name>
 
     <properties>
-        <db2.version>11.5.9.0</db2.version>
+        <db2.version>12.1.3.0</db2.version>
     </properties>
 
     <dependencies>

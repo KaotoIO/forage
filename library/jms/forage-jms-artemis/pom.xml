@@ -11,7 +11,7 @@
     <name>Forage :: Library :: JMS :: ActiveMQ Artemis</name>
 
     <properties>
-        <artemis.version>2.43.0</artemis.version>
+        <artemis.version>2.44.0</artemis.version>
     </properties>
 
     <dependencies>

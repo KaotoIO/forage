@@ -60,7 +60,7 @@ public abstract class TransactionalJtaTransactionPolicy extends JtaTransactionPo
         }
     }
 
-    protected final jakarta.transaction.Transaction suspendTransaction() throws Exception {
+    protected final Transaction suspendTransaction() throws Exception {
         return transactionManager.suspend();
     }
 

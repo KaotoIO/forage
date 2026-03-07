@@ -13,7 +13,8 @@ import io.kaoto.forage.jdbc.common.PooledDataSource;
         value = "postgresql",
         components = {"camel-sql", "camel-jdbc", "camel-spring-jdbc"},
         description = "PostgreSQL database",
-        feature = "javax.sql.DataSource")
+        feature = "javax.sql.DataSource",
+        runtimeDependencies = {"quarkus:mvn:io.quarkus:quarkus-jdbc-postgresql"})
 public class PostgresqlJdbc extends PooledDataSource {
 
     @Override

@@ -56,4 +56,13 @@ public @interface ForageBean {
      * @return the Config class
      */
     Class<? extends Config> configClass() default Config.class;
+
+    /**
+     * Additional runtime dependencies needed for this bean, per variant.
+     * Format: "variant:gavString" (e.g., "quarkus:mvn:io.quarkus:quarkus-jdbc-postgresql").
+     * BOM-managed deps omit version; non-BOM deps include version.
+     *
+     * @return array of variant-prefixed GAV strings
+     */
+    String[] runtimeDependencies() default {};
 }

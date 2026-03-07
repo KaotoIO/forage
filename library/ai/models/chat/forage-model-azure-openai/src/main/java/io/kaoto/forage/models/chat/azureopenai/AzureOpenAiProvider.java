@@ -71,8 +71,7 @@ public class AzureOpenAiProvider implements ModelProvider {
         }
 
         // Configure logging settings
-        boolean logRequestsAndResponses =
-                config.logRequestsAndResponses() != null ? config.logRequestsAndResponses() : true;
+        boolean logRequestsAndResponses = config.logRequestsAndResponses() == null || config.logRequestsAndResponses();
         builder.logRequestsAndResponses(logRequestsAndResponses);
 
         return builder.build();

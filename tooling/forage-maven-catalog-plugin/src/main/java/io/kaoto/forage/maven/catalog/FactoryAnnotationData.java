@@ -14,6 +14,7 @@ public class FactoryAnnotationData {
     private List<ConditionalBeanGroup> conditionalBeans = new ArrayList<>();
     private String variant = "BASE";
     private String configClassName = null;
+    private List<String> runtimeDependencies = new ArrayList<>();
 
     public String getName() {
         return name;
@@ -77,5 +78,13 @@ public class FactoryAnnotationData {
 
     public void setConfigClassName(String configClassName) {
         this.configClassName = configClassName;
+    }
+
+    public List<String> getRuntimeDependencies() {
+        return runtimeDependencies;
+    }
+
+    public void setRuntimeDependencies(List<String> runtimeDependencies) {
+        this.runtimeDependencies = runtimeDependencies;
     }
 }

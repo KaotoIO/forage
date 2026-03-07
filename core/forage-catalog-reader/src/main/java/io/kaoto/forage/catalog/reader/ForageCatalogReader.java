@@ -481,6 +481,81 @@ public final class ForageCatalogReader {
     }
 
     /**
+     * Gets the additional dependencies for a specific variant of a factory.
+     *
+     * @param factoryTypeKey the factory type key (e.g., "jdbc", "jms")
+     * @param variantName the variant name (e.g., "base", "springboot", "quarkus")
+     * @return list of additional GAVs, or empty list if none
+     */
+    public List<String> getVariantAdditionalDependencies(String factoryTypeKey, String variantName) {
+        FactoryVariants variants = getFactoryVariants(factoryTypeKey);
+        if (variants == null) {
+            return List.of();
+        }
+        FactoryVariant variant = getVariantByName(variants, variantName);
+        if (variant == null || variant.getAdditionalDependencies() == null) {
+            return List.of();
+        }
+        return variant.getAdditionalDependencies();
+    }
+
+    /**
+     * Gets runtime dependencies for a bean in a specific variant.
+     *
+     * @param beanName the bean name (e.g., "postgresql", "artemis")
+     * @param variantName the variant name (e.g., "quarkus", "springboot")
+     * @return list of GAVs for the given variant, or empty list if none
+     */
+    public List<String> getBeanRuntimeDependencies(String beanName, String variantName) {
+        if (beanName == null || variantName == null) {
+            return List.of();
+        }
+
+        // Look through all factories' beansByFeature to find the bean
+        for (ForageFactory factory : catalog.getFactories()) {
+            List<FeatureBeans> beansByFeature = factory.getBeansByFeature();
+            if (beansByFeature == null) {
+                continue;
+            }
+            for (FeatureBeans featureBeans : beansByFeature) {
+                if (featureBeans.getBeans() == null) {
+                    continue;
+                }
+                for (ForageBean bean : featureBeans.getBeans()) {
+                    if (beanName.equalsIgnoreCase(bean.getName()) && bean.getRuntimeDependencies() != null) {
+                        List<String> deps = bean.getRuntimeDependencies().get(variantName.toLowerCase());
+                        if (deps != null) {
+                            return deps;
+                        }
+                    }
+                }
+            }
+        }
+        return List.of();
+    }
+
+    /**
+     * Gets runtime dependencies for a conditional bean group in a specific variant.
+     *
+     * @param factoryTypeKey the factory type key (e.g., "jdbc", "jms")
+     * @param groupId the conditional bean group ID (e.g., "jta-transaction-policies")
+     * @param variantName the variant name (e.g., "quarkus", "springboot")
+     * @return list of GAVs for the given variant, or empty list if none
+     */
+    public List<String> getConditionalRuntimeDependencies(String factoryTypeKey, String groupId, String variantName) {
+        List<ConditionalBeanGroup> groups = getConditionalBeans(factoryTypeKey);
+        for (ConditionalBeanGroup group : groups) {
+            if (groupId.equals(group.getId()) && group.getRuntimeDependencies() != null) {
+                List<String> deps = group.getRuntimeDependencies().get(variantName.toLowerCase());
+                if (deps != null) {
+                    return deps;
+                }
+            }
+        }
+        return List.of();
+    }
+
+    /**
      * Metadata about a factory configuration.
      */
     public record FactoryMetadata(

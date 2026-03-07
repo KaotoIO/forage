@@ -15,6 +15,8 @@
     <modules>
         <module>forage-agent-factories</module>
         <module>forage-agent</module>
+        <module>camel-quarkus</module>
+        <module>spring-boot</module>
     </modules>
 
 </project>

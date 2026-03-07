@@ -100,9 +100,8 @@ public class JmsModuleDescriptor implements ForageModuleDescriptor<ConnectionFac
                         props, "quarkus.transaction-manager.object-store.type", config::transactionObjectStoreType);
                 addIfNotEmpty(props, "quarkus.transaction-manager.enable-recovery", config::transactionEnableRecovery);
             }
-        } else if ("ibmmq".equals(config.jmsKind())) {
+        } else if (!"ibmmq".equals(config.jmsKind())) {
             // IBM MQ configuration is created via recorder, no property translation needed
-        } else {
             throw new IllegalArgumentException(
                     "`%s` Jms kind is not supported by Quarkus runtime.".formatted(config.jmsKind()));
         }

@@ -26,7 +26,7 @@ import io.quarkus.runtime.annotations.Recorder;
  */
 @Recorder
 public class ForageJdbcRecorder {
-    private static final org.jboss.logging.Logger LOG = Logger.getLogger(ForageJdbcRecorder.class);
+    private static final Logger LOG = Logger.getLogger(ForageJdbcRecorder.class);
 
     public RuntimeValue<JdbcAggregationRepository> createAggregationRepository(
             String dsName, RuntimeValue<CamelContext> camelContext, DataSourceFactoryConfig config) {

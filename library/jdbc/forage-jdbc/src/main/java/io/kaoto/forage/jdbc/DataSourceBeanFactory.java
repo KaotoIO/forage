@@ -43,6 +43,7 @@ import io.kaoto.forage.jdbc.common.idempotent.ForageJdbcMessageIdRepository;
                     id = "jta-transaction-policies",
                     description = "JTA Transaction Policy beans for Camel transacted routes",
                     configEntry = "forage.jdbc.transaction.enabled",
+                    runtimeDependencies = {"quarkus:mvn:io.quarkus:quarkus-narayana-jta"},
                     beans = {
                         @ConditionalBean(
                                 name = "PROPAGATION_REQUIRED",

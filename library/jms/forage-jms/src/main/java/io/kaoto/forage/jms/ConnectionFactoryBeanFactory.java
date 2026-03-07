@@ -39,6 +39,10 @@ import io.kaoto.forage.jms.common.ForageConnectionFactory;
                     id = "jta-transaction-policies",
                     description = "JTA Transaction Policy beans for Camel transacted routes",
                     configEntry = "forage.jms.transaction.enabled",
+                    runtimeDependencies = {
+                        "quarkus:mvn:io.quarkus:quarkus-narayana-jta",
+                        "quarkus:mvn:io.quarkiverse.messaginghub:quarkus-pooled-jms"
+                    },
                     beans = {
                         @ConditionalBean(
                                 name = "PROPAGATION_REQUIRED",
@@ -65,7 +69,13 @@ import io.kaoto.forage.jms.common.ForageConnectionFactory;
                                 name = "SUPPORTS",
                                 javaType = "org.apache.camel.spi.TransactedPolicy",
                                 description = "Joins existing transaction if present, otherwise runs without one")
-                    })
+                    }),
+            @ConditionalBeanGroup(
+                    id = "jms-connection-pool",
+                    description = "Connection pooling for JMS connections",
+                    configEntry = "forage.jms.pool.enabled",
+                    runtimeDependencies = {"quarkus:mvn:io.quarkiverse.messaginghub:quarkus-pooled-jms"},
+                    beans = {})
         })
 public class ConnectionFactoryBeanFactory implements BeanFactory {
     private final Logger LOG = LoggerFactory.getLogger(ConnectionFactoryBeanFactory.class);

@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.logging.Log;
@@ -63,7 +64,7 @@ public class CatalogGenerator {
 
         log.info("Found " + components.size() + " Forage components");
 
-        List<ForageFactory> factories = transformToSimplifiedCatalog(components);
+        List<ForageFactory> factories = transformToSimplifiedCatalog(components, project.getProperties());
 
         log.info("Generated " + factories.size() + " factories in simplified catalog");
 
@@ -91,13 +92,79 @@ public class CatalogGenerator {
     }
 
     /**
+     * Resolves a GAV string that may be missing a version by looking up "{artifactId}.version"
+     * in the Maven project properties. GAVs already containing a version are returned as-is.
+     *
+     * @param gav the GAV string (e.g., "mvn:io.quarkiverse.artemis:quarkus-artemis-jms")
+     * @param projectProperties the Maven project properties
+     * @return the GAV with version resolved, or the original GAV if no version found
+     */
+    private String resolveGavVersion(String gav, Properties projectProperties) {
+        if (gav == null || projectProperties == null) {
+            return gav;
+        }
+
+        // Strip "mvn:" prefix for parsing
+        String rawGav = gav.startsWith("mvn:") ? gav.substring(4) : gav;
+        String[] parts = rawGav.split(":");
+
+        // Already has a version (groupId:artifactId:version)
+        if (parts.length >= 3) {
+            return gav;
+        }
+
+        // Only groupId:artifactId — try to resolve version from properties
+        if (parts.length == 2) {
+            String artifactId = parts[1];
+            String versionProp = artifactId + ".version";
+            String version = projectProperties.getProperty(versionProp);
+            if (version != null && !version.isEmpty()) {
+                log.debug("Resolved version for " + artifactId + " -> " + version + " (from property " + versionProp
+                        + ")");
+                String prefix = gav.startsWith("mvn:") ? "mvn:" : "";
+                return prefix + rawGav + ":" + version;
+            } else {
+                log.warn("No version found for dependency " + gav + " (looked up property: " + versionProp + ")");
+            }
+        }
+
+        return gav;
+    }
+
+    /**
+     * Resolves versions in a list of GAV strings.
+     */
+    private List<String> resolveGavVersions(List<String> gavs, Properties projectProperties) {
+        if (gavs == null || gavs.isEmpty()) {
+            return gavs;
+        }
+        return gavs.stream().map(g -> resolveGavVersion(g, projectProperties)).toList();
+    }
+
+    /**
+     * Resolves versions in a variant-keyed dependency map.
+     */
+    private Map<String, List<String>> resolveVariantDependencyVersions(
+            Map<String, List<String>> deps, Properties projectProperties) {
+        if (deps == null || deps.isEmpty()) {
+            return deps;
+        }
+        Map<String, List<String>> resolved = new HashMap<>();
+        for (Map.Entry<String, List<String>> entry : deps.entrySet()) {
+            resolved.put(entry.getKey(), resolveGavVersions(entry.getValue(), projectProperties));
+        }
+        return resolved;
+    }
+
+    /**
      * Transform component-based structure to simplified factory-centric catalog.
      */
-    private List<ForageFactory> transformToSimplifiedCatalog(List<ForageComponent> components) {
+    private List<ForageFactory> transformToSimplifiedCatalog(
+            List<ForageComponent> components, Properties projectProperties) {
         ConfigMappings configMappings = collectConfigMappings(components);
         log.info("Found " + configMappings.classToConfigName.size() + " Config classes total");
 
-        CollectedData data = collectDataFromComponents(components, configMappings);
+        CollectedData data = collectDataFromComponents(components, configMappings, projectProperties);
 
         associateBeansWithFactories(data, configMappings.classToConfigName);
         associateConfigEntriesWithFactories(data, configMappings.classToArtifactId);
@@ -127,7 +194,8 @@ public class CatalogGenerator {
     /**
      * Collects factories, config entries, and beans from components.
      */
-    private CollectedData collectDataFromComponents(List<ForageComponent> components, ConfigMappings configMappings) {
+    private CollectedData collectDataFromComponents(
+            List<ForageComponent> components, ConfigMappings configMappings, Properties projectProperties) {
         CollectedData data = new CollectedData();
 
         for (ForageComponent component : components) {
@@ -135,8 +203,8 @@ public class CatalogGenerator {
             String gav = createGav(component.getGroupId(), artifactId, component.getVersion());
 
             collectConfigEntries(component, artifactId, data.configsByPrefix);
-            collectFactories(component, data, gav, configMappings);
-            collectBeans(component, data.beansByComponent, gav);
+            collectFactories(component, data, gav, configMappings, projectProperties);
+            collectBeans(component, data.beansByComponent, gav, projectProperties);
         }
 
         return data;
@@ -161,7 +229,11 @@ public class CatalogGenerator {
      * Collects factories from a component.
      */
     private void collectFactories(
-            ForageComponent component, CollectedData data, String gav, ConfigMappings configMappings) {
+            ForageComponent component,
+            CollectedData data,
+            String gav,
+            ConfigMappings configMappings,
+            Properties projectProperties) {
 
         if (component.getFactories() == null) {
             return;
@@ -182,12 +254,27 @@ public class CatalogGenerator {
 
             // Add this platform variant
             FactoryVariant variant = new FactoryVariant(scannedFactory.getClassName(), gav);
+            if (scannedFactory.getRuntimeDependencies() != null
+                    && !scannedFactory.getRuntimeDependencies().isEmpty()) {
+                variant.setAdditionalDependencies(
+                        resolveGavVersions(scannedFactory.getRuntimeDependencies(), projectProperties));
+            }
             setVariantByPlatform(catalogFactory.getVariants(), platform, variant);
 
-            // Copy conditional beans if present
+            // Copy conditional beans if present, resolving versions in runtimeDependencies
             if (scannedFactory.getConditionalBeans() != null
                     && !scannedFactory.getConditionalBeans().isEmpty()) {
-                catalogFactory.setConditionalBeans(scannedFactory.getConditionalBeans());
+                List<io.kaoto.forage.catalog.model.ConditionalBeanGroup> resolved =
+                        scannedFactory.getConditionalBeans().stream()
+                                .map(group -> {
+                                    if (group.getRuntimeDependencies() != null) {
+                                        group.setRuntimeDependencies(resolveVariantDependencyVersions(
+                                                group.getRuntimeDependencies(), projectProperties));
+                                    }
+                                    return group;
+                                })
+                                .toList();
+                catalogFactory.setConditionalBeans(resolved);
             }
         }
     }
@@ -211,12 +298,21 @@ public class CatalogGenerator {
     /**
      * Collects beans from a component.
      */
-    private void collectBeans(ForageComponent component, Map<String, List<BeanWithGav>> beansByComponent, String gav) {
+    private void collectBeans(
+            ForageComponent component,
+            Map<String, List<BeanWithGav>> beansByComponent,
+            String gav,
+            Properties projectProperties) {
         if (component.getBeans() == null) {
             return;
         }
 
         for (ScannedBean bean : component.getBeans()) {
+            // Resolve versions in bean runtime dependencies
+            if (bean.getRuntimeDependencies() != null) {
+                bean.setRuntimeDependencies(
+                        resolveVariantDependencyVersions(bean.getRuntimeDependencies(), projectProperties));
+            }
             BeanWithGav beanWithGav = new BeanWithGav(bean, gav, component.getConfigurationProperties());
             if (bean.getComponents() != null) {
                 for (String comp : bean.getComponents()) {
@@ -435,8 +531,6 @@ public class CatalogGenerator {
      * regardless of whether they are associated with a factory.
      */
     List<File> generateConfigurationCatalog(List<ForageComponent> components, File outputDirectory) throws IOException {
-        ConfigMappings configMappings = collectConfigMappings(components);
-
         List<ConfigurationModule> modules = new ArrayList<>();
 
         for (ForageComponent component : components) {

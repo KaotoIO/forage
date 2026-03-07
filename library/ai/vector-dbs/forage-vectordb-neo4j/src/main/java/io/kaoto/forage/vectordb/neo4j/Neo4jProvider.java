@@ -106,9 +106,12 @@ public class Neo4jProvider implements EmbeddingStoreProvider {
                 .dimension(dimension);
 
         // use basic auth
-        if ((uri != null && !uri.trim().isEmpty())
-                && (user != null && !user.trim().isEmpty())
-                && (password != null && !password.trim().isEmpty())) {
+        if (uri != null
+                && !uri.trim().isEmpty()
+                && user != null
+                && !user.trim().isEmpty()
+                && password != null
+                && !password.trim().isEmpty()) {
             builder.withBasicAuth(uri, user, password);
         }
 

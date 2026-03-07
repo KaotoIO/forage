@@ -34,7 +34,8 @@ import org.junit.platform.commons.util.StringUtils;
         type = FactoryType.DATA_SOURCE,
         autowired = true,
         configClass = DataSourceFactoryConfig.class,
-        variant = FactoryVariant.QUARKUS)
+        variant = FactoryVariant.QUARKUS,
+        runtimeDependencies = {"mvn:org.apache.camel.quarkus:camel-quarkus-sql"})
 public class ForageJdbcProcessor {
 
     private static final Logger LOG = Logger.getLogger(ForageJdbcProcessor.class);

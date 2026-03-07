@@ -13,7 +13,8 @@ import io.kaoto.forage.jdbc.common.PooledDataSource;
         value = "h2",
         components = {"camel-sql", "camel-jdbc", "camel-spring-jdbc"},
         description = "H2 database",
-        feature = "javax.sql.DataSource")
+        feature = "javax.sql.DataSource",
+        runtimeDependencies = {"quarkus:mvn:io.quarkus:quarkus-jdbc-h2"})
 public class H2Jdbc extends PooledDataSource {
 
     @Override

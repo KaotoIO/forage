@@ -13,7 +13,8 @@ import io.kaoto.forage.jdbc.common.PooledDataSource;
         value = "mariadb",
         components = {"camel-sql", "camel-jdbc", "camel-spring-jdbc"},
         description = "MariaDB database",
-        feature = "javax.sql.DataSource")
+        feature = "javax.sql.DataSource",
+        runtimeDependencies = {"quarkus:mvn:io.quarkus:quarkus-jdbc-mariadb"})
 public class MariadbJdbc extends PooledDataSource {
 
     @Override

@@ -45,4 +45,12 @@ public @interface ConditionalBeanGroup {
      * @return array of conditional bean definitions
      */
     ConditionalBean[] beans();
+
+    /**
+     * Runtime dependencies triggered when this condition is met.
+     * Format: "variant:gavString" (e.g., "quarkus:mvn:io.quarkus:quarkus-narayana-jta").
+     *
+     * @return array of variant-prefixed GAV strings
+     */
+    String[] runtimeDependencies() default {};
 }

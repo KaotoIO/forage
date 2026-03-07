@@ -314,6 +314,9 @@ public class CodeScanner {
         }
         factory.setVariant(data.getVariant());
         factory.setConfigClassName(data.getConfigClassName());
+        if (!data.getRuntimeDependencies().isEmpty()) {
+            factory.setRuntimeDependencies(data.getRuntimeDependencies());
+        }
         return factory;
     }
 
@@ -347,6 +350,7 @@ public class CodeScanner {
                 case "conditionalBeans" -> data.setConditionalBeans(extractConditionalBeanGroupArray(value));
                 case "variant" -> data.setVariant(extractVariantValue(value));
                 case "configClass" -> data.setConfigClassName(extractClassValue(value, cu));
+                case "runtimeDependencies" -> data.setRuntimeDependencies(extractStringArrayValue(value));
                 default -> {}
             }
         }
@@ -380,6 +384,7 @@ public class CodeScanner {
         String description = "";
         String configEntry = "";
         List<ConditionalBeanInfo> beans = new ArrayList<>();
+        List<String> runtimeDeps = null;
 
         for (MemberValuePair pair : annotation.getPairs()) {
             String pairName = pair.getNameAsString();
@@ -402,6 +407,7 @@ public class CodeScanner {
                     }
                 }
                 case "beans" -> beans = extractConditionalBeanArray(value);
+                case "runtimeDependencies" -> runtimeDeps = extractStringArrayValue(value);
                 default -> {}
             }
         }
@@ -410,7 +416,11 @@ public class CodeScanner {
             return null;
         }
 
-        return new ConditionalBeanGroup(id, description, configEntry, beans);
+        ConditionalBeanGroup group = new ConditionalBeanGroup(id, description, configEntry, beans);
+        if (runtimeDeps != null && !runtimeDeps.isEmpty()) {
+            group.setRuntimeDependencies(ScannedBean.parseVariantDependencies(runtimeDeps));
+        }
+        return group;
     }
 
     /**
@@ -497,6 +507,7 @@ public class CodeScanner {
         String description = "";
         String feature = "";
         String configClassName = null;
+        List<String> runtimeDeps = null;
 
         // Extract annotation values
         if (annotation instanceof SingleMemberAnnotationExpr singleMember) {
@@ -526,6 +537,7 @@ public class CodeScanner {
                         }
                     }
                     case "configClass" -> configClassName = extractClassValue(value, cu);
+                    case "runtimeDependencies" -> runtimeDeps = extractStringArrayValue(value);
                     default -> {}
                 }
             }
@@ -536,6 +548,9 @@ public class CodeScanner {
 
         ScannedBean bean = new ScannedBean(name, components, description, className, feature);
         bean.setConfigClassName(configClassName);
+        if (runtimeDeps != null && !runtimeDeps.isEmpty()) {
+            bean.setRuntimeDependencies(ScannedBean.parseVariantDependencies(runtimeDeps));
+        }
         return bean;
     }
 

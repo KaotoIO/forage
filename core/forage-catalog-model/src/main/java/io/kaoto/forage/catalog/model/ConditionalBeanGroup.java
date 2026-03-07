@@ -1,6 +1,7 @@
 package io.kaoto.forage.catalog.model;
 
 import java.util.List;
+import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -24,6 +25,9 @@ public class ConditionalBeanGroup {
 
     @JsonProperty("beans")
     private List<ConditionalBeanInfo> beans;
+
+    @JsonProperty("runtimeDependencies")
+    private Map<String, List<String>> runtimeDependencies;
 
     public ConditionalBeanGroup() {}
 
@@ -64,6 +68,14 @@ public class ConditionalBeanGroup {
 
     public void setBeans(List<ConditionalBeanInfo> beans) {
         this.beans = beans;
+    }
+
+    public Map<String, List<String>> getRuntimeDependencies() {
+        return runtimeDependencies;
+    }
+
+    public void setRuntimeDependencies(Map<String, List<String>> runtimeDependencies) {
+        this.runtimeDependencies = runtimeDependencies;
     }
 
     @Override

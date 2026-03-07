@@ -32,6 +32,22 @@
             <artifactId>forage-agent</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-quarkus-agent-deployment</artifactId>
+            <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.camel.quarkus</groupId>
+                    <artifactId>camel-quarkus-core-deployment</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-agent-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Vector Database Modules -->
         <dependency>

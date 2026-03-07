@@ -16,6 +16,7 @@ public class ScannedFactory {
     private String className;
     private String variant;
     private String configClassName;
+    private List<String> runtimeDependencies;
 
     public ScannedFactory() {
         this.factory = new ForageFactory();
@@ -124,6 +125,14 @@ public class ScannedFactory {
 
     public void setConfigClassName(String configClassName) {
         this.configClassName = configClassName;
+    }
+
+    public List<String> getRuntimeDependencies() {
+        return runtimeDependencies;
+    }
+
+    public void setRuntimeDependencies(List<String> runtimeDependencies) {
+        this.runtimeDependencies = runtimeDependencies;
     }
 
     @Override

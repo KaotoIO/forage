@@ -79,4 +79,13 @@ public @interface ForageFactory {
      * @return the Config class
      */
     Class<? extends Config> configClass() default Config.class;
+
+    /**
+     * Additional runtime dependencies needed for this factory variant.
+     * GAVs in mvn: format, resolved at catalog generation time.
+     * BOM-managed dependencies omit the version (e.g., "mvn:org.apache.camel.quarkus:camel-quarkus-sql").
+     *
+     * @return array of GAV strings
+     */
+    String[] runtimeDependencies() default {};
 }

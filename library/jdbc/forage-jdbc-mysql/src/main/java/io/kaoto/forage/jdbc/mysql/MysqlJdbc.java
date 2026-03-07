@@ -13,7 +13,8 @@ import com.mysql.cj.jdbc.MysqlXADataSource;
         value = "mysql",
         components = {"camel-sql", "camel-jdbc", "camel-spring-jdbc"},
         description = "MySQL database",
-        feature = "javax.sql.DataSource")
+        feature = "javax.sql.DataSource",
+        runtimeDependencies = {"quarkus:mvn:io.quarkus:quarkus-jdbc-mysql"})
 public class MysqlJdbc extends PooledDataSource {
 
     @Override

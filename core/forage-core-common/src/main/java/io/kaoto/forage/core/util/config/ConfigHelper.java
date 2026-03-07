@@ -95,7 +95,7 @@ public final class ConfigHelper {
     }
 
     static Optional<String> getSpringBootProperty(String propertyName) {
-        Properties springBootProps = ConfigHelper.getSpringBootConfig();
+        Properties springBootProps = getSpringBootConfig();
         if (springBootProps != null) {
             LOG.trace("Loading {} from Spring Boot", propertyName);
             String propertyValue = (String) springBootProps.get(propertyName);
@@ -107,7 +107,7 @@ public final class ConfigHelper {
     }
 
     static Optional<String> getQuarkusProperty(String propertyName) {
-        SmallRyeConfig config = ConfigHelper.getQuarkusConfig();
+        SmallRyeConfig config = getQuarkusConfig();
         if (config != null) {
             LOG.trace("Loading {} from Quarkus", propertyName);
             Optional<String> quarkusValue = config.getOptionalValue(propertyName, String.class);
@@ -115,11 +115,21 @@ public final class ConfigHelper {
                 return quarkusValue;
             }
         }
+        // Fallback: read from application.properties directly when SmallRye config
+        // isn't available (e.g., during ConfigSourceFactory bootstrap where
+        // getQuarkusConfig() returns null to avoid infinite recursion)
+        Properties appProps = getQuarkusApplicationProperties();
+        if (appProps != null) {
+            String value = appProps.getProperty(propertyName);
+            if (value != null) {
+                return Optional.of(value);
+            }
+        }
         return Optional.empty();
     }
 
     static Optional<String> getCamelMainProperty(String propertyName) {
-        Properties camelMainProps = ConfigHelper.getCamelMainConfig();
+        Properties camelMainProps = getCamelMainConfig();
         if (camelMainProps != null) {
             LOG.trace("Loading {} from Camel main", propertyName);
             String mainPropertyValue = (String) camelMainProps.get(propertyName);
@@ -206,8 +216,17 @@ public final class ConfigHelper {
         return switch (getRuntime()) {
             case springBoot -> getSpringBootConfig();
             case main -> getCamelMainConfig();
-            case quarkus -> null;
+            case quarkus -> getQuarkusApplicationProperties();
         };
+    }
+
+    private static Properties quarkusAppProps = null;
+
+    private static Properties getQuarkusApplicationProperties() {
+        if (quarkusAppProps == null) {
+            quarkusAppProps = loadApplicationProperties();
+        }
+        return quarkusAppProps;
     }
 
     private static SmallRyeConfig getQuarkusConfig() {
@@ -246,7 +265,26 @@ public final class ConfigHelper {
             LOG.debug("Failed to load application.properties from working directory", ex);
         }
 
-        // Fallback to classpath
+        // Fallback to classpath — try multiple classloaders since in Quarkus
+        // augmentation the deployment classloader may not see the application's resources
+        if (input == null) {
+            ClassLoader tccl = Thread.currentThread().getContextClassLoader();
+            if (tccl != null) {
+                input = tccl.getResourceAsStream("application.properties");
+            }
+            if (input != null) {
+                LOG.debug("Loading application.properties from thread context classloader");
+            }
+        }
+        if (input == null) {
+            ClassLoader storeClassLoader = ConfigStore.getInstance().getClassLoader();
+            if (storeClassLoader != null) {
+                input = storeClassLoader.getResourceAsStream("application.properties");
+            }
+            if (input != null) {
+                LOG.debug("Loading application.properties from ConfigStore classloader");
+            }
+        }
         if (input == null) {
             input = ConfigHelper.class.getClassLoader().getResourceAsStream("application.properties");
             if (input != null) {

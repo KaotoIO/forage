@@ -1,6 +1,7 @@
 package io.kaoto.forage.catalog.model;
 
 import java.util.List;
+import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -28,6 +29,9 @@ public class ForageBean {
 
     @JsonProperty("propertiesFile")
     private String propertiesFile;
+
+    @JsonProperty("runtimeDependencies")
+    private Map<String, List<String>> runtimeDependencies;
 
     public ForageBean() {}
 
@@ -84,6 +88,14 @@ public class ForageBean {
 
     public void setPropertiesFile(String propertiesFile) {
         this.propertiesFile = propertiesFile;
+    }
+
+    public Map<String, List<String>> getRuntimeDependencies() {
+        return runtimeDependencies;
+    }
+
+    public void setRuntimeDependencies(Map<String, List<String>> runtimeDependencies) {
+        this.runtimeDependencies = runtimeDependencies;
     }
 
     @Override

@@ -266,11 +266,11 @@ public class ConfigWriteCommand extends CamelCommand {
             if (metadataOpt.isPresent()) {
                 ForageCatalogReader.FactoryMetadata metadata = metadataOpt.get();
                 Optional<String> shortPrefixKeyOpt = metadata.getShortPrefixPropertyKey();
-                if (shortPrefixKeyOpt.isPresent() && normalizedKey.equals(shortPrefixKeyOpt.get())) {
-                    // This is the bean name property - only store non-empty values
-                    if (value != null && !value.trim().isEmpty()) {
-                        factoryBeanNames.put(factoryTypeKey, value.trim());
-                    }
+                if (shortPrefixKeyOpt.isPresent()
+                        && normalizedKey.equals(shortPrefixKeyOpt.get())
+                        && value != null
+                        && !value.trim().isEmpty()) {
+                    factoryBeanNames.put(factoryTypeKey, value.trim());
                 }
             }
         }

@@ -1,5 +1,6 @@
 package io.kaoto.forage.catalog.model;
 
+import java.util.List;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -15,6 +16,9 @@ public class FactoryVariant {
 
     @JsonProperty("gav")
     private String gav;
+
+    @JsonProperty("additionalDependencies")
+    private List<String> additionalDependencies;
 
     public FactoryVariant() {}
 
@@ -39,6 +43,14 @@ public class FactoryVariant {
         this.gav = gav;
     }
 
+    public List<String> getAdditionalDependencies() {
+        return additionalDependencies;
+    }
+
+    public void setAdditionalDependencies(List<String> additionalDependencies) {
+        this.additionalDependencies = additionalDependencies;
+    }
+
     /**
      * Creates a GAV string from individual components.
      */
@@ -48,6 +60,7 @@ public class FactoryVariant {
 
     @Override
     public String toString() {
-        return "FactoryVariant{" + "className='" + className + '\'' + ", gav='" + gav + '\'' + '}';
+        return "FactoryVariant{" + "className='" + className + '\'' + ", gav='" + gav + '\''
+                + ", additionalDependencies=" + additionalDependencies + '}';
     }
 }

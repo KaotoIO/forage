@@ -33,7 +33,7 @@
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
-            <artifactId>forage-jdbc-common</artifactId>
+            <artifactId>forage-core-common</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -41,18 +41,6 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-catalog</artifactId>
             <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.kaoto.forage</groupId>
-            <artifactId>forage-jms-common</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.reflections</groupId>
-            <artifactId>reflections</artifactId>
-            <version>0.10.2</version>
         </dependency>
 
         <!-- Test dependencies -->

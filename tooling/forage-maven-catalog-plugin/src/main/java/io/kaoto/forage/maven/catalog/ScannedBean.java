@@ -1,6 +1,9 @@
 package io.kaoto.forage.maven.catalog;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import io.kaoto.forage.catalog.model.ForageBean;
 
 /**
@@ -15,6 +18,7 @@ public class ScannedBean {
     private List<String> components;
     private String feature;
     private String configClassName;
+    private Map<String, List<String>> runtimeDependencies;
 
     public ScannedBean() {
         this.bean = new ForageBean();
@@ -101,6 +105,33 @@ public class ScannedBean {
         this.configClassName = configClassName;
     }
 
+    public Map<String, List<String>> getRuntimeDependencies() {
+        return runtimeDependencies;
+    }
+
+    public void setRuntimeDependencies(Map<String, List<String>> runtimeDependencies) {
+        this.runtimeDependencies = runtimeDependencies;
+    }
+
+    /**
+     * Parses "variant:gav" format strings into a variant->gavs map.
+     */
+    public static Map<String, List<String>> parseVariantDependencies(List<String> rawDeps) {
+        if (rawDeps == null || rawDeps.isEmpty()) {
+            return null;
+        }
+        Map<String, List<String>> result = new HashMap<>();
+        for (String dep : rawDeps) {
+            int colonIndex = dep.indexOf(':');
+            if (colonIndex > 0) {
+                String variant = dep.substring(0, colonIndex);
+                String gav = dep.substring(colonIndex + 1);
+                result.computeIfAbsent(variant, k -> new ArrayList<>()).add(gav);
+            }
+        }
+        return result.isEmpty() ? null : result;
+    }
+
     /**
      * Creates a ForageBean for catalog output with GAV set.
      */
@@ -110,6 +141,7 @@ public class ScannedBean {
         catalogBean.setDescription(bean.getDescription());
         catalogBean.setClassName(bean.getClassName());
         catalogBean.setGav(gav);
+        catalogBean.setRuntimeDependencies(runtimeDependencies);
         return catalogBean;
     }
 

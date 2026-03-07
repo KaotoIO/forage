@@ -31,7 +31,8 @@ import io.quarkus.runtime.RuntimeValue;
         type = FactoryType.CONNECTION_FACTORY,
         autowired = true,
         configClass = ConnectionFactoryConfig.class,
-        variant = FactoryVariant.QUARKUS)
+        variant = FactoryVariant.QUARKUS,
+        runtimeDependencies = {"mvn:org.apache.camel.quarkus:camel-quarkus-jms"})
 public class ForageJmsProcessor {
 
     private static final Logger LOG = Logger.getLogger(ForageJmsProcessor.class);

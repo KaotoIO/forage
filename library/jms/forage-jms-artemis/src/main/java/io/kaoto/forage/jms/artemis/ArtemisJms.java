@@ -17,7 +17,8 @@ import io.kaoto.forage.jms.common.PooledConnectionFactory;
         value = "artemis",
         components = {"camel-jms"},
         description = "ActiveMQ Artemis message broker",
-        feature = "jakarta.jms.ConnectionFactory")
+        feature = "jakarta.jms.ConnectionFactory",
+        runtimeDependencies = {"quarkus:mvn:io.quarkiverse.artemis:quarkus-artemis-jms"})
 public class ArtemisJms extends PooledConnectionFactory {
 
     @Override

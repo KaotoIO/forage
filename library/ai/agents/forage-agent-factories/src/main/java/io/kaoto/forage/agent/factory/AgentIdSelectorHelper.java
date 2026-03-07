@@ -100,7 +100,7 @@ public class AgentIdSelectorHelper {
     }
 
     public static String select(MultiAgentConfig config, Exchange exchange) {
-        AgentSelector agentSelector = AgentIdSelectorHelper.create(config);
+        AgentSelector agentSelector = create(config);
         String agentId = agentSelector.select(exchange);
         LOG.info("Creating Agent for {} using ID {}", exchange.getExchangeId(), agentId);
         return agentId;

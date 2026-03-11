@@ -227,7 +227,7 @@ public final class AgentCreator {
         List<ServiceLoader.Provider<EmbeddingStoreProvider>> providers = findEmbeddingStoreProviders(classLoader);
 
         if (!providers.isEmpty()) {
-            ServiceLoader.Provider<EmbeddingStoreProvider> provider = providers.getFirst();
+            ServiceLoader.Provider<EmbeddingStoreProvider> provider = providers.get(0);
             Class<? extends EmbeddingStoreProvider> providerClass = provider.type();
             LOG.debug("Found embedding store provider for kind '{}': {}", modelKind, providerClass.getName());
             EmbeddingStoreProvider storeProvider = provider.get();
@@ -267,7 +267,7 @@ public final class AgentCreator {
                 findRetrievalAugmentorProviders(classLoader);
 
         if (!providers.isEmpty()) {
-            ServiceLoader.Provider<RetrievalAugmentorProvider> provider = providers.getFirst();
+            ServiceLoader.Provider<RetrievalAugmentorProvider> provider = providers.get(0);
             Class<? extends RetrievalAugmentorProvider> providerClass = provider.type();
             LOG.debug("Found retrieval augmentor provider for kind '{}': {}", modelKind, providerClass.getName());
             RetrievalAugmentorProvider retrievalAugmentorProvider = provider.get();

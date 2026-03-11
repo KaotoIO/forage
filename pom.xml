@@ -49,7 +49,7 @@
         <microprofile.version>3.1</microprofile.version>
         <mysql.version>9.5.0</mysql.version>
         <narayana.version>7.3.3.Final</narayana.version>
-        <pooled-jms.version>3.2.1</pooled-jms.version>
+        <pooled-jms.version>3.2.2</pooled-jms.version>
         <postgresql.version>42.7.7</postgresql.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <quarkus.version>3.32.1</quarkus.version>

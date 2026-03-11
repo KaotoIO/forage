@@ -18,7 +18,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.logging.Log;
-import org.apache.maven.project.MavenProject;
 import io.kaoto.forage.catalog.model.ConditionalBeanGroup;
 import io.kaoto.forage.catalog.model.ConditionalBeanInfo;
 import io.kaoto.forage.catalog.model.ConfigEntry;
@@ -72,11 +71,11 @@ public class CodeScanner {
      * This is a performance optimization to avoid multiple directory walks and file parsing.
      * (Issue 2 optimization)
      */
-    public ScanResult scanAllInOnePass(Artifact artifact, MavenProject rootProject) {
+    public ScanResult scanAllInOnePass(Artifact artifact, Path rootDir) {
         ScanResult result = new ScanResult();
 
         // Find the source directory (cached)
-        Path sourceDir = findSourceDirectory(artifact, rootProject);
+        Path sourceDir = findSourceDirectory(artifact, rootDir);
         if (sourceDir == null || !Files.exists(sourceDir)) {
             log.debug("No source directory found for artifact: " + artifact.getArtifactId());
             return result;
@@ -178,7 +177,7 @@ public class CodeScanner {
      * Uses caching to avoid redundant directory resolution.
      * Performs a single directory walk for both exact match and POM search (performance optimization).
      */
-    private Path findSourceDirectory(Artifact artifact, MavenProject rootProject) {
+    private Path findSourceDirectory(Artifact artifact, Path rootDir) {
         String artifactId = artifact.getArtifactId();
 
         // Check cache first
@@ -186,7 +185,7 @@ public class CodeScanner {
             return sourceDirectoryCache.get(artifactId);
         }
 
-        Path projectBase = Path.of(rootProject.getBasedir().getAbsolutePath());
+        Path projectBase = rootDir;
         log.debug("Project base directory: " + projectBase);
         log.debug("Looking for source directory for artifact: " + artifactId);
 

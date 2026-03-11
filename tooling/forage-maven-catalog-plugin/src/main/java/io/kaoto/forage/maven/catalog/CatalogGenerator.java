@@ -2,6 +2,7 @@ package io.kaoto.forage.maven.catalog;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,10 +58,10 @@ public class CatalogGenerator {
      * @return the catalog generation result
      * @throws IOException if file operations fail
      */
-    public CatalogResult generateCatalog(MavenProject project, File outputDirectory) throws IOException {
+    public CatalogResult generateCatalog(MavenProject project, File outputDirectory, File rootDir) throws IOException {
         log.info("Scanning project dependencies for Forage components...");
 
-        List<ForageComponent> components = discoverComponents(project);
+        List<ForageComponent> components = discoverComponents(project, rootDir);
 
         log.info("Found " + components.size() + " Forage components");
 
@@ -602,7 +603,7 @@ public class CatalogGenerator {
         return outputFile;
     }
 
-    private List<ForageComponent> discoverComponents(MavenProject project) {
+    private List<ForageComponent> discoverComponents(MavenProject project, File rootDir) {
         List<ForageComponent> components = new ArrayList<>();
 
         Set<Artifact> artifacts = project.getArtifacts();
@@ -613,11 +614,12 @@ public class CatalogGenerator {
         }
 
         CodeScanner codeScanner = new CodeScanner(log);
+        Path rootPath = rootDir.toPath();
 
         for (Artifact artifact : artifacts) {
             if (isForageComponent(artifact)) {
                 log.debug("Processing Forage component: " + artifact.getArtifactId());
-                ForageComponent component = createComponentFromArtifact(artifact, project.getParent(), codeScanner);
+                ForageComponent component = createComponentFromArtifact(artifact, rootPath, codeScanner);
                 components.add(component);
             }
         }
@@ -630,14 +632,13 @@ public class CatalogGenerator {
         return groupId.equals(Constants.FORAGE_GROUP_ID) || groupId.startsWith(Constants.FORAGE_GROUP_ID + ".");
     }
 
-    private ForageComponent createComponentFromArtifact(
-            Artifact artifact, MavenProject rootProject, CodeScanner codeScanner) {
+    private ForageComponent createComponentFromArtifact(Artifact artifact, Path rootDir, CodeScanner codeScanner) {
         ForageComponent component = new ForageComponent();
         component.setArtifactId(artifact.getArtifactId());
         component.setGroupId(artifact.getGroupId());
         component.setVersion(artifact.getVersion());
 
-        ScanResult scanResult = codeScanner.scanAllInOnePass(artifact, rootProject);
+        ScanResult scanResult = codeScanner.scanAllInOnePass(artifact, rootDir);
 
         component.setBeans(scanResult.getBeans());
         component.setFactories(scanResult.getFactories());

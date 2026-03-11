@@ -46,10 +46,14 @@ public class GenerateCatalogMojo extends AbstractMojo {
     private String format;
 
     /**
-     * The base directory
+     * The root directory of the multi-module project.
+     * Used to locate source directories for annotation scanning.
+     * This is more reliable than project.getParent().getBasedir() which can
+     * return null or a repository path when the parent is resolved from the
+     * Maven cache rather than the reactor.
      */
-    @Parameter(defaultValue = "${project.basedir}")
-    protected File baseDir;
+    @Parameter(defaultValue = "${maven.multiModuleProjectDirectory}", readonly = true)
+    protected File rootDir;
 
     @Override
     public void execute() throws MojoExecutionException {
@@ -66,7 +70,14 @@ public class GenerateCatalogMojo extends AbstractMojo {
             generator.setFormat(format);
 
             // Generate catalog
-            CatalogResult result = generator.generateCatalog(project, outputDirectory);
+            getLog().info("Using root directory for source scanning: " + rootDir.getAbsolutePath());
+            CatalogResult result = generator.generateCatalog(project, outputDirectory, rootDir);
+
+            if (result.getComponentCount() == 0) {
+                throw new MojoExecutionException(
+                        "Catalog generation produced 0 factories — this likely indicates a source scanning failure. "
+                                + "Root directory used: " + rootDir.getAbsolutePath());
+            }
 
             getLog().info("Catalog generation completed. Found %d components, generated %d files"
                     .formatted(result.getComponentCount(), result.getGeneratedFileCount()));
@@ -74,6 +85,8 @@ public class GenerateCatalogMojo extends AbstractMojo {
             // Log generated files
             result.getGeneratedFiles().forEach(file -> getLog().info("Generated: " + file.getAbsolutePath()));
 
+        } catch (MojoExecutionException e) {
+            throw e;
         } catch (Exception e) {
             throw new MojoExecutionException("Failed to generate Forage catalog", e);
         }

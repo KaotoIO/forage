@@ -43,6 +43,11 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-text</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-catalog</artifactId>
             <version>${project.version}</version>

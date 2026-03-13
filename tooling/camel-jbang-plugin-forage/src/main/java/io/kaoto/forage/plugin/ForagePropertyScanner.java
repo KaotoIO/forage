@@ -28,6 +28,11 @@ public final class ForagePropertyScanner {
     private ForagePropertyScanner() {}
 
     /**
+     * Tracks where a property was defined (for validation purposes).
+     */
+    public record PropertyOccurrence(File file, String fullPropertyName, String value) {}
+
+    /**
      * Scans the given directory for forage properties and returns them grouped by factory type key.
      * Each factory key maps to a property name to a list of all values found for that property
      * (supporting multiple named instances like ds1.jdbc.db.kind=mysql, ds2.jdbc.db.kind=postgresql).
@@ -38,7 +43,42 @@ public final class ForagePropertyScanner {
      */
     public static Map<String, Map<String, List<String>>> scanProperties(File directory, ForageCatalogReader catalog)
             throws IOException {
+        // Delegate to scanPropertiesWithFileTracking and convert PropertyOccurrence to String
+        Map<String, Map<String, List<PropertyOccurrence>>> withTracking =
+                scanPropertiesWithFileTracking(directory, catalog, false);
+
         Map<String, Map<String, List<String>>> result = new HashMap<>();
+        for (Map.Entry<String, Map<String, List<PropertyOccurrence>>> factoryEntry : withTracking.entrySet()) {
+            String factoryKey = factoryEntry.getKey();
+
+            Map<String, List<String>> propertyMap = new HashMap<>();
+            for (Map.Entry<String, List<PropertyOccurrence>> propEntry :
+                    factoryEntry.getValue().entrySet()) {
+                List<String> values = propEntry.getValue().stream()
+                        .map(PropertyOccurrence::value)
+                        .toList();
+                propertyMap.put(propEntry.getKey(), values);
+            }
+            result.put(factoryKey, propertyMap);
+        }
+
+        return result;
+    }
+
+    /**
+     * Scans properties files and tracks where each property is defined.
+     * Returns a map of factory type key to properties, plus optionally a special "__unknown__" key for unparseable properties.
+     *
+     * @param directory the directory to scan
+     * @param catalog the catalog reader
+     * @param trackUnknown if true, unparseable forage properties are tracked in "__unknown__" bucket
+     * @return map of factoryTypeKey -> (propertyName -> [PropertyOccurrence])
+     * @throws IOException if properties files cannot be read
+     */
+    public static Map<String, Map<String, List<PropertyOccurrence>>> scanPropertiesWithFileTracking(
+            File directory, ForageCatalogReader catalog, boolean trackUnknown) throws IOException {
+
+        Map<String, Map<String, List<PropertyOccurrence>>> result = new HashMap<>();
 
         List<File> propertiesFiles = findPropertiesFiles(directory, catalog);
         for (File file : propertiesFiles) {
@@ -55,17 +95,41 @@ public final class ForagePropertyScanner {
 
                 String remainder = matcher.group(1);
                 ParseResult parsed = parsePropertyKey(remainder, catalog);
+
+                String value = props.getProperty(key);
+                PropertyOccurrence occurrence = new PropertyOccurrence(file, key, value);
+
                 if (parsed == null) {
+                    // Property starts with "forage." but doesn't match any known pattern
+                    if (trackUnknown) {
+                        result.computeIfAbsent("__unknown__", k -> new HashMap<>())
+                                .computeIfAbsent(remainder, k -> new ArrayList<>())
+                                .add(occurrence);
+                    }
                     continue;
                 }
 
                 result.computeIfAbsent(parsed.factoryTypeKey, k -> new HashMap<>())
                         .computeIfAbsent(parsed.propertyName, k -> new ArrayList<>())
-                        .add(props.getProperty(key));
+                        .add(occurrence);
             }
         }
 
         return result;
+    }
+
+    /**
+     * Scans properties files and tracks where each property is defined.
+     * Unparseable properties are tracked in "__unknown__" bucket.
+     *
+     * @param directory the directory to scan
+     * @param catalog the catalog reader
+     * @return map of factoryTypeKey -> (propertyName -> [PropertyOccurrence])
+     * @throws IOException if properties files cannot be read
+     */
+    public static Map<String, Map<String, List<PropertyOccurrence>>> scanPropertiesWithFileTracking(
+            File directory, ForageCatalogReader catalog) throws IOException {
+        return scanPropertiesWithFileTracking(directory, catalog, true);
     }
 
     private static List<File> findPropertiesFiles(File dir, ForageCatalogReader catalog) throws IOException {

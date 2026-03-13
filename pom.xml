@@ -41,6 +41,7 @@
         <maven-plugin-plugin.version>3.15.2</maven-plugin-plugin.version>
         <maven-plugin-testing-harness.version>3.5.1</maven-plugin-testing-harness.version>
         <build-helper-maven-plugin.version>3.4.0</build-helper-maven-plugin.version>
+        <commons-text.version>1.15.0</commons-text.version>
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <maven-resources-plugin.version>3.4.0</maven-resources-plugin.version>
         <maven.compiler.source>17</maven.compiler.source>
@@ -145,6 +146,12 @@
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-core</artifactId>
                 <version>${log4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>${commons-text.version}</version>
             </dependency>
 
             <!-- Test dependencies -->

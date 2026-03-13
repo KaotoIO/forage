@@ -161,4 +161,27 @@ public class JdbcTest implements ForageIntegrationTest {
         }
         Assertions.assertTrue(error != null && error.startsWith("Action timeout after"));
     }
+
+    @Test
+    @CitrusTest()
+    public void validationStrictModeFailsWithInvalidProperties(ForageTestCaseRunner runner) {
+        // Given: properties file with validation warnings (typo: 'usernam' instead of 'username')
+        // When: running with --strict flag
+        // Then: the validation should fail and prevent the route from starting
+
+        String error = null;
+        try {
+            runner.when(forageRun("validation-strict-test", "forage-datasource-factory-invalid.properties", null)
+                    .withArg("--strict")
+                    .dumpIntegrationOutput(true));
+        } catch (Exception e) {
+            error = e.getMessage();
+        }
+
+        // Verify that the run failed due to validation in strict mode
+        Assertions.assertNotNull(error, "Expected validation to fail with --strict flag");
+        Assertions.assertTrue(
+                error.contains("exit code 1") || error.contains("Failed to verify"),
+                "Expected validation failure with exit code 1, got: " + error);
+    }
 }

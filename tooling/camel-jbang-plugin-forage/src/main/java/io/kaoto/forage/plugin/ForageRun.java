@@ -5,10 +5,26 @@ import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.commands.Run;
 import io.kaoto.forage.core.common.ExportCustomizer;
 import io.kaoto.forage.core.common.RuntimeType;
+import picocli.CommandLine;
 
 public class ForageRun extends Run {
+
+    @CommandLine.Mixin
+    private PropertyValidationMixin validation;
+
     public ForageRun(CamelJBangMain main) {
         super(main);
+    }
+
+    @Override
+    public Integer doCall() throws Exception {
+        // Validate properties before running
+        int validationResult = validation.validateAndReport(printer());
+        if (validationResult != 0) {
+            return validationResult;
+        }
+
+        return super.doCall();
     }
 
     /**

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 import io.kaoto.forage.catalog.model.ConditionalBeanGroup;
 import io.kaoto.forage.catalog.model.ConfigEntry;
 import io.kaoto.forage.catalog.model.FactoryVariant;
@@ -589,5 +590,140 @@ public final class ForageCatalogReader {
             }
             return Optional.of(prefixPropertyName.substring("forage.".length()));
         }
+    }
+
+    /**
+     * Gets all bean definitions for a specific factory type.
+     *
+     * <p><b>Factory vs Feature:</b>
+     * <ul>
+     *   <li><b>Factory</b> = Top-level category (jdbc, jms, agent)</li>
+     *   <li><b>Feature</b> = Sub-category within a factory (Chat Model, Memory)</li>
+     * </ul>
+     *
+     * @param factoryTypeKey the factory type key (e.g., "jdbc", "agent")
+     * @return list of all ForageBean objects, or empty list if factory not found
+     * @see #getBeanNamesByFeature(String) to query by feature instead
+     */
+    public List<ForageBean> getAllBeansForFactory(String factoryTypeKey) {
+        // Validation: null or empty factory key returns empty list
+        if (factoryTypeKey == null || factoryTypeKey.isBlank()) {
+            return List.of();
+        }
+
+        // Find the factory matching the requested type
+        Optional<ForageFactory> factory = findFactoryByTypeKey(factoryTypeKey);
+        if (factory.isEmpty()) {
+            return List.of(); // Early return: factory not found
+        }
+
+        // Extract all beans from all features in this factory
+        return extractAllBeansFromFactory(factory.get());
+    }
+
+    /**
+     * Gets bean names for a specific feature category across all factories.
+     *
+     * <p><b>Factory vs Feature:</b>
+     * <ul>
+     *   <li><b>Factory</b> = Top-level category (jdbc, jms, agent)</li>
+     *   <li><b>Feature</b> = Sub-category within a factory (Chat Model, Memory)</li>
+     * </ul>
+     *
+     * @param feature the feature category name (e.g., "Chat Model", "Memory")
+     * @return list of bean names only (not full bean objects), or empty list if not found
+     * @see #getAllBeansForFactory(String) to get full bean objects instead
+     */
+    public List<String> getBeanNamesByFeature(String feature) {
+        // Validation: null or empty feature returns empty list
+        if (feature == null || feature.isBlank()) {
+            return List.of();
+        }
+
+        // Defensive null check mirroring parseCatalog()
+        if (catalog.getFactories() == null) {
+            return List.of();
+        }
+
+        return catalog.getFactories().stream()
+                .map(ForageFactory::getBeansByFeature)
+                .filter(beansByFeature -> beansByFeature != null)
+                .flatMap(List::stream)
+                .filter(featureBeans -> feature.equalsIgnoreCase(featureBeans.getFeature()))
+                .flatMap(this::extractBeanNamesFromFeature)
+                .toList();
+    }
+
+    // ─── Helper Methods ───────────────────────────────────────────────────
+
+    /**
+     * Finds a factory by its type key (case-insensitive).
+     */
+    private Optional<ForageFactory> findFactoryByTypeKey(String factoryTypeKey) {
+        // Defensive null check mirroring parseCatalog()
+        if (catalog.getFactories() == null) {
+            return Optional.empty();
+        }
+
+        return catalog.getFactories().stream()
+                .filter(factory -> factoryTypeKey.equalsIgnoreCase(extractFactoryTypeKeyFromFactory(factory)))
+                .findFirst();
+    }
+
+    /**
+     * Extracts all beans from all features within a factory.
+     * Filters out null beans and null feature groups.
+     */
+    private List<ForageBean> extractAllBeansFromFactory(ForageFactory factory) {
+        List<FeatureBeans> beansByFeature = factory.getBeansByFeature();
+        if (beansByFeature == null) {
+            return List.of();
+        }
+
+        return beansByFeature.stream()
+                .map(FeatureBeans::getBeans)
+                .filter(beans -> beans != null)
+                .flatMap(List::stream)
+                .toList();
+    }
+
+    /**
+     * Extracts non-null bean names from a feature group.
+     */
+    private Stream<String> extractBeanNamesFromFeature(FeatureBeans featureBeans) {
+        List<ForageBean> beans = featureBeans.getBeans();
+        if (beans == null) {
+            return Stream.empty();
+        }
+
+        return beans.stream().map(ForageBean::getName).filter(name -> name != null);
+    }
+
+    /**
+     * Extracts the factory type key from a factory object.
+     * Uses the same logic as parseCatalog to determine the key.
+     */
+    private String extractFactoryTypeKeyFromFactory(ForageFactory factory) {
+        List<ConfigEntry> configEntries = factory.getConfigEntries();
+        if (configEntries == null || configEntries.isEmpty()) {
+            return null;
+        }
+
+        // Look for prefix type first (highest priority, same as parseCatalog)
+        for (ConfigEntry entry : configEntries) {
+            if ("prefix".equals(entry.getType())) {
+                return extractFactoryTypeKeyFromPropertyName(entry.getName());
+            }
+        }
+
+        // Then look for bean-name type (canonical property prefix)
+        for (ConfigEntry entry : configEntries) {
+            if ("bean-name".equals(entry.getType())) {
+                return extractFactoryTypeKeyFromPropertyName(entry.getName());
+            }
+        }
+
+        // Fall back to first config entry
+        return extractFactoryTypeKeyFromPropertyName(configEntries.get(0).getName());
     }
 }

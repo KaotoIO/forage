@@ -5,10 +5,35 @@ import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.commands.Run;
 import io.kaoto.forage.core.common.ExportCustomizer;
 import io.kaoto.forage.core.common.RuntimeType;
+import picocli.CommandLine;
 
 public class ForageRun extends Run {
+
+    @CommandLine.Option(
+            names = {"--strict"},
+            description = "Fail on property validation warnings",
+            defaultValue = "false")
+    private boolean strict;
+
+    @CommandLine.Option(
+            names = {"--skip-validation"},
+            description = "Skip property validation",
+            defaultValue = "false")
+    private boolean skipValidation;
+
     public ForageRun(CamelJBangMain main) {
         super(main);
+    }
+
+    @Override
+    public Integer doCall() throws Exception {
+        // Validate properties before running
+        int validationResult = ForagePropertyValidator.validateAndReport(printer(), skipValidation, strict);
+        if (validationResult != 0) {
+            return validationResult;
+        }
+
+        return super.doCall();
     }
 
     /**

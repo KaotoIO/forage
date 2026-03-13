@@ -5,7 +5,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
-import org.apache.camel.dsl.jbang.core.commands.Export;
 import org.apache.camel.dsl.jbang.core.common.CamelJBangPlugin;
 import org.apache.camel.dsl.jbang.core.common.Plugin;
 import org.apache.camel.dsl.jbang.core.common.PluginExporter;
@@ -30,7 +29,7 @@ public class ForagePlugin implements Plugin {
                                 new CommandLine(new ConfigCommand(main))
                                         .addSubcommand("read", new CommandLine(new ConfigReadCommand(main)))
                                         .addSubcommand("write", new CommandLine(new ConfigWriteCommand(main))))
-                        .addSubcommand("export", new Export(main))
+                        .addSubcommand("export", new ForageExport(main))
                         .addSubcommand("run", new ForageRun(main)));
     }
 

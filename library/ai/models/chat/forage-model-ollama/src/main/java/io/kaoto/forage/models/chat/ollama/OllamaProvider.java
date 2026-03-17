@@ -1,5 +1,6 @@
 package io.kaoto.forage.models.chat.ollama;
 
+import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.kaoto.forage.core.ai.ModelProvider;
@@ -68,9 +69,10 @@ public class OllamaProvider implements ModelProvider {
         Integer numCtx = config.numCtx();
         Boolean logRequests = config.logRequests();
         Boolean logResponses = config.logResponses();
+        Duration timeout = config.timeout();
 
         LOG.trace(
-                "Creating Ollama model: {} at {} with configuration: temperature={}, topK={}, topP={}, minP={}, numCtx={}, logRequests={}, logResponses={}",
+                "Creating Ollama model: {} at {} with configuration: temperature={}, topK={}, topP={}, minP={}, numCtx={}, logRequests={}, logResponses={}, timeout={}",
                 modelName,
                 baseUrl,
                 temperature,
@@ -79,7 +81,8 @@ public class OllamaProvider implements ModelProvider {
                 minP,
                 numCtx,
                 logRequests,
-                logResponses);
+                logResponses,
+                timeout);
 
         OllamaChatModel.OllamaChatModelBuilder builder =
                 OllamaChatModel.builder().baseUrl(baseUrl).modelName(modelName);
@@ -111,6 +114,10 @@ public class OllamaProvider implements ModelProvider {
 
         if (logResponses != null) {
             builder.logResponses(logResponses);
+        }
+
+        if (timeout != null) {
+            builder.timeout(timeout);
         }
 
         return builder.build();

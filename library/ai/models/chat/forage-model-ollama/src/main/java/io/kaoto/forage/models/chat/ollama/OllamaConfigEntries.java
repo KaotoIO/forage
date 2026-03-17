@@ -86,6 +86,15 @@ public final class OllamaConfigEntries extends ConfigEntries {
             "boolean",
             false,
             ConfigTag.ADVANCED);
+    public static final ConfigModule TIMEOUT = ConfigModule.of(
+            OllamaConfig.class,
+            "forage.ollama.timeout",
+            "Request timeout duration in ISO-8601 format (e.g. PT120S for 120 seconds)",
+            "Timeout",
+            null,
+            "string",
+            false,
+            ConfigTag.COMMON);
 
     static {
         initModules(
@@ -98,6 +107,7 @@ public final class OllamaConfigEntries extends ConfigEntries {
                 MIN_P,
                 NUM_CTX,
                 LOG_REQUESTS,
-                LOG_RESPONSES);
+                LOG_RESPONSES,
+                TIMEOUT);
     }
 }

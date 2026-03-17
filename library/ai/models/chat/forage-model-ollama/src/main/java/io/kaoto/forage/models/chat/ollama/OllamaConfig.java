@@ -1,5 +1,6 @@
 package io.kaoto.forage.models.chat.ollama;
 
+import java.time.Duration;
 import io.kaoto.forage.core.util.config.AbstractConfig;
 
 import static io.kaoto.forage.models.chat.ollama.OllamaConfigEntries.BASE_URL;
@@ -9,6 +10,7 @@ import static io.kaoto.forage.models.chat.ollama.OllamaConfigEntries.MIN_P;
 import static io.kaoto.forage.models.chat.ollama.OllamaConfigEntries.MODEL_NAME;
 import static io.kaoto.forage.models.chat.ollama.OllamaConfigEntries.NUM_CTX;
 import static io.kaoto.forage.models.chat.ollama.OllamaConfigEntries.TEMPERATURE;
+import static io.kaoto.forage.models.chat.ollama.OllamaConfigEntries.TIMEOUT;
 import static io.kaoto.forage.models.chat.ollama.OllamaConfigEntries.TOP_K;
 import static io.kaoto.forage.models.chat.ollama.OllamaConfigEntries.TOP_P;
 
@@ -335,5 +337,27 @@ public class OllamaConfig extends AbstractConfig {
      */
     public Boolean logResponses() {
         return get(LOG_RESPONSES).map(Boolean::parseBoolean).orElse(null);
+    }
+
+    /**
+     * Returns the request timeout duration.
+     *
+     * <p>This parameter controls how long the client will wait for a response from the
+     * Ollama server. Larger models running locally may need longer timeouts.
+     *
+     * <p><strong>Configuration Sources (in order of precedence):</strong>
+     * <ol>
+     *   <li>OLLAMA_TIMEOUT environment variable</li>
+     *   <li>ollama.timeout system property</li>
+     *   <li>timeout property in forage-model-ollama.properties</li>
+     *   <li>No default value (returns null if not configured, LangChain4j defaults to 60s)</li>
+     * </ol>
+     *
+     * <p><strong>Format:</strong> ISO-8601 duration (e.g. PT120S for 120 seconds, PT5M for 5 minutes)
+     *
+     * @return the timeout duration, or null if not configured
+     */
+    public Duration timeout() {
+        return get(TIMEOUT).map(Duration::parse).orElse(null);
     }
 }

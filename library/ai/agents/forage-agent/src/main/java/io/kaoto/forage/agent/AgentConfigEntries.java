@@ -173,6 +173,17 @@ public final class AgentConfigEntries extends ConfigEntries {
             false,
             ConfigTag.ADVANCED);
 
+    // Timeout
+    public static final ConfigModule TIMEOUT = ConfigModule.of(
+            AgentConfig.class,
+            "forage.agent.timeout",
+            "Request timeout duration in ISO-8601 format (e.g. PT120S for 120 seconds)",
+            "Timeout",
+            null,
+            "string",
+            false,
+            ConfigTag.COMMON);
+
     // Memory configuration
     public static final ConfigModule MEMORY_MAX_MESSAGES = ConfigModule.of(
             AgentConfig.class,
@@ -357,6 +368,7 @@ public final class AgentConfigEntries extends ConfigEntries {
                 DEPLOYMENT_NAME,
                 LOG_REQUESTS,
                 LOG_RESPONSES,
+                TIMEOUT,
                 MEMORY_MAX_MESSAGES,
                 MEMORY_REDIS_HOST,
                 MEMORY_REDIS_PORT,

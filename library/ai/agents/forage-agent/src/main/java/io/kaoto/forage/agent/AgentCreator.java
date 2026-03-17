@@ -173,6 +173,7 @@ public final class AgentCreator {
                 setSystemPropertyIfNotNull(setKeys, prefix, providerPrefix, "deployment.name", config.deploymentName());
                 setSystemPropertyIfNotNull(setKeys, prefix, providerPrefix, "log.requests", config.logRequests());
                 setSystemPropertyIfNotNull(setKeys, prefix, providerPrefix, "log.responses", config.logResponses());
+                setSystemPropertyIfNotNull(setKeys, prefix, providerPrefix, "timeout", config.timeout());
 
                 try {
                     return modelProvider.create(prefix);

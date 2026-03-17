@@ -33,6 +33,7 @@ import static io.kaoto.forage.agent.AgentConfigEntries.MEMORY_REDIS_PORT;
 import static io.kaoto.forage.agent.AgentConfigEntries.MODEL_KIND;
 import static io.kaoto.forage.agent.AgentConfigEntries.MODEL_NAME;
 import static io.kaoto.forage.agent.AgentConfigEntries.TEMPERATURE;
+import static io.kaoto.forage.agent.AgentConfigEntries.TIMEOUT;
 import static io.kaoto.forage.agent.AgentConfigEntries.TOP_K;
 import static io.kaoto.forage.agent.AgentConfigEntries.TOP_P;
 
@@ -131,6 +132,10 @@ public class AgentConfig extends AbstractConfig {
 
     public Boolean logResponses() {
         return get(LOG_RESPONSES).map(Boolean::parseBoolean).orElse(null);
+    }
+
+    public String timeout() {
+        return get(TIMEOUT).orElse(null);
     }
 
     // Memory configuration

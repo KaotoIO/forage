@@ -56,6 +56,17 @@ public final class ExportHelper {
         return getString(
                 "project.version", ResourceType.versions, "Could not determine project version from properties file.");
     }
+    /**
+     * Gets the project version from the versions.properties file. (which is populated during buildtime)
+     *
+     * @return the project version
+     */
+    public static String getCiJavaVersion() {
+        return getString(
+                "ci-java.version",
+                ResourceType.versions,
+                "Could not determine ci-java.version version from properties file.");
+    }
 
     /**
      * Reads property from the file versions.properties (which contains build time resolved versions)

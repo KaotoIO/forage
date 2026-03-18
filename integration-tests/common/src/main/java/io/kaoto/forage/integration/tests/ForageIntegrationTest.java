@@ -6,6 +6,7 @@ import org.citrusframework.TestActionSupport;
 import org.citrusframework.actions.camel.CamelIntegrationRunCustomizedActionBuilder;
 import org.citrusframework.spi.Resource;
 import org.citrusframework.spi.Resources;
+import io.kaoto.forage.plugin.ExportHelper;
 
 /**
  * Interface required for special test cases:
@@ -54,7 +55,7 @@ public interface ForageIntegrationTest extends TestActionSupport {
         if (!Strings.isNullOrEmpty(camelRoute)) {
             builder.addResource(classResource(camelRoute));
         }
-        return builder;
+        return builder.withArgs("--java-version=" + ExportHelper.getCiJavaVersion());
     }
 
     default Resource classResource(String resourceRelativePath) {

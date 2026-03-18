@@ -2,6 +2,7 @@ package io.kaoto.forage.models.chat.ollama;
 
 import java.time.Duration;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -21,6 +22,20 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @DisplayName("OllamaConfig Configuration Loading Tests")
 class OllamaConfigTest {
+
+    @AfterEach
+    void clearSystemProperties() {
+        System.clearProperty("forage.ollama.base.url");
+        System.clearProperty("forage.ollama.model.name");
+        System.clearProperty("forage.ollama.temperature");
+        System.clearProperty("forage.ollama.top.k");
+        System.clearProperty("forage.ollama.top.p");
+        System.clearProperty("forage.ollama.min.p");
+        System.clearProperty("forage.ollama.num.ctx");
+        System.clearProperty("forage.ollama.log.requests");
+        System.clearProperty("forage.ollama.log.responses");
+        System.clearProperty("forage.ollama.timeout");
+    }
 
     @Test
     @DisplayName("Should load base URL from system property")

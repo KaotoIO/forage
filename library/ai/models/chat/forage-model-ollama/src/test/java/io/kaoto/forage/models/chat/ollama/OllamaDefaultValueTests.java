@@ -38,6 +38,7 @@ class OllamaDefaultValueTests {
         assertThat(config.numCtx()).isNull();
         assertThat(config.logRequests()).isNull();
         assertThat(config.logResponses()).isNull();
+        assertThat(config.timeout()).isNull();
     }
 
     @Test

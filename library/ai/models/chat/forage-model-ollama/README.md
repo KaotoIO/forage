@@ -40,6 +40,7 @@ The Ollama provider is configured through environment variables, system properti
 | `OLLAMA_NUM_CTX` | `ollama.num.ctx` | Context window size | None | Positive integers |
 | `OLLAMA_LOG_REQUESTS` | `ollama.log.requests` | Enable request logging | None | true/false |
 | `OLLAMA_LOG_RESPONSES` | `ollama.log.responses` | Enable response logging | None | true/false |
+| `OLLAMA_TIMEOUT` | `ollama.timeout` | Request timeout duration in ISO-8601 format | None | e.g. `PT120S`, `PT5M` |
 
 ### Configuration Sources Priority
 
@@ -72,6 +73,7 @@ export OLLAMA_TOP_P="0.9"
 export OLLAMA_NUM_CTX="2048"
 export OLLAMA_LOG_REQUESTS="false"
 export OLLAMA_LOG_RESPONSES="false"
+export OLLAMA_TIMEOUT="PT120S"
 ```
 
 ### Configuration File
@@ -93,6 +95,9 @@ ollama.num.ctx=2048
 # Logging configuration
 ollama.log.requests=false
 ollama.log.responses=false
+
+# Timeout configuration
+ollama.timeout=PT120S
 ```
 
 ## Supported Models
@@ -129,6 +134,9 @@ Common Ollama models you can use:
 - Depends on your model and available memory
 - Larger values allow longer conversations but use more resources
 - Common values: 512, 1024, 2048, 4096
+
+### Timeout
+- Uses ISO-8601 duration format (e.g., `PT30S` for 30 seconds, `PT5M` for 5 minutes)
 
 ## Troubleshooting
 

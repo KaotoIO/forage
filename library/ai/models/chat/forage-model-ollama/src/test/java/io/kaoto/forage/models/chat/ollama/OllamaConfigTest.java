@@ -1,5 +1,7 @@
 package io.kaoto.forage.models.chat.ollama;
 
+import java.time.Duration;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,6 +52,7 @@ class OllamaConfigTest {
         System.setProperty("forage.ollama.num.ctx", "2048");
         System.setProperty("forage.ollama.log.requests", "true");
         System.setProperty("forage.ollama.log.responses", "false");
+        System.setProperty("forage.ollama.timeout", "PT120S");
 
         OllamaConfig config = new OllamaConfig();
 
@@ -60,5 +63,6 @@ class OllamaConfigTest {
         assertThat(config.numCtx()).isEqualTo(2048);
         assertThat(config.logRequests()).isTrue();
         assertThat(config.logResponses()).isFalse();
+        assertThat(config.timeout()).isEqualTo(Duration.parse("PT120S"));
     }
 }

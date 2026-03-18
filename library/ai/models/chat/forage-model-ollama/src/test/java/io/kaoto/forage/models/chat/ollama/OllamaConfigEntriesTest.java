@@ -43,6 +43,7 @@ class OllamaConfigEntriesTest {
             assertThat(OllamaConfigEntries.NUM_CTX.name()).isEqualTo("forage.ollama.num.ctx");
             assertThat(OllamaConfigEntries.LOG_REQUESTS.name()).isEqualTo("forage.ollama.log.requests");
             assertThat(OllamaConfigEntries.LOG_RESPONSES.name()).isEqualTo("forage.ollama.log.responses");
+            assertThat(OllamaConfigEntries.TIMEOUT.name()).isEqualTo("forage.ollama.timeout");
         }
 
         @Test
@@ -57,6 +58,7 @@ class OllamaConfigEntriesTest {
             assertThat(OllamaConfigEntries.NUM_CTX.config()).isEqualTo(OllamaConfig.class);
             assertThat(OllamaConfigEntries.LOG_REQUESTS.config()).isEqualTo(OllamaConfig.class);
             assertThat(OllamaConfigEntries.LOG_RESPONSES.config()).isEqualTo(OllamaConfig.class);
+            assertThat(OllamaConfigEntries.TIMEOUT.config()).isEqualTo(OllamaConfig.class);
         }
     }
 
@@ -90,6 +92,7 @@ class OllamaConfigEntriesTest {
             assertThat(entries).containsKey(OllamaConfigEntries.NUM_CTX);
             assertThat(entries).containsKey(OllamaConfigEntries.LOG_REQUESTS);
             assertThat(entries).containsKey(OllamaConfigEntries.LOG_RESPONSES);
+            assertThat(entries).containsKey(OllamaConfigEntries.TIMEOUT);
         }
 
         @Test
@@ -108,6 +111,7 @@ class OllamaConfigEntriesTest {
             assertThat(entries.get(OllamaConfigEntries.NUM_CTX)).isNotNull();
             assertThat(entries.get(OllamaConfigEntries.LOG_REQUESTS)).isNotNull();
             assertThat(entries.get(OllamaConfigEntries.LOG_RESPONSES)).isNotNull();
+            assertThat(entries.get(OllamaConfigEntries.TIMEOUT)).isNotNull();
         }
     }
 

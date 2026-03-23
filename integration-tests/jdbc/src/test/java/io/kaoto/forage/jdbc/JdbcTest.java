@@ -71,6 +71,7 @@ public class JdbcTest implements ForageIntegrationTest {
         // running jbang forage run with required resources and required runtime
         runner.when(forageRun(INTEGRATION_NAME, "forage-datasource-factory.properties", "jdbc-routes.camel.yaml")
                 .addResource(classResource("MyAggregationStrategy.java"))
+                .dumpIntegrationOutput(true)
                 // required if more test are using the same route
                 .autoRemove(false)
                 .withEnvs(Collections.singletonMap("FORAGE_JDBC_URL", postgres.getJdbcUrl())));

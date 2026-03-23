@@ -50,7 +50,7 @@
         <mysql.version>9.5.0</mysql.version>
         <narayana.version>7.3.3.Final</narayana.version>
         <pooled-jms.version>3.2.2</pooled-jms.version>
-        <postgresql.version>42.7.7</postgresql.version>
+        <postgresql.version>42.7.10</postgresql.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <quarkus.version>3.32.1</quarkus.version>
         <quarkus-artemis-jms.version>3.12.1</quarkus-artemis-jms.version>

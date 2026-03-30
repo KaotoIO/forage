@@ -43,6 +43,7 @@ public class ForageTestCaseRunner extends DefaultTestCaseRunner {
 
     private <T extends TestAction> void initializeTestAction(CamelIntegrationRunCustomizedActionBuilder<?, ?> builder) {
         builder.withSystemProperty("camel.jbang.quarkusVersion", ExportHelper.getQuarkusVersion());
+        builder.withArg("--java-version=" + System.getProperty("java.specification.version"));
         String runtime = System.getProperty(
                 IntegrationTestSetupExtension.RUNTIME_PROPERTY,
                 System.getenv(IntegrationTestSetupExtension.RUNTIME_PROPERTY));

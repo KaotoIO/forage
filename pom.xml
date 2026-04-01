@@ -64,7 +64,7 @@
         <spring.version>6.2.17</spring.version>
         <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
         <testcontainers.version>2.0.3</testcontainers.version>
-        <vertx.version>4.5.25</vertx.version>
+        <vertx.version>5.0.10</vertx.version>
 
         <!-- Test container image properties -->
         <postgres.container.image>mirror.gcr.io/postgres:17.5-alpine</postgres.container.image>

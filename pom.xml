@@ -46,7 +46,7 @@
         <maven-resources-plugin.version>3.4.0</maven-resources-plugin.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <maven.version>3.9.11</maven.version>
+        <maven.version>3.9.14</maven.version>
         <microprofile.version>3.1</microprofile.version>
         <mysql.version>9.5.0</mysql.version>
         <narayana.version>7.3.3.Final</narayana.version>

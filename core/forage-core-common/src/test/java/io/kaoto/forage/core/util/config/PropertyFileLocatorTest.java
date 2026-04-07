@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -155,5 +156,22 @@ class PropertyFileLocatorTest {
         Properties props = new Properties();
         Set<String> prefixes = PropertyFileLocator.readPrefixes(props, "forage\\.(.+)\\.jdbc\\..+");
         assertThat(prefixes).isEmpty();
+    }
+
+    @Test
+    void builtInSourcesContainExpectedTypes() {
+        List<PropertyFileSource> sources = PropertyFileLocator.getBuiltInSources();
+        assertThat(sources).hasSize(2);
+        assertThat(sources.get(0)).isInstanceOf(WorkingDirectoryPropertyFileSource.class);
+        assertThat(sources.get(1)).isInstanceOf(ConfigDirPropertyFileSource.class);
+    }
+
+    @Test
+    void builtInSourcesAreSortedByDescendingPriority() {
+        List<PropertyFileSource> sources = PropertyFileLocator.getBuiltInSources();
+        for (int i = 0; i < sources.size() - 1; i++) {
+            assertThat(sources.get(i).priority())
+                    .isGreaterThanOrEqualTo(sources.get(i + 1).priority());
+        }
     }
 }

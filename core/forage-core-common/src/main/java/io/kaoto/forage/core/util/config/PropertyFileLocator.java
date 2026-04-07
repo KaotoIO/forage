@@ -1,11 +1,11 @@
 package io.kaoto.forage.core.util.config;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
@@ -29,11 +29,14 @@ import org.slf4j.LoggerFactory;
  *   <li>Current working directory</li>
  *   <li>{@code forage.config.dir} system property</li>
  *   <li>{@code FORAGE_CONFIG_DIR} environment variable</li>
+ *   <li>Pluggable sources discovered via {@link PluggablePropertyFileSourceLoader}</li>
  * </ol>
  *
  * @since 1.2
  * @see ConfigStore
  * @see ConfigHelper
+ * @see PropertyFileSource
+ * @see PluggablePropertyFileSource
  */
 public final class PropertyFileLocator {
 
@@ -41,6 +44,16 @@ public final class PropertyFileLocator {
 
     static final String CONFIG_DIR_PROPERTY = "forage.config.dir";
     static final String CONFIG_DIR_ENV = "FORAGE_CONFIG_DIR";
+
+    private static final List<PropertyFileSource> BUILT_IN_SOURCES;
+
+    static {
+        List<PropertyFileSource> sources = new ArrayList<>();
+        sources.add(new WorkingDirectoryPropertyFileSource());
+        sources.add(new ConfigDirPropertyFileSource());
+        sources.sort(Comparator.comparingInt(PropertyFileSource::priority).reversed());
+        BUILT_IN_SOURCES = List.copyOf(sources);
+    }
 
     private PropertyFileLocator() {}
 
@@ -61,39 +74,45 @@ public final class PropertyFileLocator {
     }
 
     /**
-     * Attempts to open a properties file from the filesystem following the standard
-     * resolution order: working directory first, then the configuration directory.
+     * Attempts to open a properties file by consulting all registered
+     * {@link PropertyFileSource} instances (built-in and pluggable) in priority order.
+     *
+     * <p>Built-in sources (working directory, config directory) are tried first,
+     * followed by any {@link PluggablePropertyFileSource} implementations discovered via
+     * {@link java.util.ServiceLoader}.
      *
      * @param fileName the file name to locate (e.g., {@code "application.properties"})
      * @return an open {@link InputStream} for the file, or {@code null} if not found
      */
     public static InputStream locateFromFilesystem(String fileName) {
-        // Try working directory first
-        File file = Path.of("", fileName).toAbsolutePath().toFile();
-        if (file.exists()) {
-            try {
-                LOG.debug("Loading {} from working directory: {}", fileName, file.getAbsolutePath());
-                return new FileInputStream(file);
-            } catch (IOException e) {
-                LOG.debug("Failed to load {} from working directory", fileName, e);
+        // Try built-in sources first (sorted by descending priority)
+        for (PropertyFileSource source : BUILT_IN_SOURCES) {
+            InputStream is = source.locate(fileName);
+            if (is != null) {
+                LOG.debug("Located {} via {}", fileName, source.name());
+                return is;
             }
         }
 
-        // Try config directory (system property, then env var)
-        String configDir = resolveConfigDir();
-        if (configDir != null) {
-            file = Path.of(configDir, fileName).toAbsolutePath().toFile();
-            if (file.exists()) {
-                try {
-                    LOG.debug("Loading {} from config dir: {}", fileName, file.getAbsolutePath());
-                    return new FileInputStream(file);
-                } catch (IOException e) {
-                    LOG.debug("Failed to load {} from config dir", fileName, e);
-                }
+        // Then try pluggable sources discovered via ServiceLoader
+        for (PluggablePropertyFileSource source : PluggablePropertyFileSourceLoader.getSources()) {
+            InputStream is = source.locate(fileName);
+            if (is != null) {
+                LOG.debug("Located {} via pluggable source {}", fileName, source.name());
+                return is;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Returns an unmodifiable list of the built-in property file sources.
+     *
+     * @return the built-in sources sorted by descending priority
+     */
+    public static List<PropertyFileSource> getBuiltInSources() {
+        return BUILT_IN_SOURCES;
     }
 
     /**

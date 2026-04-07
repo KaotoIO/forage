@@ -161,9 +161,10 @@ class PropertyFileLocatorTest {
     @Test
     void builtInSourcesContainExpectedTypes() {
         List<PropertyFileSource> sources = PropertyFileLocator.getBuiltInSources();
-        assertThat(sources).hasSize(2);
+        assertThat(sources).hasSize(3);
         assertThat(sources.get(0)).isInstanceOf(WorkingDirectoryPropertyFileSource.class);
         assertThat(sources.get(1)).isInstanceOf(ConfigDirPropertyFileSource.class);
+        assertThat(sources.get(2)).isInstanceOf(ClassPathPropertyFileSource.class);
     }
 
     @Test

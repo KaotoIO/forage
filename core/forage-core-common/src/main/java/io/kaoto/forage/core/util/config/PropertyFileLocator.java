@@ -51,6 +51,7 @@ public final class PropertyFileLocator {
         List<PropertyFileSource> sources = new ArrayList<>();
         sources.add(new WorkingDirectoryPropertyFileSource());
         sources.add(new ConfigDirPropertyFileSource());
+        sources.add(new ClassPathPropertyFileSource());
         sources.sort(Comparator.comparingInt(PropertyFileSource::priority).reversed());
         BUILT_IN_SOURCES = List.copyOf(sources);
     }
@@ -77,7 +78,7 @@ public final class PropertyFileLocator {
      * Attempts to open a properties file by consulting all registered
      * {@link PropertyFileSource} instances (built-in and pluggable) in priority order.
      *
-     * <p>Built-in sources (working directory, config directory) are tried first,
+     * <p>Built-in sources (working directory, config directory, classpath) are tried first,
      * followed by any {@link PluggablePropertyFileSource} implementations discovered via
      * {@link java.util.ServiceLoader}.
      *

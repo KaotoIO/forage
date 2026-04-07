@@ -1,13 +1,9 @@
 package io.kaoto.forage.core.util.config;
 
 import java.util.Collections;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,25 +63,11 @@ public class DefaultConfigResolver implements ConfigResolver {
         if (appProps == null) {
             return Collections.emptySet();
         }
-        return readPrefixes(appProps, regexp);
+        return PropertyFileLocator.readPrefixes(appProps, regexp);
     }
 
     @Override
     public int priority() {
         return 0;
-    }
-
-    private static Set<String> readPrefixes(Properties props, String regexp) {
-        Pattern pattern = Pattern.compile(regexp);
-        return Collections.list(props.keys()).stream()
-                .map(key -> {
-                    Matcher m = pattern.matcher((String) key);
-                    if (m.find()) {
-                        return m.group(1);
-                    }
-                    return null;
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
     }
 }

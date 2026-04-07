@@ -15,6 +15,7 @@ import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import io.kaoto.forage.core.util.config.ConfigStore;
+import io.kaoto.forage.core.util.config.PropertyFileLocator;
 
 /**
  * Spring Boot {@link EnvironmentPostProcessor} that bridges Forage's configuration system
@@ -96,10 +97,7 @@ public class ForageEnvironmentPostProcessor implements EnvironmentPostProcessor 
      * giving them higher precedence than classpath-bundled defaults.
      */
     private void loadForagePropertiesFromFilesystem(ConfigurableEnvironment environment) {
-        String configDir = System.getProperty("forage.config.dir");
-        if (configDir == null) {
-            configDir = System.getenv("FORAGE_CONFIG_DIR");
-        }
+        String configDir = PropertyFileLocator.resolveConfigDir();
         if (configDir != null) {
             loadDirectoryIntoEnvironment(environment, Path.of(configDir));
         }

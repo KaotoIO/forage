@@ -1,25 +1,15 @@
 package io.kaoto.forage.core.util.config;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -196,7 +186,7 @@ public final class ConfigStore {
             }
         }
 
-        Set<String> prefixes = readPrefixes(merged, regexp);
+        Set<String> prefixes = PropertyFileLocator.readPrefixes(merged, regexp);
 
         // Consult registered resolvers for additional prefix discovery
         for (ConfigResolver resolver : resolvers) {
@@ -220,75 +210,24 @@ public final class ConfigStore {
      * (to work as expected in Quarkus runtime)</p>
      */
     private <T extends Config> Properties loadPropertiesWithPriority(T instance, String fileName) {
-        InputStream is = null;
-        File file = Path.of("", fileName).toAbsolutePath().toFile();
-        if (!file.exists()) {
-            final String property = System.getProperty("forage.config.dir");
-            if (property != null) {
-                file = Path.of(property, fileName).toAbsolutePath().toFile();
-            } else {
-                final String environment = System.getenv("FORAGE_CONFIG_DIR");
-                if (environment != null) {
-                    file = Path.of(environment, fileName).toAbsolutePath().toFile();
-                }
-            }
-        }
+        // 1. Filesystem: working directory → config directory
+        InputStream is = PropertyFileLocator.locateFromFilesystem(fileName);
 
-        if (file.exists()) {
-            try {
-                is = new FileInputStream(file);
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
+        // 2. Custom classloader: package-relative path
         if (is == null && classLoader != null) {
-            LOG.debug("Trying to use the classloader to read {}", file);
-            final URL resource = classLoader.getResource(asClasspathPath(instance));
-            if (resource != null) {
-                try {
-                    is = resource.openStream();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+            LOG.debug("Trying to use the classloader to read {}", fileName);
+            is = PropertyFileLocator.locateFromClasspath(asClasspathPath(instance), classLoader);
         }
 
+        // 3. Default classloader: root classpath path
         if (is == null) {
             LOG.debug("Loading defaults from the forage component");
-            is = classLoader == null
-                    ? ConfigStore.class.getResourceAsStream("/" + instance.name() + ".properties")
-                    : classLoader.getResourceAsStream("/" + instance.name() + ".properties");
+            String rootPath = "/" + instance.name() + ".properties";
+            ClassLoader cl = classLoader != null ? classLoader : ConfigStore.class.getClassLoader();
+            is = cl.getResourceAsStream(rootPath);
         }
 
-        try {
-            Properties props = new Properties();
-            if (is != null) {
-                LOG.debug("Loading defaults from the forage component");
-                try (InputStream stream = is) {
-                    props.load(stream);
-                }
-            }
-            return props;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static Set<String> readPrefixes(Properties props, String regexp) {
-        Pattern pattern = Pattern.compile(regexp);
-
-        return Collections.list(props.keys()).stream()
-                .map((key) -> {
-                    Matcher m = pattern.matcher((String) key);
-                    if (m.find()) {
-                        return m.group(1);
-                    } else {
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        return PropertyFileLocator.readProperties(is);
     }
 
     private static <T extends Config> String asClasspathPath(T instance) {

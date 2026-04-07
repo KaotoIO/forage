@@ -1,6 +1,5 @@
 package io.kaoto.forage.core.util.config;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -250,80 +249,20 @@ public final class ConfigHelper {
     }
 
     private static Properties loadApplicationProperties() {
-        InputStream input = null;
-
-        // Try loading from working directory first
-        try {
-            java.io.File file = java.nio.file.Path.of("", "application.properties")
-                    .toAbsolutePath()
-                    .toFile();
-            if (file.exists()) {
-                LOG.debug("Loading application.properties from working directory: {}", file.getAbsolutePath());
-                input = new java.io.FileInputStream(file);
-            }
-        } catch (IOException ex) {
-            LOG.debug("Failed to load application.properties from working directory", ex);
-        }
-
-        // Fallback to forage.config.dir / FORAGE_CONFIG_DIR
-        if (input == null) {
-            String configDir = System.getProperty("forage.config.dir");
-            if (configDir == null) {
-                configDir = System.getenv("FORAGE_CONFIG_DIR");
-            }
-            if (configDir != null) {
-                try {
-                    java.io.File file = java.nio.file.Path.of(configDir, "application.properties")
-                            .toAbsolutePath()
-                            .toFile();
-                    if (file.exists()) {
-                        LOG.debug("Loading application.properties from config dir: {}", file.getAbsolutePath());
-                        input = new java.io.FileInputStream(file);
-                    }
-                } catch (IOException ex) {
-                    LOG.debug("Failed to load application.properties from config dir", ex);
-                }
-            }
-        }
+        InputStream input = PropertyFileLocator.locateFromFilesystem("application.properties");
 
         // Fallback to classpath — try multiple classloaders since in Quarkus
         // augmentation the deployment classloader may not see the application's resources
         if (input == null) {
-            ClassLoader tccl = Thread.currentThread().getContextClassLoader();
-            if (tccl != null) {
-                input = tccl.getResourceAsStream("application.properties");
-            }
-            if (input != null) {
-                LOG.debug("Loading application.properties from thread context classloader");
-            }
-        }
-        if (input == null) {
-            ClassLoader storeClassLoader = ConfigStore.getInstance().getClassLoader();
-            if (storeClassLoader != null) {
-                input = storeClassLoader.getResourceAsStream("application.properties");
-            }
-            if (input != null) {
-                LOG.debug("Loading application.properties from ConfigStore classloader");
-            }
-        }
-        if (input == null) {
-            input = ConfigHelper.class.getClassLoader().getResourceAsStream("application.properties");
-            if (input != null) {
-                LOG.debug("Loading application.properties from classpath");
-            }
+            input = PropertyFileLocator.locateFromClasspath(
+                    "application.properties",
+                    Thread.currentThread().getContextClassLoader(),
+                    ConfigStore.getInstance().getClassLoader(),
+                    ConfigHelper.class.getClassLoader());
         }
 
-        if (input != null) {
-            try (InputStream is = input) {
-                Properties props = new Properties();
-                props.load(is);
-                return props;
-            } catch (IOException ex) {
-                LOG.error("Failed to load application.properties", ex);
-            }
-        }
-
-        return null;
+        Properties props = PropertyFileLocator.readProperties(input);
+        return props.isEmpty() ? null : props;
     }
 
     private static Properties getSpringBootConfig() {

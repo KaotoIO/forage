@@ -18,17 +18,16 @@ class ConfigDirPropertyFileSourceTest {
 
     @Test
     void returnsNullWhenNoConfigDir() {
-        String original = System.getProperty(PropertyFileLocator.CONFIG_DIR_PROPERTY);
-        try {
-            System.clearProperty(PropertyFileLocator.CONFIG_DIR_PROPERTY);
-            ConfigDirPropertyFileSource source = new ConfigDirPropertyFileSource();
-            InputStream is = source.locate("nonexistent-file-" + System.nanoTime() + ".properties");
-            assertThat(is).isNull();
-        } finally {
-            if (original != null) {
-                System.setProperty(PropertyFileLocator.CONFIG_DIR_PROPERTY, original);
-            }
-        }
+        ConfigDirPropertyFileSource source = new ConfigDirPropertyFileSource(() -> null);
+        InputStream is = source.locate("nonexistent-file-" + System.nanoTime() + ".properties");
+        assertThat(is).isNull();
+    }
+
+    @Test
+    void returnsNullWhenFileNotInConfigDir(@TempDir Path tempDir) {
+        ConfigDirPropertyFileSource source = new ConfigDirPropertyFileSource(tempDir::toString);
+        InputStream is = source.locate("nonexistent-file-" + System.nanoTime() + ".properties");
+        assertThat(is).isNull();
     }
 
     @Test
@@ -36,25 +35,14 @@ class ConfigDirPropertyFileSourceTest {
         Path propsFile = tempDir.resolve("test-config-dir.properties");
         Files.writeString(propsFile, "key=from-config-dir\n");
 
-        String original = System.getProperty(PropertyFileLocator.CONFIG_DIR_PROPERTY);
-        try {
-            System.setProperty(PropertyFileLocator.CONFIG_DIR_PROPERTY, tempDir.toString());
+        ConfigDirPropertyFileSource source = new ConfigDirPropertyFileSource(tempDir::toString);
+        InputStream is = source.locate("test-config-dir.properties");
+        assertThat(is).isNotNull();
 
-            ConfigDirPropertyFileSource source = new ConfigDirPropertyFileSource();
-            InputStream is = source.locate("test-config-dir.properties");
-            assertThat(is).isNotNull();
-
-            Properties props = new Properties();
-            try (InputStream stream = is) {
-                props.load(stream);
-            }
-            assertThat(props.getProperty("key")).isEqualTo("from-config-dir");
-        } finally {
-            if (original != null) {
-                System.setProperty(PropertyFileLocator.CONFIG_DIR_PROPERTY, original);
-            } else {
-                System.clearProperty(PropertyFileLocator.CONFIG_DIR_PROPERTY);
-            }
+        Properties props = new Properties();
+        try (InputStream stream = is) {
+            props.load(stream);
         }
+        assertThat(props.getProperty("key")).isEqualTo("from-config-dir");
     }
 }

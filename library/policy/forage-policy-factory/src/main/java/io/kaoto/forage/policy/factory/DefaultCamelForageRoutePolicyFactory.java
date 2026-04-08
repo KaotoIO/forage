@@ -17,12 +17,12 @@ import io.kaoto.forage.core.policy.RoutePolicyProvider;
  *
  * <p>This factory reads the configuration for each route to determine which
  * policies to apply. The configuration follows the pattern:
- * {@code camel.forage.route.policy.<routeId>.name=schedule,flip}
+ * {@code forage.route.policy.<routeId>.name=schedule,flip}
  *
  * <p><strong>Configuration Flow:</strong>
  * <ol>
  *   <li>Camel calls {@link #createRoutePolicy(CamelContext, String, NamedNode)}</li>
- *   <li>Factory reads {@code camel.forage.route.policy.<routeId>.name}</li>
+ *   <li>Factory reads {@code forage.route.policy.<routeId>.name}</li>
  *   <li>For each policy name, look up provider in RoutePolicyRegistry</li>
  *   <li>Provider creates configured RoutePolicy instance</li>
  *   <li>Return policy (or null if none configured)</li>
@@ -43,7 +43,7 @@ import io.kaoto.forage.core.policy.RoutePolicyProvider;
 public class DefaultCamelForageRoutePolicyFactory implements RoutePolicyFactory {
     private static final Logger LOG = LoggerFactory.getLogger(DefaultCamelForageRoutePolicyFactory.class);
 
-    private static final String CONFIG_PREFIX = "camel.forage.route.policy";
+    private static final String CONFIG_PREFIX = "forage.route.policy";
 
     private final RoutePolicyRegistry registry;
     private final RoutePolicyFactoryConfig config;

@@ -5,12 +5,10 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.EnumSet;
-import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import io.kaoto.forage.core.util.config.Config;
-import io.kaoto.forage.core.util.config.ConfigModule;
+import io.kaoto.forage.core.util.config.AbstractConfig;
 import io.kaoto.forage.core.util.config.ConfigStore;
 
 /**
@@ -27,32 +25,20 @@ import io.kaoto.forage.core.util.config.ConfigStore;
  *
  * @since 1.0
  */
-public class ScheduleRoutePolicyConfig implements Config {
+public class ScheduleRoutePolicyConfig extends AbstractConfig {
     private static final Logger LOG = LoggerFactory.getLogger(ScheduleRoutePolicyConfig.class);
-
-    private final String prefix;
 
     public ScheduleRoutePolicyConfig() {
         this(null);
     }
 
     public ScheduleRoutePolicyConfig(String prefix) {
-        this.prefix = prefix;
-
-        ScheduleRoutePolicyConfigEntries.register(prefix);
-        ConfigStore.getInstance().load(ScheduleRoutePolicyConfig.class, this, this::register);
-        ScheduleRoutePolicyConfigEntries.loadOverrides(prefix);
+        super(prefix, ScheduleRoutePolicyConfigEntries.class);
     }
 
     @Override
     public String name() {
         return "forage-policy-schedule";
-    }
-
-    @Override
-    public void register(String name, String value) {
-        Optional<ConfigModule> config = ScheduleRoutePolicyConfigEntries.find(prefix, name);
-        config.ifPresent(module -> ConfigStore.getInstance().set(module, value));
     }
 
     /**
@@ -62,7 +48,7 @@ public class ScheduleRoutePolicyConfig implements Config {
      */
     public LocalTime startTime() {
         return ConfigStore.getInstance()
-                .get(ScheduleRoutePolicyConfigEntries.startTime(prefix))
+                .get(ScheduleRoutePolicyConfigEntries.startTime(super.prefix()))
                 .map(this::parseTime)
                 .orElse(null);
     }
@@ -74,7 +60,7 @@ public class ScheduleRoutePolicyConfig implements Config {
      */
     public LocalTime stopTime() {
         return ConfigStore.getInstance()
-                .get(ScheduleRoutePolicyConfigEntries.stopTime(prefix))
+                .get(ScheduleRoutePolicyConfigEntries.stopTime(super.prefix()))
                 .map(this::parseTime)
                 .orElse(null);
     }
@@ -86,7 +72,7 @@ public class ScheduleRoutePolicyConfig implements Config {
      */
     public ZoneId timezone() {
         return ConfigStore.getInstance()
-                .get(ScheduleRoutePolicyConfigEntries.timezone(prefix))
+                .get(ScheduleRoutePolicyConfigEntries.timezone(super.prefix()))
                 .map(this::parseZoneId)
                 .orElse(ZoneId.systemDefault());
     }
@@ -98,7 +84,7 @@ public class ScheduleRoutePolicyConfig implements Config {
      */
     public String cronExpression() {
         return ConfigStore.getInstance()
-                .get(ScheduleRoutePolicyConfigEntries.cron(prefix))
+                .get(ScheduleRoutePolicyConfigEntries.cron(super.prefix()))
                 .orElse(null);
     }
 
@@ -109,7 +95,7 @@ public class ScheduleRoutePolicyConfig implements Config {
      */
     public Set<DayOfWeek> daysOfWeek() {
         return ConfigStore.getInstance()
-                .get(ScheduleRoutePolicyConfigEntries.daysOfWeek(prefix))
+                .get(ScheduleRoutePolicyConfigEntries.daysOfWeek(super.prefix()))
                 .map(this::parseDaysOfWeek)
                 .orElse(EnumSet.allOf(DayOfWeek.class));
     }

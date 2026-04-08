@@ -14,7 +14,7 @@ import io.kaoto.forage.core.util.config.ConfigTag;
  * Configuration entries for the schedule route policy.
  *
  * <p>Configuration follows the pattern:
- * {@code camel.forage.route.policy.<routeId>.schedule.<option>}
+ * {@code forage.route.policy.<routeId>.schedule.<option>}
  *
  * @since 1.0
  */
@@ -23,7 +23,7 @@ public final class ScheduleRoutePolicyConfigEntries extends ConfigEntries {
     /**
      * The base configuration prefix for route policy configuration.
      */
-    public static final String CONFIG_PREFIX = "camel.forage.route.policy";
+    public static final String CONFIG_PREFIX = "forage.route.policy";
 
     private static final Map<ConfigModule, ConfigEntry> CONFIG_MODULES = new ConcurrentHashMap<>();
 

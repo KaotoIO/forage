@@ -1,6 +1,8 @@
 package io.kaoto.forage.policy.factory;
 
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import io.kaoto.forage.core.util.config.AbstractConfig;
 import io.kaoto.forage.core.util.config.ConfigModule;
 import io.kaoto.forage.core.util.config.ConfigStore;
@@ -10,13 +12,14 @@ import io.kaoto.forage.core.util.config.ConfigStore;
  *
  * <p>This class provides access to the policy configuration for each route.
  * The configuration follows the pattern:
- * {@code camel.forage.route.policy.<routeId>.name}
+ * {@code forage.route.policy.<routeId>.name}
  *
  * @see AbstractConfig
  * @see RoutePolicyFactoryConfigEntries
  * @since 1.0
  */
 public class RoutePolicyFactoryConfig extends AbstractConfig {
+    private static final Logger LOG = LoggerFactory.getLogger(RoutePolicyFactoryConfig.class);
 
     /**
      * Creates a new RoutePolicyFactoryConfig with no prefix.
@@ -40,6 +43,37 @@ public class RoutePolicyFactoryConfig extends AbstractConfig {
     }
 
     /**
+     * Registers a configuration property value.
+     *
+     * <p>This method extends the default behavior to handle dynamic per-route
+     * policy properties (e.g., {@code forage.route.policy.<routeId>.name})
+     * that are not statically registered as ConfigModules.
+     *
+     * @param name the property key
+     * @param value the property value
+     */
+    @Override
+    public void register(String name, String value) {
+        super.register(name, value);
+
+        String prefix = RoutePolicyFactoryConfigEntries.CONFIG_PREFIX + ".";
+        if (name.startsWith(prefix)) {
+            String suffix = name.substring(prefix.length());
+            if (suffix.endsWith(".name")) {
+                String routeId = suffix.substring(0, suffix.length() - ".name".length());
+                if (!routeId.isEmpty()) {
+                    ConfigModule module = RoutePolicyFactoryConfigEntries.policyNameModule(routeId);
+                    LOG.debug("Registering policy name for route {}: {}", routeId, value);
+                    ConfigStore.getInstance().set(module, value);
+                }
+            }
+
+            // Store all per-route properties so downstream policy configs can find them
+            ConfigStore.getInstance().setDirect(name, value);
+        }
+    }
+
+    /**
      * Returns whether the route policy factory is enabled.
      *
      * <p>When disabled, no route policies will be created by this factory.
@@ -47,9 +81,9 @@ public class RoutePolicyFactoryConfig extends AbstractConfig {
      *
      * <p>Configuration sources (in order of precedence):
      * <ol>
-     *   <li>Environment variable: CAMEL_FORAGE_ROUTE_POLICY_ENABLED</li>
-     *   <li>System property: camel.forage.route.policy.enabled</li>
-     *   <li>Properties file: camel.forage.route.policy.enabled</li>
+     *   <li>Environment variable: FORAGE_ROUTE_POLICY_ENABLED</li>
+     *   <li>System property: forage.route.policy.enabled</li>
+     *   <li>Properties file: forage.route.policy.enabled</li>
      *   <li>Default: true</li>
      * </ol>
      *
@@ -74,8 +108,8 @@ public class RoutePolicyFactoryConfig extends AbstractConfig {
      * @return an Optional containing the policy names, or empty if not configured
      */
     public Optional<String> getPolicyNames(String routeId) {
-        ConfigModule module = RoutePolicyFactoryConfigEntries.policyNameModule(routeId);
-        ConfigStore.getInstance().load(module);
-        return ConfigStore.getInstance().get(module);
+        ConfigStore.getInstance().load(RoutePolicyFactoryConfigEntries.policyNameModule(routeId));
+
+        return ConfigStore.getInstance().get(RoutePolicyFactoryConfigEntries.policyNameModule(routeId));
     }
 }

@@ -9,7 +9,7 @@ import io.kaoto.forage.core.util.config.ConfigTag;
  *
  * <p>This class defines the configuration modules for the factory itself,
  * primarily the policy name assignment for each route. The configuration
- * follows the pattern: {@code camel.forage.route.policy.<routeId>.name}
+ * follows the pattern: {@code forage.route.policy.<routeId>.name}
  *
  * @since 1.0
  */
@@ -18,7 +18,7 @@ public final class RoutePolicyFactoryConfigEntries extends ConfigEntries {
     /**
      * The base configuration prefix for route policy configuration.
      */
-    public static final String CONFIG_PREFIX = "camel.forage.route.policy";
+    public static final String CONFIG_PREFIX = "forage.route.policy";
 
     /**
      * Configuration module for enabling/disabling the route policy factory.

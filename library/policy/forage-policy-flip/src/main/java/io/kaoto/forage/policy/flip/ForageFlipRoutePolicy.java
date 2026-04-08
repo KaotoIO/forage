@@ -26,13 +26,13 @@ import org.slf4j.LoggerFactory;
  * <p><strong>Configuration:</strong>
  * Both routes must be configured with flip policies referencing each other:
  * <pre>
- * camel.forage.route.policy.routeA.name=flip
- * camel.forage.route.policy.routeA.flip.paired-route=routeB
- * camel.forage.route.policy.routeA.flip.initially-active=true
+ * forage.route.policy.routeA.name=flip
+ * forage.route.policy.routeA.flip.paired-route=routeB
+ * forage.route.policy.routeA.flip.initially-active=true
  *
- * camel.forage.route.policy.routeB.name=flip
- * camel.forage.route.policy.routeB.flip.paired-route=routeA
- * camel.forage.route.policy.routeB.flip.initially-active=false
+ * forage.route.policy.routeB.name=flip
+ * forage.route.policy.routeB.flip.paired-route=routeA
+ * forage.route.policy.routeB.flip.initially-active=false
  * </pre>
  *
  * @since 1.0

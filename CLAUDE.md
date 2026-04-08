@@ -209,7 +209,7 @@ See **[docs/adding-modules.md](docs/adding-modules.md)** for the complete guide 
 - Use `getRequired(MODULE, "error message")` for required config, `get(MODULE)` for optional config
 - Use `MissingConfigException` for required missing configuration (or `getRequired()` which wraps it)
 - Properties files named `<module-name>.properties` in resources
-- **Special cases:** `FlipRoutePolicyConfig/ConfigEntries` and `ScheduleRoutePolicyConfig/ConfigEntries` use a dynamic ConfigModule pattern and do NOT extend `AbstractConfig` / use `initModules()`
+- **Special cases:** `FlipRoutePolicyConfig` and `ScheduleRoutePolicyConfig` extend `AbstractConfig` and follow the standard configuration pattern. Their ConfigEntries classes (`FlipRoutePolicyConfigEntries`, `ScheduleRoutePolicyConfigEntries`) use a dynamic ConfigModule pattern with factory methods (e.g., `pairedRoute(prefix)`) instead of static fields + `initModules()`, because property names are route-ID-dependent.
 
 ## Active Technologies
 - Java 17+ + Apache Camel 4.16+, camel-api (RoutePolicyFactory, RoutePolicy) (001-route-policies)

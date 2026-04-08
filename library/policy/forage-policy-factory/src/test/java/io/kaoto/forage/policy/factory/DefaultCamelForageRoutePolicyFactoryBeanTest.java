@@ -20,7 +20,7 @@ class DefaultCamelForageRoutePolicyFactoryBeanTest {
 
     @AfterEach
     void tearDown() throws Exception {
-        System.clearProperty("camel.forage.route.policy.enabled");
+        System.clearProperty("forage.route.policy.enabled");
         if (camelContext != null) {
             camelContext.close();
         }
@@ -34,7 +34,7 @@ class DefaultCamelForageRoutePolicyFactoryBeanTest {
      * during CamelContext initialization.
      */
     private CamelContext createContextWithEnabledProperty(String value) {
-        System.setProperty("camel.forage.route.policy.enabled", value);
+        System.setProperty("forage.route.policy.enabled", value);
         return new DefaultCamelContext();
     }
 

@@ -1,7 +1,6 @@
 package io.kaoto.forage.policy.flip;
 
-import java.util.Optional;
-import io.kaoto.forage.core.util.config.Config;
+import io.kaoto.forage.core.util.config.AbstractConfig;
 import io.kaoto.forage.core.util.config.ConfigModule;
 import io.kaoto.forage.core.util.config.ConfigStore;
 import io.kaoto.forage.core.util.config.MissingConfigException;
@@ -17,31 +16,19 @@ import io.kaoto.forage.core.util.config.MissingConfigException;
  *
  * @since 1.0
  */
-public class FlipRoutePolicyConfig implements Config {
-
-    private final String prefix;
+public class FlipRoutePolicyConfig extends AbstractConfig {
 
     public FlipRoutePolicyConfig() {
         this(null);
     }
 
     public FlipRoutePolicyConfig(String prefix) {
-        this.prefix = prefix;
-
-        FlipRoutePolicyConfigEntries.register(prefix);
-        ConfigStore.getInstance().load(FlipRoutePolicyConfig.class, this, this::register);
-        FlipRoutePolicyConfigEntries.loadOverrides(prefix);
+        super(prefix, FlipRoutePolicyConfigEntries.class);
     }
 
     @Override
     public String name() {
         return "forage-policy-flip";
-    }
-
-    @Override
-    public void register(String name, String value) {
-        Optional<ConfigModule> config = FlipRoutePolicyConfigEntries.find(prefix, name);
-        config.ifPresent(module -> ConfigStore.getInstance().set(module, value));
     }
 
     /**
@@ -51,10 +38,11 @@ public class FlipRoutePolicyConfig implements Config {
      * @throws MissingConfigException if not configured
      */
     public String pairedRouteId() {
-        ConfigModule module = FlipRoutePolicyConfigEntries.pairedRoute(prefix);
+        ConfigModule module = FlipRoutePolicyConfigEntries.pairedRoute(super.prefix());
         ConfigStore.getInstance().load(module);
         return ConfigStore.getInstance()
                 .get(module)
+                .or(() -> ConfigStore.getInstance().getDirect(module.propertyName()))
                 .orElseThrow(() -> new MissingConfigException("Missing paired-route configuration for flip policy"));
     }
 
@@ -64,8 +52,12 @@ public class FlipRoutePolicyConfig implements Config {
      * @return true if this route should start active, false otherwise
      */
     public boolean initiallyActive() {
-        ConfigModule module = FlipRoutePolicyConfigEntries.initiallyActive(prefix);
+        ConfigModule module = FlipRoutePolicyConfigEntries.initiallyActive(super.prefix());
         ConfigStore.getInstance().load(module);
-        return ConfigStore.getInstance().get(module).map(Boolean::parseBoolean).orElse(true);
+        return ConfigStore.getInstance()
+                .get(module)
+                .or(() -> ConfigStore.getInstance().getDirect(module.propertyName()))
+                .map(Boolean::parseBoolean)
+                .orElse(true);
     }
 }

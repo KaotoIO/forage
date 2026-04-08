@@ -14,7 +14,7 @@ import io.kaoto.forage.core.util.config.ConfigTag;
  * Configuration entries for the flip route policy.
  *
  * <p>Configuration follows the pattern:
- * {@code camel.forage.route.policy.<routeId>.flip.<option>}
+ * {@code forage.route.policy.<routeId>.flip.<option>}
  *
  * @since 1.0
  */
@@ -23,7 +23,7 @@ public final class FlipRoutePolicyConfigEntries extends ConfigEntries {
     /**
      * The base configuration prefix for route policy configuration.
      */
-    public static final String CONFIG_PREFIX = "camel.forage.route.policy";
+    public static final String CONFIG_PREFIX = "forage.route.policy";
 
     private static final Map<ConfigModule, ConfigEntry> CONFIG_MODULES = new ConcurrentHashMap<>();
 
@@ -32,7 +32,7 @@ public final class FlipRoutePolicyConfigEntries extends ConfigEntries {
     /**
      * Creates a ConfigModule for the paired-route configuration with the given config prefix.
      *
-     * @param configPrefix the full config prefix (e.g., camel.forage.route.policy.routeId.flip)
+     * @param configPrefix the full config prefix (e.g., forage.route.policy.routeId.flip)
      * @return a ConfigModule for the paired-route configuration
      */
     public static ConfigModule pairedRoute(String configPrefix) {
@@ -51,7 +51,7 @@ public final class FlipRoutePolicyConfigEntries extends ConfigEntries {
     /**
      * Creates a ConfigModule for the initially-active configuration with the given config prefix.
      *
-     * @param configPrefix the full config prefix (e.g., camel.forage.route.policy.routeId.flip)
+     * @param configPrefix the full config prefix (e.g., forage.route.policy.routeId.flip)
      * @return a ConfigModule for the initially-active configuration
      */
     public static ConfigModule initiallyActive(String configPrefix) {

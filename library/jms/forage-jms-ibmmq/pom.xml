@@ -11,7 +11,7 @@
     <name>Forage :: Library :: JMS :: IBM MQ</name>
 
     <properties>
-        <ibmmq.version>9.4.4.1</ibmmq.version>
+        <ibmmq.version>9.4.5.0</ibmmq.version>
     </properties>
 
     <dependencies>

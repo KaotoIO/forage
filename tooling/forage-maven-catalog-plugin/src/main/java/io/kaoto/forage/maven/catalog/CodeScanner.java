@@ -51,16 +51,18 @@ public class CodeScanner {
 
     private final Log log;
     private final Map<String, Path> sourceDirectoryCache = new ConcurrentHashMap<>();
-    private final JavaParser parser;
+    private final ThreadLocal<JavaParser> parserLocal = ThreadLocal.withInitial(CodeScanner::createConfiguredParser);
+    private final DocumentBuilderFactory documentBuilderFactory;
 
     public CodeScanner(Log log) {
         this.log = log;
-        this.parser = createConfiguredParser();
+        this.documentBuilderFactory = createDocumentBuilderFactory();
     }
 
     /**
      * Creates a JavaParser with optimized configuration for better performance.
      * Disables features not needed for annotation scanning.
+     * Each thread gets its own instance via ThreadLocal since JavaParser is not thread-safe.
      */
     private static JavaParser createConfiguredParser() {
         ParserConfiguration config = new ParserConfiguration();
@@ -74,6 +76,22 @@ public class CodeScanner {
     }
 
     /**
+     * Creates a DocumentBuilderFactory with XXE protection, reused for all POM parsing.
+     */
+    private static DocumentBuilderFactory createDocumentBuilderFactory() {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        try {
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        } catch (Exception e) {
+            // Should not happen with standard JDK XML implementations
+            throw new IllegalStateException("Failed to configure XML parser security features", e);
+        }
+        return factory;
+    }
+
+    /**
      * Scans the artifact source directory in a single pass, extracting all information at once.
      * This is a performance optimization to avoid multiple directory walks and file parsing.
      * (Issue 2 optimization)
@@ -81,20 +99,28 @@ public class CodeScanner {
     public ScanResult scanAllInOnePass(Artifact artifact, Path rootDir) {
         ScanResult result = new ScanResult();
 
-        // Find the source directory (cached)
-        Path sourceDir = findSourceDirectory(artifact, rootDir);
-        if (sourceDir == null || !Files.exists(sourceDir)) {
+        // Find the module directory (cached), then narrow to src/main/java
+        Path moduleDir = findSourceDirectory(artifact, rootDir);
+        if (moduleDir == null || !Files.exists(moduleDir)) {
             log.debug("No source directory found for artifact: " + artifact.getArtifactId());
+            return result;
+        }
+
+        Path sourceDir = moduleDir.resolve("src").resolve("main").resolve("java");
+        if (!Files.exists(sourceDir)) {
+            log.debug("No src/main/java in module: " + artifact.getArtifactId());
             return result;
         }
 
         try {
             log.debug("Scanning source directory: " + sourceDir);
 
-            // Walk through all Java files ONCE and extract all information
+            // Walk through all Java files and extract all information in parallel.
+            // ScanResult uses thread-safe collections and each thread gets its own
+            // JavaParser instance via ThreadLocal, so parallel processing is safe.
             try (Stream<Path> paths = Files.walk(sourceDir)) {
                 paths.filter(path -> path.toString().endsWith(".java"))
-                        .filter(path -> !path.toString().contains("/test/"))
+                        .parallel()
                         .forEach(javaFile -> {
                             try {
                                 scanJavaFileForAllInfo(javaFile, result);
@@ -130,7 +156,8 @@ public class CodeScanner {
      */
     private void scanJavaFileForAllInfo(Path javaFile, ScanResult result) {
         try {
-            Optional<CompilationUnit> parseResult = parser.parse(javaFile).getResult();
+            Optional<CompilationUnit> parseResult =
+                    parserLocal.get().parse(javaFile).getResult();
 
             if (parseResult.isEmpty()) {
                 log.debug("Failed to parse Java file: " + javaFile);
@@ -263,24 +290,13 @@ public class CodeScanner {
     }
 
     /**
-     * Extracts the artifactId from a pom.xml file.
+     * Extracts the artifactId from a pom.xml file's direct child element.
      * Returns null if the POM cannot be parsed or has no artifactId.
+     * Reuses the shared DocumentBuilderFactory for performance.
      */
     private String extractArtifactIdFromPom(Path pomPath) {
-        return isModuleArtifactId(pomPath) ? getArtifactIdFromPom(pomPath) : null;
-    }
-
-    /**
-     * Gets the artifactId from a pom.xml file's direct child element.
-     */
-    private String getArtifactIdFromPom(Path pomPath) {
         try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
-            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-
-            DocumentBuilder builder = factory.newDocumentBuilder();
+            DocumentBuilder builder = documentBuilderFactory.newDocumentBuilder();
             Document doc = builder.parse(pomPath.toFile());
 
             Element root = doc.getDocumentElement();
@@ -298,13 +314,6 @@ public class CodeScanner {
             log.debug("Failed to parse POM file: " + pomPath);
         }
         return null;
-    }
-
-    /**
-     * Checks if the given POM file is a valid Maven project POM (has a project root and artifactId).
-     */
-    private boolean isModuleArtifactId(Path pomPath) {
-        return getArtifactIdFromPom(pomPath) != null;
     }
 
     /**

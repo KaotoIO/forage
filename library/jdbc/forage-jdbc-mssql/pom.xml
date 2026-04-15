@@ -11,7 +11,7 @@
     <name>Forage :: Library :: JDBC :: MSSQL</name>
 
     <properties>
-        <mssql.version>13.2.1.jre11</mssql.version>
+        <mssql.version>13.4.0.jre11</mssql.version>
     </properties>
 
     <dependencies>

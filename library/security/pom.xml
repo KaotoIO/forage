@@ -4,24 +4,18 @@
 
     <parent>
         <groupId>io.kaoto.forage</groupId>
-        <artifactId>forage</artifactId>
+        <artifactId>library</artifactId>
         <version>1.3-SNAPSHOT</version>
     </parent>
 
-    <artifactId>library</artifactId>
+    <artifactId>security</artifactId>
     <packaging>pom</packaging>
-    <name>Forage :: Library</name>
+    <name>Forage :: Library :: Security</name>
 
     <modules>
-        <module>ai</module>
-        <module>cloud</module>
-        <module>common</module>
-        <module>cxf</module>
-        <module>jdbc</module>
-        <module>jms</module>
-        <module>policy</module>
-        <module>security</module>
-        <module>vertx</module>
+        <module>forage-security-shiro</module>
+        <module>forage-security-spring</module>
+        <module>forage-security-keycloak</module>
     </modules>
 
 </project>

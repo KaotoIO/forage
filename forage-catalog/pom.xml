@@ -356,6 +356,23 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Security Policy Modules -->
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-security-shiro</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-security-spring</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-security-keycloak</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Route Policy Modules -->
         <dependency>
             <groupId>io.kaoto.forage</groupId>

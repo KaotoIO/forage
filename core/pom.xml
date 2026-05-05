@@ -26,6 +26,7 @@
         <module>forage-core-jta</module>
         <module>forage-core-vertx</module>
         <module>forage-core-cloud</module>
+        <module>forage-core-security</module>
     </modules>
 
 </project>

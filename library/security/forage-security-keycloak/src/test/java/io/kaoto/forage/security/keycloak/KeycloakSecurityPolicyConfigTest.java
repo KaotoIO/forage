@@ -249,5 +249,45 @@ class KeycloakSecurityPolicyConfigTest {
         public Optional<String> requiredRoles() {
             return Optional.ofNullable(testRequiredRoles);
         }
+
+        @Override
+        public boolean allRolesRequired() {
+            return false;
+        }
+
+        @Override
+        public Optional<String> requiredPermissions() {
+            return Optional.empty();
+        }
+
+        @Override
+        public boolean allPermissionsRequired() {
+            return false;
+        }
+
+        @Override
+        public boolean useTokenIntrospection() {
+            return false;
+        }
+
+        @Override
+        public boolean introspectionCacheEnabled() {
+            return false;
+        }
+
+        @Override
+        public long introspectionCacheTtl() {
+            return 300000L;
+        }
+
+        @Override
+        public boolean validateIssuer() {
+            return true;
+        }
+
+        @Override
+        public boolean autoFetchPublicKey() {
+            return true;
+        }
     }
 }

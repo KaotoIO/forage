@@ -91,7 +91,18 @@ public class KeycloakSecurityPolicyConfig extends AbstractConfig {
     }
 
     public long introspectionCacheTtl() {
-        return get(INTROSPECTION_CACHE_TTL).map(Long::parseLong).orElse(300000L);
+        return get(INTROSPECTION_CACHE_TTL)
+                .map(v -> {
+                    try {
+                        return Long.parseLong(v);
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException(
+                                "Invalid introspection cache TTL value: '" + v
+                                        + "' — expected a numeric millisecond value",
+                                e);
+                    }
+                })
+                .orElse(300000L);
     }
 
     public boolean validateIssuer() {

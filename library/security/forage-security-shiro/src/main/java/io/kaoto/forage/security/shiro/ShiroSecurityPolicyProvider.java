@@ -55,7 +55,13 @@ public class ShiroSecurityPolicyProvider implements SecurityPolicyProvider {
 
         ShiroSecurityPolicy policy;
         if (config.passphrase().isPresent()) {
-            byte[] passPhrase = Base64.getDecoder().decode(config.passphrase().get());
+            byte[] passPhrase;
+            try {
+                passPhrase = Base64.getDecoder().decode(config.passphrase().get());
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException(
+                        "Invalid Base64-encoded Shiro passphrase in 'forage.shiro.passphrase'", e);
+            }
             policy = new ShiroSecurityPolicy(iniResourcePath, passPhrase);
         } else {
             policy = new ShiroSecurityPolicy(iniResourcePath);

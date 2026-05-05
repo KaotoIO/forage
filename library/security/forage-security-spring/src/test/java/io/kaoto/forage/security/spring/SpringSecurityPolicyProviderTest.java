@@ -6,9 +6,12 @@ import org.apache.camel.spi.AuthorizationPolicy;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.parallel.Resources.SYSTEM_PROPERTIES;
 
 @DisplayName("SpringSecurityPolicyProvider Tests")
+@ResourceLock(SYSTEM_PROPERTIES)
 class SpringSecurityPolicyProviderTest {
 
     @Nested

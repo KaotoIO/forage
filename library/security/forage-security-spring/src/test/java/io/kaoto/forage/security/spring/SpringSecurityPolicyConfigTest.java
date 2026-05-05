@@ -113,19 +113,17 @@ class SpringSecurityPolicyConfigTest {
 
         @Override
         public String id() {
-            return testId != null ? testId : super.id();
+            return testId != null ? testId : "springSecurityPolicy";
         }
 
         @Override
         public boolean alwaysReauthenticate() {
-            return testAlwaysReauthenticate != null ? testAlwaysReauthenticate : super.alwaysReauthenticate();
+            return testAlwaysReauthenticate != null ? testAlwaysReauthenticate : false;
         }
 
         @Override
         public boolean useThreadSecurityContext() {
-            return testUseThreadSecurityContext != null
-                    ? testUseThreadSecurityContext
-                    : super.useThreadSecurityContext();
+            return testUseThreadSecurityContext != null ? testUseThreadSecurityContext : true;
         }
     }
 }

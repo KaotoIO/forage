@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.kaoto.forage</groupId>
         <artifactId>jdbc-camel-quarkus</artifactId>
-        <version>1.2-SNAPSHOT</version>
+        <version>1.2</version>
     </parent>
 
     <artifactId>forage-quarkus-jdbc-parent</artifactId>

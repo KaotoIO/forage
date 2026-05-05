@@ -11,7 +11,7 @@
     <description>A plugin extension for Apache Camel that provides opinionated bean factories</description>
 
     <properties>
-        <camel.version>4.18.2-SNAPSHOT</camel.version>
+        <camel.version>4.18.2</camel.version>
         <langchain4j.version>1.11.0</langchain4j.version>
         <langchain4j-beta.version>1.11.0-beta19</langchain4j-beta.version>
         <langchain4j-community.version>1.11.0-beta19</langchain4j-community.version>
@@ -21,7 +21,7 @@
         <aws-sdk.version>2.42.30</aws-sdk.version>
         <azure.identity.version>1.18.2</azure.identity.version>
         <azure.messaging.eventhubs.version>5.21.3</azure.messaging.eventhubs.version>
-        <camel-quarkus.version>3.32.0</camel-quarkus.version>
+        <camel-quarkus.version>3.33.0</camel-quarkus.version>
         <citrus.version>4.10.0</citrus.version>
         <groovy.version>4.0.30</groovy.version>
         <ibmmq-client.version>9.4.5.0</ibmmq-client.version>
@@ -53,14 +53,14 @@
         <pooled-jms.version>3.2.2</pooled-jms.version>
         <postgresql.version>42.7.10</postgresql.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <quarkus.version>3.32.1</quarkus.version>
+        <quarkus.version>3.33.1.1</quarkus.version>
         <quarkus-artemis-jms.version>3.12.1</quarkus-artemis-jms.version>
         <quarkus-pooled-jms.version>2.10.0</quarkus-pooled-jms.version>
         <slf4j.version>2.0.17</slf4j.version>
         <smallrye.version>3.16.0</smallrye.version>
         <spotless.version>3.2.1</spotless.version>
         <palantir-format.version>2.71.0</palantir-format.version>
-        <spring-boot.version>3.5.12</spring-boot.version>
+        <spring-boot.version>3.5.14</spring-boot.version>
         <spring.version>6.2.17</spring.version>
         <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
         <testcontainers.version>2.0.4</testcontainers.version>

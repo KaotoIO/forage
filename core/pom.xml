@@ -22,6 +22,7 @@
         <module>forage-core-vectordb</module>
         <module>forage-core-jdbc</module>
         <module>forage-core-jms</module>
+        <module>forage-core-cxf</module>
         <module>forage-core-jta</module>
         <module>forage-core-vertx</module>
         <module>forage-core-cloud</module>

@@ -51,12 +51,6 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-catalog</artifactId>
             <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.logging.log4j</groupId>
-                    <artifactId>log4j-to-slf4j</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <!-- Test dependencies -->

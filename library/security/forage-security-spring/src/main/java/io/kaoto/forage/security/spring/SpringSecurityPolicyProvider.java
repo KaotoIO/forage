@@ -58,6 +58,10 @@ public class SpringSecurityPolicyProvider implements SecurityPolicyProvider {
                 config.id(),
                 config.alwaysReauthenticate(),
                 config.useThreadSecurityContext());
+        LOG.warn(
+                "Spring Security policy '{}' requires an AuthenticationManager and AuthorizationManager to be set"
+                        + " before use (e.g., via Spring Boot auto-configuration or manual wiring)",
+                config.id());
 
         return policy;
     }

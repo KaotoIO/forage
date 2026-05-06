@@ -64,7 +64,7 @@ public class KeycloakSecurityPolicyProvider implements SecurityPolicyProvider {
 
         policy.setUseTokenIntrospection(config.useTokenIntrospection());
         policy.setIntrospectionCacheEnabled(config.introspectionCacheEnabled());
-        policy.setIntrospectionCacheTtl(config.introspectionCacheTtl());
+        policy.setIntrospectionCacheTtl(config.introspectionCacheTtl() / 1000);
         policy.setValidateIssuer(config.validateIssuer());
         policy.setAutoFetchPublicKey(config.autoFetchPublicKey());
 

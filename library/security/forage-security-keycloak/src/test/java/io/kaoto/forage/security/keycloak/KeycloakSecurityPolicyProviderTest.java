@@ -125,7 +125,7 @@ class KeycloakSecurityPolicyProviderTest {
                 KeycloakSecurityPolicy keycloakPolicy = (KeycloakSecurityPolicy) policy;
                 assertThat(keycloakPolicy.isUseTokenIntrospection()).isTrue();
                 assertThat(keycloakPolicy.isIntrospectionCacheEnabled()).isTrue();
-                assertThat(keycloakPolicy.getIntrospectionCacheTtl()).isEqualTo(60000L);
+                assertThat(keycloakPolicy.getIntrospectionCacheTtl()).isEqualTo(60L);
             } finally {
                 System.clearProperty("forage.keycloak.server.url");
                 System.clearProperty("forage.keycloak.realm");

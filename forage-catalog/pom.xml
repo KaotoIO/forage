@@ -342,6 +342,23 @@
             </exclusions>
         </dependency>
 
+        <!-- CXF Modules -->
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-cxf</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-cxf-soap</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-cxf-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Cloud Modules -->
         <dependency>
             <groupId>io.kaoto.forage</groupId>

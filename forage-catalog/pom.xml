@@ -21,21 +21,31 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!--
+            All dependencies below are optional: they are needed at build time
+            by the forage-maven-catalog-plugin to scan annotations and generate
+            the catalog JSON, but consumers of this artifact only need the
+            generated JSON files (plus forage-catalog-model for deserialization).
+        -->
+
         <!-- Forage modules with ForageBean annotations - required for complete catalog generation -->
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-agent-factories</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-agent</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-quarkus-agent-deployment</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.camel.quarkus</groupId>
@@ -47,6 +57,7 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-agent-starter</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Vector Database Modules -->
@@ -54,66 +65,77 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-vectordb-infinispan</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-vectordb-mariadb</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-vectordb-default</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-vectordb-chroma</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-vectordb-redis</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-vectordb-pgvector</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-vectordb-milvus</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-vectordb-weaviate</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-vectordb-qdrant</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-vectordb-pinecone</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-vectordb-neo4j</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Chat Memory Modules -->
@@ -121,18 +143,21 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-memory-infinispan</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-memory-redis</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-memory-message-window</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Guardrail Modules -->
@@ -140,11 +165,13 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-guardrails-input</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-guardrails-output</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- AI Model Modules -->
@@ -152,66 +179,77 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-model-azure-openai</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-model-open-ai</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-model-ollama</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-model-google-gemini</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-model-anthropic</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-model-bedrock</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-model-dashscope</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-model-hugging-face</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-model-local-ai</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-model-mistral-ai</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-model-watsonx-ai</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Embedding Model Modules -->
@@ -219,6 +257,7 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-model-embeddings-ollama</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- RAG Modules -->
@@ -226,6 +265,7 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-default-retrieval-augmentor</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- In-Memory Vector Store -->
@@ -233,6 +273,7 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-in-memory-store</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- JDBC modules -->
@@ -240,22 +281,26 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jdbc-common</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jdbc</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jdbc-starter</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-quarkus-jdbc-deployment</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.camel.quarkus</groupId>
@@ -268,72 +313,86 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jdbc-postgresql</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jdbc-db2</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jdbc-h2</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jdbc-hsqldb</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jdbc-mariadb</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jdbc-mssql</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jdbc-mysql</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jdbc-oracle</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jms</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jms-artemis</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jms-common</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jms-ibmmq</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-jms-starter</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-quarkus-jms-deployment</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.camel.quarkus</groupId>
@@ -347,16 +406,19 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-cxf</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-cxf-soap</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-cxf-starter</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Cloud Modules -->
@@ -364,6 +426,7 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-azure-eventhubs</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Vert.x Modules -->
@@ -371,6 +434,7 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-vertx</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Security Policy Modules -->
@@ -378,16 +442,19 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-security-shiro</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-security-spring</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-security-keycloak</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Route Policy Modules -->
@@ -395,16 +462,19 @@
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-policy-factory</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-policy-flip</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-policy-schedule</artifactId>
             <version>${project.version}</version>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 

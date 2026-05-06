@@ -18,6 +18,7 @@ import io.kaoto.forage.cxf.common.CxfConfig;
 import io.kaoto.forage.cxf.common.CxfConfigEntries;
 import io.kaoto.forage.cxf.common.CxfModuleDescriptor;
 import io.kaoto.forage.quarkus.cxf.ForageCxfRecorder;
+import io.quarkiverse.cxf.deployment.CxfRouteRegistrationRequestorBuildItem;
 import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
@@ -45,6 +46,11 @@ public class ForageCxfProcessor {
     @BuildStep
     FeatureBuildItem feature() {
         return new FeatureBuildItem(FEATURE);
+    }
+
+    @BuildStep
+    CxfRouteRegistrationRequestorBuildItem requestCxfRouteRegistration() {
+        return new CxfRouteRegistrationRequestorBuildItem(FEATURE);
     }
 
     @BuildStep

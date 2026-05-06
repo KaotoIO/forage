@@ -67,7 +67,7 @@ public class CxfBeanFactory implements BeanFactory {
             try {
                 if (camelContext.getRegistry().lookupByName(DEFAULT_BEAN_NAME) == null) {
                     CxfConfig cxfConfig = new CxfConfig();
-                    Object endpoint = newCxfEndpoint(cxfConfig, DEFAULT_BEAN_NAME);
+                    Object endpoint = newCxfEndpoint(cxfConfig, null);
                     if (endpoint != null) {
                         applyCamelContext(endpoint);
                         camelContext.getRegistry().bind(DEFAULT_BEAN_NAME, endpoint);
@@ -92,7 +92,7 @@ public class CxfBeanFactory implements BeanFactory {
                 ServiceLoaderHelper.findProviderByClassName(providers, providerClass);
 
         if (provider == null) {
-            LOG.warn("CXF endpoint {} has no provider for {}", name, providerClass);
+            LOG.warn("CXF endpoint '{}' has no provider for {}", name != null ? name : DEFAULT_BEAN_NAME, providerClass);
             return null;
         }
 

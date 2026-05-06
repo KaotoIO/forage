@@ -15,6 +15,7 @@
     <modules>
         <module>forage-cxf-common</module>
         <module>forage-cxf-soap</module>
+        <module>forage-cxf</module>
     </modules>
 
 </project>

@@ -1,0 +1,43 @@
+- route:
+    id: cxf-soap-server
+    streamCaching: false
+    from:
+      uri: cxf:bean:cxfEndpoint
+      steps:
+        - log:
+            message: "Server received request"
+        - setBody:
+            constant:
+              expression: >
+                <sayHelloResponse xmlns="http://example.com/hello"><greeting>Hello from CXF server</greeting></sayHelloResponse>
+        - log:
+            message: "Server sending response"
+- route:
+    id: cxf-soap-caller
+    from:
+      uri: timer
+      parameters:
+        timerName: soap-caller
+        repeatCount: 1
+        delay: 5000
+      steps:
+        - setBody:
+            constant:
+              expression: >
+                <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+                  <soap:Body>
+                    <sayHello xmlns="http://example.com/hello"><name>Forage</name></sayHello>
+                  </soap:Body>
+                </soap:Envelope>
+        - setHeader:
+            name: CamelHttpMethod
+            constant:
+              expression: POST
+        - setHeader:
+            name: Content-Type
+            constant:
+              expression: text/xml
+        - to:
+            uri: "http://localhost:8080/services/hello"
+        - log:
+            message: "Server response: ${body}"

@@ -38,6 +38,7 @@
         <module>common</module>
         <module>jdbc</module>
         <module>jms</module>
+        <module>cxf</module>
     </modules>
 
     <build>

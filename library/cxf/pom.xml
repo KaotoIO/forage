@@ -16,6 +16,7 @@
         <module>forage-cxf-common</module>
         <module>forage-cxf-soap</module>
         <module>forage-cxf</module>
+        <module>spring-boot</module>
     </modules>
 
 </project>

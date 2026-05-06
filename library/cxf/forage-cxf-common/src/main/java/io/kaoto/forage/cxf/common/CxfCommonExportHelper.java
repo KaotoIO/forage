@@ -11,6 +11,9 @@ public class CxfCommonExportHelper {
     }
 
     public static String transformCxfKindIntoProviderClass(String cxfKind) {
+        if (cxfKind == null) {
+            return "io.kaoto.forage.cxf.soap.SoapEndpointProvider";
+        }
         return CXF_KIND_TO_PROVIDER_CLASS.getOrDefault(
                 cxfKind.toLowerCase(), "io.kaoto.forage.cxf.soap.SoapEndpointProvider");
     }

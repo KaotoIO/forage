@@ -111,7 +111,7 @@ public final class CxfConfigEntries extends ConfigEntries {
             "The username for CXF endpoint authentication",
             "Username",
             null,
-            "password",
+            "string",
             false,
             ConfigTag.SECURITY);
 

@@ -18,14 +18,6 @@ import io.kaoto.forage.cxf.common.CxfConfig;
 import io.kaoto.forage.cxf.common.CxfModuleDescriptor;
 import io.kaoto.forage.springboot.common.ForageSpringBootModuleAdapter;
 
-/**
- * Auto-configuration for Forage CXF endpoint creation using ServiceLoader discovery.
- * Automatically creates CXF endpoint beans from configuration properties,
- * supporting both single and multi-instance (prefixed) configurations.
- *
- * <p>Named/prefixed endpoints (e.g., {@code forage.billing.cxf.address}) are registered
- * dynamically by {@link ForageSpringBootModuleAdapter} using the {@link CxfModuleDescriptor}.
- */
 @ForageFactory(
         value = "CXF (Spring Boot)",
         variant = FactoryVariant.SPRING_BOOT,

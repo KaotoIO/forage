@@ -22,6 +22,7 @@
         <azure.identity.version>1.18.2</azure.identity.version>
         <azure.messaging.eventhubs.version>5.21.3</azure.messaging.eventhubs.version>
         <camel-quarkus.version>3.33.0</camel-quarkus.version>
+        <cxf.version>4.1.5</cxf.version>
         <citrus.version>4.10.0</citrus.version>
         <groovy.version>4.0.30</groovy.version>
         <ibmmq-client.version>9.4.5.0</ibmmq-client.version>

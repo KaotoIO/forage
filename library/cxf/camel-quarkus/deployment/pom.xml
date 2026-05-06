@@ -47,6 +47,12 @@
             <artifactId>smallrye-config</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>io.quarkiverse.cxf</groupId>
+            <artifactId>quarkus-cxf-deployment</artifactId>
+            <version>${quarkiverse-cxf.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>

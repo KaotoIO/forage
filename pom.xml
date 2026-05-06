@@ -53,7 +53,7 @@
         <pooled-jms.version>3.2.2</pooled-jms.version>
         <postgresql.version>42.7.10</postgresql.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <quarkus.version>3.33.1.1</quarkus.version>
+        <quarkus.version>3.35.2</quarkus.version>
         <quarkus-artemis-jms.version>3.12.1</quarkus-artemis-jms.version>
         <quarkus-pooled-jms.version>2.10.0</quarkus-pooled-jms.version>
         <slf4j.version>2.0.17</slf4j.version>

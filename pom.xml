@@ -23,7 +23,7 @@
         <azure.messaging.eventhubs.version>5.21.3</azure.messaging.eventhubs.version>
         <camel-quarkus.version>3.33.0</camel-quarkus.version>
         <citrus.version>4.10.0</citrus.version>
-        <groovy.version>4.0.30</groovy.version>
+        <groovy.version>5.0.5</groovy.version>
         <ibmmq-client.version>9.4.5.0</ibmmq-client.version>
 
         <javaparser.version>3.28.0</javaparser.version>

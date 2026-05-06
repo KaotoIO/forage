@@ -17,6 +17,7 @@
         <module>forage-cxf-soap</module>
         <module>forage-cxf</module>
         <module>spring-boot</module>
+        <module>camel-quarkus</module>
     </modules>
 
 </project>

@@ -1,0 +1,25 @@
+- route:
+    id: cxf-soap-client
+    from:
+      uri: timer
+      parameters:
+        timerName: soap-caller
+        repeatCount: 1
+        period: 5000
+      steps:
+        - setBody:
+            constant:
+              expression: >
+                <sayHello xmlns="http://example.com/hello"><name>Forage</name></sayHello>
+        - setHeader:
+            name: operationName
+            constant:
+              expression: sayHello
+        - setHeader:
+            name: operationNamespace
+            constant:
+              expression: "http://example.com/hello"
+        - to:
+            uri: cxf:bean:cxfEndpoint
+        - log:
+            message: "SOAP response: ${body}"

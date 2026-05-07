@@ -8,7 +8,7 @@ Call an existing SOAP web service with auto-configured CXF endpoint and WSDL bin
 
 - How to read a WSDL and map it to Forage properties
 - How Forage auto-configures a CXF `CxfEndpoint` from those properties
-- Invoking a SOAP operation using the `cxf:bean:cxfEndpoint` URI with operation headers
+- Invoking a SOAP operation using named beans with operation headers
 - Enabling CXF message logging for request/response tracing
 
 ## Scenario
@@ -35,16 +35,16 @@ Here is the relevant part of the WSDL:
 
 ## Step 1: Map the WSDL to Forage Properties
 
-Each WSDL element maps to a `forage.cxf.*` property:
+Each WSDL element maps to a `forage.<name>.cxf.*` property. The name (`helloClient`) becomes the bean name used in routes:
 
 ```properties title="application.properties"
-forage.cxf.kind=soap                                                     # (1)!
-forage.cxf.address=http://localhost:8080/services/hello                   # (2)!
-forage.cxf.wsdl.url=http://localhost:8080/services/hello?wsdl             # (3)!
-forage.cxf.service.name={http://example.com/hello}HelloService            # (4)!
-forage.cxf.port.name={http://example.com/hello}HelloPort                  # (5)!
-forage.cxf.data.format=PAYLOAD                                           # (6)!
-forage.cxf.logging.enabled=true                                          # (7)!
+forage.helloClient.cxf.kind=soap                                         # (1)!
+forage.helloClient.cxf.address=http://localhost:8080/services/hello       # (2)!
+forage.helloClient.cxf.wsdl.url=http://localhost:8080/services/hello?wsdl # (3)!
+forage.helloClient.cxf.service.name={http://example.com/hello}HelloService # (4)!
+forage.helloClient.cxf.port.name={http://example.com/hello}HelloPort      # (5)!
+forage.helloClient.cxf.data.format=PAYLOAD                               # (6)!
+forage.helloClient.cxf.logging.enabled=true                              # (7)!
 ```
 
 1. Selects the SOAP endpoint provider.
@@ -55,7 +55,7 @@ forage.cxf.logging.enabled=true                                          # (7)!
 6. `PAYLOAD` means raw XML elements -- no JAX-WS annotations needed.
 7. Activates CXF's message interceptors for request/response logging.
 
-Forage reads these properties and registers a fully configured `CxfEndpoint` bean as `cxfEndpoint` in the Camel registry.
+Forage reads these properties and registers a fully configured `CxfEndpoint` bean as `helloClient` in the Camel registry.
 
 ## Step 2: Write the Route
 
@@ -86,7 +86,7 @@ Forage reads these properties and registers a fully configured `CxfEndpoint` bea
                 constant:
                   expression: "http://example.com/hello"
             - to:
-                uri: cxf:bean:cxfEndpoint
+                uri: cxf:bean:helloClient
             - log:
                 message: "SOAP response: ${body}"
     ```
@@ -105,7 +105,7 @@ Forage reads these properties and registers a fully configured `CxfEndpoint` bea
                 .setHeader("operationName", constant("sayHello"))
                 .setHeader("operationNamespace",
                     constant("http://example.com/hello"))
-                .to("cxf:bean:cxfEndpoint")
+                .to("cxf:bean:helloClient")
                 .log("SOAP response: ${body}");
         }
     }
@@ -142,7 +142,7 @@ With `logging.enabled=true`, the full SOAP envelope (including HTTP headers) is 
 
 ## Key Takeaways
 
-- **WSDL-driven** -- the WSDL's service name, port name, and endpoint address map directly to `forage.cxf.*` properties. No need to parse the WSDL programmatically.
+- **WSDL-driven** -- the WSDL's service name, port name, and endpoint address map directly to `forage.<name>.cxf.*` properties. No need to parse the WSDL programmatically.
 - **Zero boilerplate** -- a few properties replace manual `CxfEndpoint` setup, WSDL binding, and service class configuration.
 - **Built-in logging** -- `logging.enabled=true` activates CXF's message interceptors for full request/response tracing without custom interceptor code.
-- **Provider abstraction** -- the route uses `cxf:bean:cxfEndpoint` regardless of the underlying configuration. Changing the data format or adding authentication only requires property changes.
+- **Named beans** -- the route uses `cxf:bean:helloClient` to reference the endpoint by name. Multiple endpoints can coexist in the same application with different names.

@@ -8,7 +8,7 @@ Expose a SOAP web service endpoint using a contract-first approach -- WSDL, prop
 
 - How to use a WSDL contract to define a SOAP server endpoint
 - How Forage creates a CXF server endpoint from the WSDL and properties
-- Consuming SOAP requests with `cxf:bean:cxfEndpoint` as a route source
+- Consuming SOAP requests with `cxf:bean:helloServer` as a route source
 - Building SOAP responses in YAML routes
 
 ## Scenario
@@ -22,13 +22,13 @@ This is also useful for building a REST-to-SOAP bridge: accept modern HTTP reque
 The server uses a contract-first approach with a local WSDL file:
 
 ```properties title="application.properties"
-forage.cxf.kind=soap                                                      # (1)!
-forage.cxf.address=http://localhost:8080/services/hello                    # (2)!
-forage.cxf.wsdl.url=file:hello.wsdl                                       # (3)!
-forage.cxf.service.name={http://example.com/hello}HelloService            # (4)!
-forage.cxf.port.name={http://example.com/hello}HelloPort                  # (5)!
-forage.cxf.data.format=PAYLOAD                                            # (6)!
-forage.cxf.logging.enabled=true
+forage.helloServer.cxf.kind=soap                                          # (1)!
+forage.helloServer.cxf.address=http://localhost:8080/services/hello        # (2)!
+forage.helloServer.cxf.wsdl.url=file:hello.wsdl                           # (3)!
+forage.helloServer.cxf.service.name={http://example.com/hello}HelloService # (4)!
+forage.helloServer.cxf.port.name={http://example.com/hello}HelloPort      # (5)!
+forage.helloServer.cxf.data.format=PAYLOAD                                # (6)!
+forage.helloServer.cxf.logging.enabled=true
 ```
 
 1. Selects the SOAP endpoint provider.
@@ -50,7 +50,7 @@ The WSDL defines the service contract (`hello.wsdl`), and Forage creates the CXF
         id: cxf-soap-server
         streamCache: false
         from:
-          uri: cxf:bean:cxfEndpoint
+          uri: cxf:bean:helloServer
           steps:
             - log:
                 message: "Server received SOAP request"
@@ -105,7 +105,7 @@ The WSDL defines the service contract (`hello.wsdl`), and Forage creates the CXF
         @Override
         public void configure() throws Exception {
             // Server: listen for SOAP requests
-            from("cxf:bean:cxfEndpoint")
+            from("cxf:bean:helloServer")
                 .log("Server received SOAP request")
                 .setBody(constant(
                     "<sayHelloResponse xmlns=\"http://example.com/hello\">"
@@ -129,7 +129,7 @@ The WSDL defines the service contract (`hello.wsdl`), and Forage creates the CXF
     }
     ```
 
-The first route acts as the SOAP server -- it consumes from `cxf:bean:cxfEndpoint`, processes the request, and returns a response. The second route is a test caller that fires once after 5 seconds to verify the server works.
+The first route acts as the SOAP server -- it consumes from `cxf:bean:helloServer`, processes the request, and returns a response. The second route is a test caller that fires once after 5 seconds to verify the server works.
 
 ## Prerequisites
 
@@ -171,7 +171,7 @@ curl http://localhost:8080/services/hello?wsdl
 ```
 
 !!! note "Quarkus export"
-    When exporting to Quarkus, you may need to change the address to a relative path (e.g., `/services/hello`) because Quarkus manages the HTTP server.
+    When exporting to Quarkus, Forage automatically adapts the server address (e.g., `http://localhost:8080/services/hello`) to a relative path (`/hello`) for the Quarkus CXF servlet. This only happens for server endpoints (used as route `from:`); client endpoints keep their absolute URL. See the [CXF module docs](../../modules/cxf.md) for details.
 
 ## Key Takeaways
 

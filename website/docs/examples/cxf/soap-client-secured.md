@@ -60,20 +60,20 @@ The truststore contains the server's certificate, allowing the CXF client to ver
 Add SSL and authentication properties to the basic SOAP client config:
 
 ```properties title="application.properties"
-forage.cxf.kind=soap
-forage.cxf.address=https://localhost:8443/ws/hello                        # (1)!
-forage.cxf.wsdl.url=https://localhost:8443/ws/hello?wsdl
-forage.cxf.service.name={http://example.com/hello}HelloService
-forage.cxf.port.name={http://example.com/hello}HelloPort
-forage.cxf.data.format=PAYLOAD
-forage.cxf.logging.enabled=true
+forage.securedClient.cxf.kind=soap
+forage.securedClient.cxf.address=https://localhost:8443/ws/hello           # (1)!
+forage.securedClient.cxf.wsdl.url=https://localhost:8443/ws/hello?wsdl
+forage.securedClient.cxf.service.name={http://example.com/hello}HelloService
+forage.securedClient.cxf.port.name={http://example.com/hello}HelloPort
+forage.securedClient.cxf.data.format=PAYLOAD
+forage.securedClient.cxf.logging.enabled=true
 
 # Authentication
-forage.cxf.username=admin                                                 # (2)!
-forage.cxf.password=secret                                                # (3)!
+forage.securedClient.cxf.username=admin                                   # (2)!
+forage.securedClient.cxf.password=secret                                  # (3)!
 
 # SSL/TLS
-forage.cxf.ssl.context.parameters=mySSLContext                            # (4)!
+forage.securedClient.cxf.ssl.context.parameters=mySSLContext              # (4)!
 ```
 
 1. Note `https://` -- the endpoint uses TLS.
@@ -81,10 +81,10 @@ forage.cxf.ssl.context.parameters=mySSLContext                            # (4)!
 3. Password for authentication.
 4. References the `mySSLContext` bean defined in `ssl-context.camel.yaml`.
 
-The three additions compared to the [basic SOAP client](soap-client.md):
+The additions compared to the [basic SOAP client](soap-client.md):
 
-- `forage.cxf.username` / `forage.cxf.password` -- credentials injected into every request
-- `forage.cxf.ssl.context.parameters` -- links to the SSL bean that configures the TLS trust chain
+- `forage.securedClient.cxf.username` / `forage.securedClient.cxf.password` -- credentials injected into every request
+- `forage.securedClient.cxf.ssl.context.parameters` -- links to the SSL bean that configures the TLS trust chain
 
 ## Step 4: Write the Route
 
@@ -117,7 +117,7 @@ The route itself is identical to the basic client -- security is handled entirel
                 constant:
                   expression: "http://example.com/hello"
             - to:
-                uri: cxf:bean:cxfEndpoint
+                uri: cxf:bean:securedClient
             - log:
                 message: "Secured SOAP response: ${body}"
     ```
@@ -136,13 +136,13 @@ The route itself is identical to the basic client -- security is handled entirel
                 .setHeader("operationName", constant("sayHello"))
                 .setHeader("operationNamespace",
                     constant("http://example.com/hello"))
-                .to("cxf:bean:cxfEndpoint")
+                .to("cxf:bean:securedClient")
                 .log("Secured SOAP response: ${body}");
         }
     }
     ```
 
-Notice that the route code does not change at all -- the same `cxf:bean:cxfEndpoint` URI works for both unsecured and secured endpoints. All security is handled by Forage at the configuration level.
+Notice that the route code does not change at all -- the same pattern works for both unsecured and secured endpoints. All security is handled by Forage at the configuration level.
 
 ## Running
 
@@ -176,4 +176,4 @@ rm -rf certs/
 - **Security as configuration** -- adding TLS and authentication to a SOAP client requires only property changes and an SSL bean definition. The route code stays the same.
 - **No interceptor boilerplate** -- without Forage, configuring CXF SSL requires programmatic `HTTPConduit` access and custom interceptor chains. Forage handles this from a single property reference.
 - **Self-contained testing** -- the WireMock HTTPS setup provides a complete test environment with self-signed certificates, no external services needed.
-- **Separation of concerns** -- the SSL context bean (`ssl-context.camel.yaml`) is reusable across multiple CXF endpoints. Each endpoint references it by name.
+- **Named beans** -- each endpoint has a descriptive name (`securedClient`). The SSL context bean (`mySSLContext`) is reusable across multiple CXF endpoints by referencing it by name.

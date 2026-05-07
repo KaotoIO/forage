@@ -1,6 +1,5 @@
 package io.kaoto.forage.cxf;
 
-import java.util.Collections;
 import java.util.function.Consumer;
 import org.citrusframework.annotations.CitrusTest;
 import org.citrusframework.junit.jupiter.CitrusSupport;
@@ -22,15 +21,8 @@ public class CxfSoapServerTest implements ForageIntegrationTest {
 
     @Override
     public String runBeforeAll(ForageTestCaseRunner runner, Consumer<AutoCloseable> afterAll) {
-        var builder = forageRun(INTEGRATION_NAME, "forage-cxf.properties", "route-server.camel.yaml")
-                .dumpIntegrationOutput(true);
-
-        String runtime = System.getProperty(IntegrationTestSetupExtension.RUNTIME_PROPERTY);
-        if ("quarkus".equals(runtime)) {
-            builder.withEnvs(Collections.singletonMap("FORAGE_CXF_ADDRESS", "/hello"));
-        }
-
-        runner.when(builder);
+        runner.when(forageRun(INTEGRATION_NAME, "forage-cxf.properties", "route-server.camel.yaml")
+                .dumpIntegrationOutput(true));
 
         return INTEGRATION_NAME;
     }

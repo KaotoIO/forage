@@ -210,7 +210,7 @@ public class ConfigModule {
         String propertyName = buildPrefixedName();
 
         if (propertyName != null && !propertyName.isBlank()) {
-            return propertyName.replace("_", ".").toLowerCase();
+            return propertyName.replace("_", ".");
         }
 
         return null;

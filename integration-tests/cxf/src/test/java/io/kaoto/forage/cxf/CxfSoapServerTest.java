@@ -21,7 +21,7 @@ public class CxfSoapServerTest implements ForageIntegrationTest {
 
     @Override
     public String runBeforeAll(ForageTestCaseRunner runner, Consumer<AutoCloseable> afterAll) {
-        runner.when(forageRun(INTEGRATION_NAME, "forage-cxf.properties", "route-server.camel.yaml")
+        runner.when(forageRun(INTEGRATION_NAME, "forage-cxf.properties", "cxf-soap-server.camel.yaml")
                 .dumpIntegrationOutput(true));
 
         return INTEGRATION_NAME;

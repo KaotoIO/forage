@@ -9,6 +9,7 @@ Expose a SOAP web service endpoint using a contract-first approach -- WSDL, prop
 - How to use a WSDL contract to define a SOAP server endpoint
 - How Forage creates a CXF server endpoint from the WSDL and properties
 - Consuming SOAP requests with `cxf:bean:helloServer` as a route source
+- Defining multiple CXF endpoints (server + client) in the same application
 - Building SOAP responses in YAML routes
 
 ## Scenario
@@ -22,23 +23,30 @@ This is also useful for building a REST-to-SOAP bridge: accept modern HTTP reque
 The server uses a contract-first approach with a local WSDL file:
 
 ```properties title="application.properties"
-forage.helloServer.cxf.kind=soap                                          # (1)!
-forage.helloServer.cxf.address=http://localhost:8080/services/hello        # (2)!
-forage.helloServer.cxf.wsdl.url=file:hello.wsdl                           # (3)!
-forage.helloServer.cxf.service.name={http://example.com/hello}HelloService # (4)!
-forage.helloServer.cxf.port.name={http://example.com/hello}HelloPort      # (5)!
-forage.helloServer.cxf.data.format=PAYLOAD                                # (6)!
+# Server endpoint
+forage.helloServer.cxf.address=http://localhost:8080/services/hello        # (1)!
+forage.helloServer.cxf.wsdl.url=file:hello.wsdl                           # (2)!
+forage.helloServer.cxf.service.name={http://example.com/hello}HelloService # (3)!
+forage.helloServer.cxf.port.name={http://example.com/hello}HelloPort      # (4)!
+forage.helloServer.cxf.data.format=PAYLOAD                                # (5)!
 forage.helloServer.cxf.logging.enabled=true
+
+# Client endpoint (used by the test caller route)
+forage.helloClient.cxf.address=http://localhost:8080/services/hello        # (6)!
+forage.helloClient.cxf.wsdl.url=file:hello.wsdl
+forage.helloClient.cxf.service.name={http://example.com/hello}HelloService
+forage.helloClient.cxf.port.name={http://example.com/hello}HelloPort
+forage.helloClient.cxf.data.format=PAYLOAD
 ```
 
-1. Selects the SOAP endpoint provider.
-2. The URL path where the SOAP service will be exposed.
-3. Local WSDL file -- the service contract.
-4. Service name from the WSDL, with target namespace prefix.
-5. Port name from the WSDL, with target namespace prefix.
-6. `PAYLOAD` means raw XML -- no JAX-WS annotations or `@WebService` interfaces needed.
+1. The URL path where the SOAP service will be exposed.
+2. Local WSDL file -- the service contract.
+3. Service name from the WSDL, with target namespace prefix.
+4. Port name from the WSDL, with target namespace prefix.
+5. `PAYLOAD` means raw XML -- no JAX-WS annotations or `@WebService` interfaces needed.
+6. A separate client endpoint pointing to the same server -- shows how multiple CXF beans coexist.
 
-The WSDL defines the service contract (`hello.wsdl`), and Forage creates the CXF endpoint from it. CXF will also serve the WSDL at `http://localhost:8080/services/hello?wsdl`.
+The WSDL defines the service contract (`hello.wsdl`), and Forage creates the CXF endpoint from it. CXF will also serve the WSDL at `http://localhost:8080/services/hello?wsdl`. Both `helloServer` and `helloClient` are registered as separate beans in the Camel registry.
 
 ## Route
 
@@ -63,7 +71,7 @@ The WSDL defines the service contract (`hello.wsdl`), and Forage creates the CXF
             - log:
                 message: "Server sending SOAP response"
 
-    # Test caller: sends a SOAP request to verify the server
+    # Test caller: sends a SOAP request via the client endpoint
     - route:
         id: cxf-soap-test-caller
         from:
@@ -76,23 +84,19 @@ The WSDL defines the service contract (`hello.wsdl`), and Forage creates the CXF
             - setBody:
                 constant:
                   expression: >
-                    <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-                      <soap:Body>
-                        <sayHello xmlns="http://example.com/hello">
-                          <name>Forage</name>
-                        </sayHello>
-                      </soap:Body>
-                    </soap:Envelope>
+                    <sayHello xmlns="http://example.com/hello">
+                      <name>Forage</name>
+                    </sayHello>
             - setHeader:
-                name: CamelHttpMethod
+                name: operationName
                 constant:
-                  expression: POST
+                  expression: sayHello
             - setHeader:
-                name: Content-Type
+                name: operationNamespace
                 constant:
-                  expression: text/xml
+                  expression: "http://example.com/hello"
             - to:
-                uri: "http://localhost:8080/services/hello"
+                uri: cxf:bean:helloClient
             - log:
                 message: "Test caller received response: ${body}"
     ```
@@ -113,23 +117,21 @@ The WSDL defines the service contract (`hello.wsdl`), and Forage creates the CXF
                     + "</sayHelloResponse>"))
                 .log("Server sending SOAP response");
 
-            // Test caller
+            // Test caller: uses the client endpoint
             from("timer:soap-caller?repeatCount=1&delay=5000")
                 .setBody(constant(
-                    "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">"
-                    + "<soap:Body>"
-                    + "<sayHello xmlns=\"http://example.com/hello\">"
-                    + "<name>Forage</name></sayHello>"
-                    + "</soap:Body></soap:Envelope>"))
-                .setHeader("CamelHttpMethod", constant("POST"))
-                .setHeader("Content-Type", constant("text/xml"))
-                .to("http://localhost:8080/services/hello")
+                    "<sayHello xmlns=\"http://example.com/hello\">"
+                    + "<name>Forage</name></sayHello>"))
+                .setHeader("operationName", constant("sayHello"))
+                .setHeader("operationNamespace",
+                    constant("http://example.com/hello"))
+                .to("cxf:bean:helloClient")
                 .log("Test caller received response: ${body}");
         }
     }
     ```
 
-The first route acts as the SOAP server -- it consumes from `cxf:bean:helloServer`, processes the request, and returns a response. The second route is a test caller that fires once after 5 seconds to verify the server works.
+The first route acts as the SOAP server -- it consumes from `cxf:bean:helloServer`, processes the request, and returns a response. The second route is a test caller that uses `cxf:bean:helloClient` to send a SOAP request to the server, demonstrating how multiple CXF endpoints coexist in the same application.
 
 ## Prerequisites
 
@@ -144,7 +146,7 @@ camel run *
 
 You should see:
 
-```
+```text
 Server received SOAP request
 Server sending SOAP response
 Test caller received response: <sayHelloResponse ...>Hello from CXF server</sayHelloResponse>
@@ -179,4 +181,5 @@ curl http://localhost:8080/services/hello?wsdl
 - **SOAP service in minutes** -- a WSDL, a properties file, and a YAML route replace JAX-WS annotations, service endpoint interfaces, and CXF server configuration.
 - **No annotations needed** -- using `PAYLOAD` data format means raw XML handling. No `@WebService`, `@WebMethod`, or generated JAXB classes required.
 - **REST-to-SOAP bridge** -- combine this with Camel's REST DSL to accept modern HTTP requests and expose them as a SOAP service for legacy clients.
-- **Self-testing** -- the built-in test caller route verifies the server is working without external tools.
+- **Multiple endpoints** -- the same application defines both a server (`helloServer`) and a client (`helloClient`) CXF endpoint, each as a named bean. This pattern extends to any number of endpoints.
+- **Self-testing** -- the built-in test caller route uses the CXF client endpoint to verify the server is working.

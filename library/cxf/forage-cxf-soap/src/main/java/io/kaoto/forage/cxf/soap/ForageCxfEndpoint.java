@@ -19,8 +19,6 @@ public class ForageCxfEndpoint extends CxfEndpoint {
 
     private static final Logger LOG = LoggerFactory.getLogger(ForageCxfEndpoint.class);
     private static final Set<String> LOCAL_HOSTS = Set.of("localhost", "127.0.0.1", "0.0.0.0");
-    private static final String DEFAULT_CXF_SERVLET_PATH = "/services";
-
     private String sslContextParametersBeanName;
     private boolean sslConfigured;
     private String quarkusCxfServletPath;

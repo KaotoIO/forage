@@ -38,22 +38,20 @@ Here is the relevant part of the WSDL:
 Each WSDL element maps to a `forage.<name>.cxf.*` property. The name (`helloClient`) becomes the bean name used in routes:
 
 ```properties title="application.properties"
-forage.helloClient.cxf.kind=soap                                         # (1)!
-forage.helloClient.cxf.address=http://localhost:8080/services/hello       # (2)!
-forage.helloClient.cxf.wsdl.url=http://localhost:8080/services/hello?wsdl # (3)!
-forage.helloClient.cxf.service.name={http://example.com/hello}HelloService # (4)!
-forage.helloClient.cxf.port.name={http://example.com/hello}HelloPort      # (5)!
-forage.helloClient.cxf.data.format=PAYLOAD                               # (6)!
-forage.helloClient.cxf.logging.enabled=true                              # (7)!
+forage.helloClient.cxf.address=http://localhost:8080/services/hello       # (1)!
+forage.helloClient.cxf.wsdl.url=http://localhost:8080/services/hello?wsdl # (2)!
+forage.helloClient.cxf.service.name={http://example.com/hello}HelloService # (3)!
+forage.helloClient.cxf.port.name={http://example.com/hello}HelloPort      # (4)!
+forage.helloClient.cxf.data.format=PAYLOAD                               # (5)!
+forage.helloClient.cxf.logging.enabled=true                              # (6)!
 ```
 
-1. Selects the SOAP endpoint provider.
-2. From `<soap:address location="..."/>` in the WSDL.
-3. URL where the WSDL document is published.
-4. From `<wsdl:service name="...">` with the target namespace as prefix.
-5. From `<wsdl:port name="...">` with the target namespace.
-6. `PAYLOAD` means raw XML elements -- no JAX-WS annotations needed.
-7. Activates CXF's message interceptors for request/response logging.
+1. From `<soap:address location="..."/>` in the WSDL.
+2. URL where the WSDL document is published.
+3. From `<wsdl:service name="...">` with the target namespace as prefix.
+4. From `<wsdl:port name="...">` with the target namespace.
+5. `PAYLOAD` means raw XML elements -- no JAX-WS annotations needed.
+6. Activates CXF's message interceptors for request/response logging.
 
 Forage reads these properties and registers a fully configured `CxfEndpoint` bean as `helloClient` in the Camel registry.
 
@@ -132,7 +130,7 @@ camel run *
 
 You should see:
 
-```
+```text
 SOAP response: <sayHelloResponse xmlns="http://example.com/hello">
   <greeting>Hello from CXF server</greeting>
 </sayHelloResponse>

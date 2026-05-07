@@ -5,7 +5,6 @@ Forage creates CXF SOAP endpoints for web service integration, handling endpoint
 ## Quick Start
 
 ```properties
-forage.helloClient.cxf.kind=soap
 forage.helloClient.cxf.address=http://localhost:8080/ws/hello
 forage.helloClient.cxf.wsdl.url=http://localhost:8080/ws/hello?wsdl
 forage.helloClient.cxf.data.format=PAYLOAD
@@ -30,17 +29,14 @@ forage.helloClient.cxf.logging.enabled=true
 Use different names to configure multiple SOAP services -- for example, a server endpoint and two client endpoints:
 
 ```properties
-forage.helloServer.cxf.kind=soap
 forage.helloServer.cxf.address=http://localhost:8080/services/hello
 forage.helloServer.cxf.wsdl.url=file:hello.wsdl
 forage.helloServer.cxf.data.format=PAYLOAD
 
-forage.payment.cxf.kind=soap
 forage.payment.cxf.address=http://payment-svc:8080/ws/payment
 forage.payment.cxf.wsdl.url=http://payment-svc:8080/ws/payment?wsdl
 forage.payment.cxf.data.format=PAYLOAD
 
-forage.inventory.cxf.kind=soap
 forage.inventory.cxf.address=http://inventory-svc:8080/ws/stock
 forage.inventory.cxf.wsdl.url=http://inventory-svc:8080/ws/stock?wsdl
 forage.inventory.cxf.data.format=PAYLOAD

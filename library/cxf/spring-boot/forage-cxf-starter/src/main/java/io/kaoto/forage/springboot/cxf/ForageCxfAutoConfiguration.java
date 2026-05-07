@@ -39,7 +39,7 @@ public class ForageCxfAutoConfiguration {
 
     @Bean("cxfEndpoint")
     @ConditionalOnMissingBean(name = "cxfEndpoint")
-    @ConditionalOnProperty(prefix = "forage.cxf", name = "kind")
+    @ConditionalOnProperty(prefix = "forage.cxf", name = "address")
     public Object forageDefaultCxfEndpoint() {
         CxfConfig config = new CxfConfig();
         String kind = config.cxfKind();

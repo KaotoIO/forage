@@ -5,7 +5,6 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
-import org.apache.camel.support.jsse.SSLContextParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.kaoto.forage.core.annotations.FactoryType;
@@ -56,7 +55,6 @@ public class CxfBeanFactory implements BeanFactory {
                         CxfConfig cxfConfig = new CxfConfig(name);
                         Object endpoint = newCxfEndpoint(cxfConfig, name);
                         if (endpoint != null) {
-                            applySslContextParameters(endpoint, cxfConfig);
                             applyCamelContext(endpoint);
                             camelContext.getRegistry().bind(name, endpoint);
                         }
@@ -71,7 +69,6 @@ public class CxfBeanFactory implements BeanFactory {
                     CxfConfig cxfConfig = new CxfConfig();
                     Object endpoint = newCxfEndpoint(cxfConfig, null);
                     if (endpoint != null) {
-                        applySslContextParameters(endpoint, cxfConfig);
                         applyCamelContext(endpoint);
                         camelContext.getRegistry().bind(DEFAULT_BEAN_NAME, endpoint);
                     } else {
@@ -101,28 +98,6 @@ public class CxfBeanFactory implements BeanFactory {
         }
 
         return provider.get().create(name);
-    }
-
-    private void applySslContextParameters(Object endpoint, CxfConfig config) {
-        String sslBeanName = config.sslContextParameters();
-        if (sslBeanName == null) {
-            return;
-        }
-
-        SSLContextParameters sslCtx =
-                camelContext.getRegistry().lookupByNameAndType(sslBeanName, SSLContextParameters.class);
-        if (sslCtx == null) {
-            LOG.warn("SSL context parameters bean '{}' not found in registry", sslBeanName);
-            return;
-        }
-
-        try {
-            endpoint.getClass()
-                    .getMethod("setSslContextParameters", SSLContextParameters.class)
-                    .invoke(endpoint, sslCtx);
-        } catch (Exception e) {
-            LOG.warn("Could not set SSL context parameters on CXF endpoint: {}", e.getMessage());
-        }
     }
 
     // setCamelContext() applies deferred properties — all config must be set before this call

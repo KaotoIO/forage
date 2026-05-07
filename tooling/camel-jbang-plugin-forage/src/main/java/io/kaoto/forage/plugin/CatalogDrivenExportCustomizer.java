@@ -70,6 +70,11 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
                             if (propSuffix != null) {
                                 // Collect ALL bean kind values across all instances
                                 Set<String> beanKinds = findAllValues(factoryProperties, propSuffix);
+                                if (beanKinds.isEmpty()
+                                        && entry.getDefaultValue() != null
+                                        && !entry.getDefaultValue().isEmpty()) {
+                                    beanKinds = Set.of(entry.getDefaultValue());
+                                }
                                 for (String kind : beanKinds) {
                                     // Add bean GAVs
                                     Collection<String> beanGavs = catalog.getBeanGavs(kind);

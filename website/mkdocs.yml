@@ -100,6 +100,10 @@ nav:
       - JMS:
           - Basic Messaging: examples/jms/single.md
           - Transactional JMS: examples/jms/transactional.md
+      - CXF:
+          - SOAP Client: examples/cxf/soap-client.md
+          - Secured SOAP Client: examples/cxf/soap-client-secured.md
+          - SOAP Server: examples/cxf/soap-server.md
       - Transactions:
           - Distributed XA: examples/transactions/distributed-xa.md
       - AI:
@@ -117,6 +121,7 @@ nav:
           - Chat Memory: modules/ai/chat-memory.md
       - JDBC: modules/jdbc.md
       - JMS: modules/jms.md
+      - CXF: modules/cxf.md
   - Guides:
       - guides/index.md
       - Camel JBang: guides/camel-jbang.md

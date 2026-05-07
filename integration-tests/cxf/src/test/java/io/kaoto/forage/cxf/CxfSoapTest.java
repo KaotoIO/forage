@@ -119,7 +119,7 @@ public class CxfSoapTest implements ForageIntegrationTest {
         envs.put("FORAGE_CXF_ADDRESS", wireMockUrl + "/ws/hello");
         envs.put("FORAGE_CXF_WSDL_URL", wireMockUrl + "/ws/hello?wsdl");
 
-        runner.when(forageRun(INTEGRATION_NAME, "forage-cxf.properties", "route.camel.yaml")
+        runner.when(forageRun(INTEGRATION_NAME, "forage-cxf.properties", "cxf-soap-client.camel.yaml")
                 .dumpIntegrationOutput(true)
                 .withEnvs(envs));
 

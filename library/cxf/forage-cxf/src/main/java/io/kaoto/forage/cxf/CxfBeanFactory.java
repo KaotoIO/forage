@@ -92,7 +92,8 @@ public class CxfBeanFactory implements BeanFactory {
                 ServiceLoaderHelper.findProviderByClassName(providers, providerClass);
 
         if (provider == null) {
-            LOG.warn("CXF endpoint '{}' has no provider for {}", name != null ? name : DEFAULT_BEAN_NAME, providerClass);
+            LOG.warn(
+                    "CXF endpoint '{}' has no provider for {}", name != null ? name : DEFAULT_BEAN_NAME, providerClass);
             return null;
         }
 

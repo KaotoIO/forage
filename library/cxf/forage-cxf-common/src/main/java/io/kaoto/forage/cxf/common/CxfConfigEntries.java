@@ -6,14 +6,15 @@ import io.kaoto.forage.core.util.config.ConfigTag;
 
 public final class CxfConfigEntries extends ConfigEntries {
 
-    public static final ConfigModule CXF_KIND = ConfigModule.ofBeanName(
+    public static final ConfigModule CXF_KIND = ConfigModule.of(
             CxfConfig.class,
             "forage.cxf.kind",
             "The CXF endpoint kind/type",
             "CXF Kind",
-            true,
-            ConfigTag.COMMON,
-            "java.lang.Object");
+            "soap",
+            "string",
+            false,
+            ConfigTag.COMMON);
 
     public static final ConfigModule ADDRESS = ConfigModule.of(
             CxfConfig.class,

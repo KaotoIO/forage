@@ -1,7 +1,6 @@
 package io.kaoto.forage.cxf.soap;
 
 import org.apache.camel.component.cxf.common.DataFormat;
-import org.apache.camel.component.cxf.jaxws.CxfEndpoint;
 import io.kaoto.forage.core.annotations.ForageBean;
 import io.kaoto.forage.core.cxf.CxfEndpointProvider;
 import io.kaoto.forage.cxf.common.CxfConfig;
@@ -16,7 +15,7 @@ public class SoapEndpointProvider implements CxfEndpointProvider {
     @Override
     public Object create(String id) {
         CxfConfig config = new CxfConfig(id);
-        CxfEndpoint endpoint = new CxfEndpoint();
+        ForageCxfEndpoint endpoint = new ForageCxfEndpoint();
 
         endpoint.setAddress(config.address());
         endpoint.setDataFormat(DataFormat.valueOf(config.dataFormat()));
@@ -63,6 +62,10 @@ public class SoapEndpointProvider implements CxfEndpointProvider {
         }
         if (config.defaultOperationNamespace() != null) {
             endpoint.setDefaultOperationNamespace(config.defaultOperationNamespace());
+        }
+
+        if (config.sslContextParameters() != null) {
+            endpoint.setSslContextParametersBeanName(config.sslContextParameters());
         }
 
         return endpoint;

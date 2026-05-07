@@ -1,6 +1,7 @@
 package io.kaoto.forage.integration.tests;
 
-import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import org.citrusframework.TestActionBuilder;
 import org.citrusframework.camel.actions.CamelActionBuilder;
@@ -40,8 +41,9 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
     public static final String RUNTIME_PROPERTY = "INTEGRATION_TEST_RUNTIME";
 
     private boolean runBeforeAll = false;
-    private final ArrayList<AutoCloseable> closeables = new ArrayList<>();
+    private final List<AutoCloseable> closeables = new CopyOnWriteArrayList<>();
     private TestContext previousTestContext;
+    private volatile boolean shutdownHookRegistered = false;
 
     @Override
     public void beforeEach(ExtensionContext context) throws Exception {
@@ -71,6 +73,7 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
                     "Running 'runBeforeAll' setup for class: {}",
                     context.getRequiredTestClass().getName());
             String integrationName = forageTest.runBeforeAll(runner, closeables::add);
+            registerShutdownHook();
             if (integrationName == null) {
                 LOG.warn(
                         "'runBeforeAll' method did not return name of the integration. Any required cleanup has to be registered manually.");
@@ -90,6 +93,26 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
                 }
             }
         }
+    }
+
+    private void registerShutdownHook() {
+        if (shutdownHookRegistered) {
+            return;
+        }
+        shutdownHookRegistered = true;
+        Runtime.getRuntime()
+                .addShutdownHook(new Thread(
+                        () -> {
+                            LOG.info("JVM shutdown detected, cleaning up Camel integrations");
+                            closeables.forEach(c -> {
+                                try {
+                                    c.close();
+                                } catch (Exception e) {
+                                    LOG.warn("Error during shutdown cleanup", e);
+                                }
+                            });
+                        },
+                        "forage-test-cleanup"));
     }
 
     private void destroyProcess(String integrationName, long pid) {

@@ -40,7 +40,7 @@ public class CxfConfig extends AbstractConfig {
     }
 
     public String cxfKind() {
-        return getRequired(CXF_KIND, "CXF kind is required but not configured");
+        return get(CXF_KIND).orElse(CXF_KIND.defaultValue());
     }
 
     public String address() {

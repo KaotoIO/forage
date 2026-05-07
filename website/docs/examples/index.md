@@ -21,6 +21,14 @@ All examples are self-contained and can be run with Camel JBang or exported to S
 | [Basic Messaging](jms/single.md) | JMS producer/consumer with ActiveMQ Artemis |
 | [Transactional JMS](jms/transactional.md) | XA transactions with Narayana, rollback, and redelivery |
 
+## CXF
+
+| Example | Description |
+|---|---|
+| [SOAP Client](cxf/soap-client.md) | Call a SOAP web service -- WSDL-driven configuration walkthrough |
+| [Secured SOAP Client](cxf/soap-client-secured.md) | SOAP with SSL/TLS and username/password authentication |
+| [SOAP Server](cxf/soap-server.md) | Expose a SOAP server endpoint from properties |
+
 ## Transactions
 
 | Example | Description |

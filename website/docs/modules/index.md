@@ -14,3 +14,7 @@ Forage provides ready-to-use bean factories for a wide range of Apache Camel com
 
 - [JDBC](jdbc.md) — Datasource providers with connection pooling
 - [JMS](jms.md) — Connection factories for message brokers
+
+## Integration
+
+- [CXF](cxf.md) — SOAP web service endpoints

@@ -4,22 +4,18 @@
 
     <parent>
         <groupId>io.kaoto.forage</groupId>
-        <artifactId>library</artifactId>
-        <version>1.3-SNAPSHOT</version>
+        <artifactId>ai</artifactId>
+        <version>1.2-SNAPSHOT</version>
     </parent>
 
-    <artifactId>ai</artifactId>
+    <artifactId>web-search</artifactId>
     <packaging>pom</packaging>
-    <name>Forage :: Library :: AI</name>
+    <name>Forage :: Library :: AI :: Web Search</name>
 
     <modules>
-        <module>agents</module>
-        <module>chat-memory</module>
-        <module>guardrails</module>
-        <module>models</module>
-        <module>rag</module>
-        <module>vector-dbs</module>
-        <module>web-search</module>
+        <module>forage-web-search</module>
+        <module>forage-web-search-tavily</module>
+        <module>forage-web-search-google-custom</module>
     </modules>
 
 </project>

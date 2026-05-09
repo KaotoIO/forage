@@ -16,7 +16,10 @@ public enum FactoryType {
     CONNECTION_FACTORY("jakarta.jms.ConnectionFactory", "forage-jms-common"),
 
     /** Factory that creates CxfEndpoint beans for CXF SOAP */
-    CXF_ENDPOINT("org.apache.camel.component.cxf.jaxws.CxfEndpoint", "forage-cxf-common");
+    CXF_ENDPOINT("org.apache.camel.component.cxf.jaxws.CxfEndpoint", "forage-cxf-common"),
+
+    /** Factory that creates WebSearchEngine beans */
+    WEB_SEARCH_ENGINE("dev.langchain4j.web.search.WebSearchEngine", "forage-web-search");
 
     private final String displayName;
 

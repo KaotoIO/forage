@@ -86,9 +86,7 @@ public class ForagePlugin implements Plugin {
         if (existing != null && existing.contains(SHIBBOLETH_REPO)) {
             return;
         }
-        String repos = existing == null || existing.isBlank()
-                ? SHIBBOLETH_REPO
-                : existing + "," + SHIBBOLETH_REPO;
+        String repos = existing == null || existing.isBlank() ? SHIBBOLETH_REPO : existing + "," + SHIBBOLETH_REPO;
         main.setRepositories(repos);
     }
 

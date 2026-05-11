@@ -19,7 +19,11 @@ public enum FactoryType {
     CXF_ENDPOINT("org.apache.camel.component.cxf.jaxws.CxfEndpoint", "forage-cxf-common"),
 
     /** Factory that creates WebSearchEngine beans */
-    WEB_SEARCH_ENGINE("dev.langchain4j.web.search.WebSearchEngine", "forage-web-search");
+    WEB_SEARCH_ENGINE("dev.langchain4j.web.search.WebSearchEngine", "forage-web-search"),
+
+    /** Factory that creates Spring RabbitMQ ConnectionFactory beans */
+    SPRING_RABBITMQ_CONNECTION_FACTORY(
+            "org.springframework.amqp.rabbit.connection.ConnectionFactory", "forage-spring-rabbitmq");
 
     private final String displayName;
 

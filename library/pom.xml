@@ -19,6 +19,7 @@
         <module>cxf</module>
         <module>jdbc</module>
         <module>jms</module>
+        <module>messaging</module>
         <module>policy</module>
         <module>security</module>
         <module>vertx</module>

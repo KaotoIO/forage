@@ -49,20 +49,28 @@ public class SpringRabbitMQBeanFactory implements BeanFactory {
                                 .lookupByNameAndType(
                                         name, org.springframework.amqp.rabbit.connection.ConnectionFactory.class)
                         == null) {
-                    SpringRabbitMQConfig namedConfig = new SpringRabbitMQConfig(name);
-                    CachingConnectionFactory connectionFactory = createConnectionFactory(namedConfig);
-                    camelContext.getRegistry().bind(name, connectionFactory);
+                    try {
+                        SpringRabbitMQConfig namedConfig = new SpringRabbitMQConfig(name);
+                        CachingConnectionFactory connectionFactory = createConnectionFactory(namedConfig);
+                        camelContext.getRegistry().bind(name, connectionFactory);
+                    } catch (Exception e) {
+                        LOG.error("Failed to create RabbitMQ connection factory for: {}", name, e);
+                    }
                 }
             }
         } else {
-            if (camelContext
-                            .getRegistry()
-                            .lookupByNameAndType(
-                                    DEFAULT_BEAN_NAME,
-                                    org.springframework.amqp.rabbit.connection.ConnectionFactory.class)
-                    == null) {
-                CachingConnectionFactory connectionFactory = createConnectionFactory(config);
-                camelContext.getRegistry().bind(DEFAULT_BEAN_NAME, connectionFactory);
+            try {
+                if (camelContext
+                                .getRegistry()
+                                .lookupByNameAndType(
+                                        DEFAULT_BEAN_NAME,
+                                        org.springframework.amqp.rabbit.connection.ConnectionFactory.class)
+                        == null) {
+                    CachingConnectionFactory connectionFactory = createConnectionFactory(config);
+                    camelContext.getRegistry().bind(DEFAULT_BEAN_NAME, connectionFactory);
+                }
+            } catch (Exception e) {
+                LOG.error(e.getMessage(), e);
             }
         }
     }

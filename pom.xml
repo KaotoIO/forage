@@ -61,7 +61,7 @@
         <quarkus-pooled-jms.version>2.10.0</quarkus-pooled-jms.version>
         <slf4j.version>2.0.17</slf4j.version>
         <smallrye.version>3.16.0</smallrye.version>
-        <spotless.version>3.2.1</spotless.version>
+        <spotless.version>3.4.0</spotless.version>
         <palantir-format.version>2.71.0</palantir-format.version>
         <camel-spring-boot.version>${camel.version}</camel-spring-boot.version>
         <spring-boot.version>3.5.14</spring-boot.version>

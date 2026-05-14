@@ -14,6 +14,7 @@ Forage provides ready-to-use bean factories for a wide range of Apache Camel com
 
 - [JDBC](jdbc.md) — Datasource providers with connection pooling
 - [JMS](jms.md) — Connection factories for message brokers
+- [Spring RabbitMQ](spring-rabbitmq.md) — CachingConnectionFactory for AMQP messaging
 
 ## Integration
 

@@ -86,6 +86,66 @@ public final class SpringRabbitMQConfigEntries extends ConfigEntries {
             false,
             ConfigTag.ADVANCED);
 
+    public static final ConfigModule CHANNEL_CHECKOUT_TIMEOUT = ConfigModule.of(
+            SpringRabbitMQConfig.class,
+            "forage.spring.rabbitmq.channel.checkout.timeout",
+            "Timeout in milliseconds when waiting for a channel from the cache",
+            "Channel Checkout Timeout",
+            "30000",
+            "long",
+            false,
+            ConfigTag.ADVANCED);
+
+    public static final ConfigModule REQUESTED_HEARTBEAT = ConfigModule.of(
+            SpringRabbitMQConfig.class,
+            "forage.spring.rabbitmq.requested.heartbeat",
+            "Heartbeat interval in seconds for detecting dead connections",
+            "Requested Heartbeat",
+            "60",
+            "integer",
+            false,
+            ConfigTag.ADVANCED);
+
+    public static final ConfigModule CONNECTION_TIMEOUT = ConfigModule.of(
+            SpringRabbitMQConfig.class,
+            "forage.spring.rabbitmq.connection.timeout",
+            "Connection timeout in milliseconds",
+            "Connection Timeout",
+            "30000",
+            "integer",
+            false,
+            ConfigTag.ADVANCED);
+
+    public static final ConfigModule ADDRESSES = ConfigModule.of(
+            SpringRabbitMQConfig.class,
+            "forage.spring.rabbitmq.addresses",
+            "Comma-separated list of host:port addresses for cluster failover",
+            "Addresses",
+            null,
+            "string",
+            false,
+            ConfigTag.COMMON);
+
+    public static final ConfigModule AUTOMATIC_RECOVERY_ENABLED = ConfigModule.of(
+            SpringRabbitMQConfig.class,
+            "forage.spring.rabbitmq.automatic.recovery.enabled",
+            "Enable automatic connection recovery after failure",
+            "Automatic Recovery",
+            "true",
+            "boolean",
+            false,
+            ConfigTag.ADVANCED);
+
+    public static final ConfigModule NETWORK_RECOVERY_INTERVAL = ConfigModule.of(
+            SpringRabbitMQConfig.class,
+            "forage.spring.rabbitmq.network.recovery.interval",
+            "Interval in milliseconds between recovery attempts",
+            "Network Recovery Interval",
+            "5000",
+            "long",
+            false,
+            ConfigTag.ADVANCED);
+
     static {
         initModules(
                 SpringRabbitMQConfigEntries.class,
@@ -96,6 +156,12 @@ public final class SpringRabbitMQConfigEntries extends ConfigEntries {
                 VIRTUAL_HOST,
                 CHANNEL_CACHE_SIZE,
                 CACHE_MODE,
-                CONNECTION_CACHE_SIZE);
+                CONNECTION_CACHE_SIZE,
+                CHANNEL_CHECKOUT_TIMEOUT,
+                REQUESTED_HEARTBEAT,
+                CONNECTION_TIMEOUT,
+                ADDRESSES,
+                AUTOMATIC_RECOVERY_ENABLED,
+                NETWORK_RECOVERY_INTERVAL);
     }
 }

@@ -92,10 +92,19 @@ public class SpringRabbitMQBeanFactory implements BeanFactory {
         rabbitConnectionFactory.setUsername(config.username());
         rabbitConnectionFactory.setPassword(config.password());
         rabbitConnectionFactory.setVirtualHost(config.virtualHost());
+        rabbitConnectionFactory.setRequestedHeartbeat(config.requestedHeartbeat());
+        rabbitConnectionFactory.setConnectionTimeout(config.connectionTimeout());
+        rabbitConnectionFactory.setAutomaticRecoveryEnabled(config.automaticRecoveryEnabled());
+        rabbitConnectionFactory.setNetworkRecoveryInterval(config.networkRecoveryInterval());
 
         CachingConnectionFactory cachingConnectionFactory = new CachingConnectionFactory(rabbitConnectionFactory);
         cachingConnectionFactory.setChannelCacheSize(config.channelCacheSize());
         cachingConnectionFactory.setConnectionCacheSize(config.connectionCacheSize());
+        cachingConnectionFactory.setChannelCheckoutTimeout(config.channelCheckoutTimeout());
+
+        if (config.addresses() != null) {
+            cachingConnectionFactory.setAddresses(config.addresses());
+        }
 
         if ("CONNECTION".equalsIgnoreCase(config.cacheMode())) {
             cachingConnectionFactory.setCacheMode(CachingConnectionFactory.CacheMode.CONNECTION);

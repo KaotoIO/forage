@@ -49,6 +49,16 @@ forage.backup.spring.rabbitmq.password=secret
       connectionFactory: "#backup"
 ```
 
+## Cluster Failover
+
+Use the `addresses` property to connect to a RabbitMQ cluster. When set, it takes precedence for connection routing:
+
+```properties
+forage.spring.rabbitmq.addresses=broker1:5672,broker2:5672,broker3:5672
+forage.spring.rabbitmq.automatic.recovery.enabled=true
+forage.spring.rabbitmq.network.recovery.interval=5000
+```
+
 ## Cache Modes
 
 The `CachingConnectionFactory` supports two cache modes:

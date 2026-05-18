@@ -4,25 +4,16 @@
 
     <parent>
         <groupId>io.kaoto.forage</groupId>
-        <artifactId>forage</artifactId>
+        <artifactId>library</artifactId>
         <version>1.4-SNAPSHOT</version>
     </parent>
 
-    <artifactId>library</artifactId>
+    <artifactId>messaging</artifactId>
     <packaging>pom</packaging>
-    <name>Forage :: Library</name>
+    <name>Forage :: Library :: Messaging</name>
 
     <modules>
-        <module>ai</module>
-        <module>cloud</module>
-        <module>common</module>
-        <module>cxf</module>
-        <module>jdbc</module>
-        <module>jms</module>
-        <module>messaging</module>
-        <module>policy</module>
-        <module>security</module>
-        <module>vertx</module>
+        <module>forage-spring-rabbitmq</module>
     </modules>
 
 </project>

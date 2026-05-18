@@ -121,6 +121,7 @@ nav:
           - Chat Memory: modules/ai/chat-memory.md
       - JDBC: modules/jdbc.md
       - JMS: modules/jms.md
+      - Spring RabbitMQ: modules/spring-rabbitmq.md
       - CXF: modules/cxf.md
   - Guides:
       - guides/index.md

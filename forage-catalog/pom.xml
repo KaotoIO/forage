@@ -433,6 +433,14 @@
             </exclusions>
         </dependency>
 
+        <!-- Messaging Modules -->
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-spring-rabbitmq</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+
         <!-- Cloud Modules -->
         <dependency>
             <groupId>io.kaoto.forage</groupId>

@@ -20,7 +20,7 @@
         <assertj-core.version>3.27.7</assertj-core.version>
         <aws-sdk.version>2.44.4</aws-sdk.version>
         <azure.identity.version>1.18.2</azure.identity.version>
-        <azure.messaging.eventhubs.version>5.21.3</azure.messaging.eventhubs.version>
+        <azure.messaging.eventhubs.version>5.21.4</azure.messaging.eventhubs.version>
         <camel-quarkus.version>3.33.0</camel-quarkus.version>
         <cxf.version>4.1.5</cxf.version>
         <quarkiverse-cxf.version>3.33.0</quarkiverse-cxf.version>

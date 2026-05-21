@@ -1,0 +1,31 @@
+- route:
+    id: producer-route
+    from:
+      uri: timer
+      parameters:
+        timerName: foo
+        period: "5000"
+        repeatCount: 3
+      steps:
+        - setBody:
+            simple:
+              expression: Hello Camel from ${routeId} - ${random(0,100)}
+        - to:
+            id: to-rabbitmq
+            uri: spring-rabbitmq
+            parameters:
+              exchangeName: foo
+              routingKey: test
+- route:
+    id: consumer-route
+    from:
+      id: from-rabbitmq
+      uri: spring-rabbitmq
+      parameters:
+        exchangeName: foo
+        queues: myqueue
+        routingKey: test
+      steps:
+        - log:
+            id: log-message
+            message: "Received: ${body}"

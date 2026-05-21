@@ -7,20 +7,25 @@
         <version>1.4-SNAPSHOT</version>
     </parent>
 
-    <artifactId>forage-spring-rabbitmq</artifactId>
-    <name>Forage :: Library :: Messaging :: Spring RabbitMQ</name>
+    <artifactId>forage-spring-rabbitmq-common</artifactId>
+    <name>Forage :: Library :: Messaging :: Spring RabbitMQ :: Common</name>
 
     <dependencies>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
-            <artifactId>forage-spring-rabbitmq-common</artifactId>
+            <artifactId>forage-core-common</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
-            <artifactId>forage-core-common</artifactId>
+            <artifactId>forage-core-messaging</artifactId>
             <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
         </dependency>
     </dependencies>
 

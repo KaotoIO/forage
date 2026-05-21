@@ -41,6 +41,7 @@ build/
 ObjectStore/
 PutObjectStore/
 .citrus-jbang
+.claude/
 
 ### MkDocs ###
 website/site/

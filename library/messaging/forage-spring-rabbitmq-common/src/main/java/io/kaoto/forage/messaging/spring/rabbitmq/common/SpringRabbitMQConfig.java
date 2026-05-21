@@ -1,21 +1,21 @@
-package io.kaoto.forage.messaging.spring.rabbitmq;
+package io.kaoto.forage.messaging.spring.rabbitmq.common;
 
 import io.kaoto.forage.core.util.config.AbstractConfig;
 
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.ADDRESSES;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.AUTOMATIC_RECOVERY_ENABLED;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.CACHE_MODE;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.CHANNEL_CACHE_SIZE;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.CHANNEL_CHECKOUT_TIMEOUT;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.CONNECTION_CACHE_SIZE;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.CONNECTION_TIMEOUT;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.HOST;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.NETWORK_RECOVERY_INTERVAL;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.PASSWORD;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.PORT;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.REQUESTED_HEARTBEAT;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.USERNAME;
-import static io.kaoto.forage.messaging.spring.rabbitmq.SpringRabbitMQConfigEntries.VIRTUAL_HOST;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.ADDRESSES;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.AUTOMATIC_RECOVERY_ENABLED;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.CACHE_MODE;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.CHANNEL_CACHE_SIZE;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.CHANNEL_CHECKOUT_TIMEOUT;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.CONNECTION_CACHE_SIZE;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.CONNECTION_TIMEOUT;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.HOST;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.NETWORK_RECOVERY_INTERVAL;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.PASSWORD;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.PORT;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.REQUESTED_HEARTBEAT;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.USERNAME;
+import static io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfigEntries.VIRTUAL_HOST;
 
 public class SpringRabbitMQConfig extends AbstractConfig {
 

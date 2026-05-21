@@ -135,16 +135,18 @@ public class ForageSpringBootModuleAdapter<C extends Config, P extends BeanProvi
         GenericBeanDefinition beanDefinition = new GenericBeanDefinition();
         beanDefinition.setBeanClass(descriptor.primaryBeanClass());
         beanDefinition.setInstanceSupplier(() -> createPrimaryBean(name));
+        beanDefinition.setPrimary(isFirst);
         registry.registerBeanDefinition(name, beanDefinition);
         LOG.info("Registered {} bean definition: {}", descriptor.modulePrefix(), name);
 
         String defaultName = descriptor.defaultBeanName();
-        if (isFirst && !registry.containsBeanDefinition(defaultName)) {
-            GenericBeanDefinition defaultDef = new GenericBeanDefinition();
-            defaultDef.setBeanClass(descriptor.primaryBeanClass());
-            defaultDef.setInstanceSupplier(() -> createPrimaryBean(name));
-            registry.registerBeanDefinition(defaultName, defaultDef);
-            LOG.info("Registered default {} bean definition using: {}", descriptor.modulePrefix(), name);
+        if (isFirst && !name.equals(defaultName)) {
+            if (registry.containsBeanDefinition(defaultName)) {
+                registry.removeBeanDefinition(defaultName);
+                LOG.info("Replaced conflicting {} default bean definition", descriptor.modulePrefix());
+            }
+            registry.registerAlias(name, defaultName);
+            LOG.info("Registered default {} alias: {} -> {}", descriptor.modulePrefix(), defaultName, name);
         }
     }
 

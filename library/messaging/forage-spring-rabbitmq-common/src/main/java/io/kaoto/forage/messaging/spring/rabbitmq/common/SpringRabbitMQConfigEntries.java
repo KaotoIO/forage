@@ -1,4 +1,4 @@
-package io.kaoto.forage.messaging.spring.rabbitmq;
+package io.kaoto.forage.messaging.spring.rabbitmq.common;
 
 import io.kaoto.forage.core.util.config.ConfigEntries;
 import io.kaoto.forage.core.util.config.ConfigModule;

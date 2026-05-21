@@ -440,6 +440,24 @@
             <version>${project.version}</version>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-spring-rabbitmq-starter</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-quarkus-spring-rabbitmq-deployment</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.camel.quarkus</groupId>
+                    <artifactId>camel-quarkus-core-deployment</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
 
         <!-- Cloud Modules -->
         <dependency>

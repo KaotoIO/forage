@@ -3,24 +3,23 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>io.kaoto.forage</groupId>
-        <artifactId>messaging</artifactId>
+        <artifactId>core</artifactId>
         <version>1.4-SNAPSHOT</version>
     </parent>
 
-    <artifactId>forage-spring-rabbitmq</artifactId>
-    <name>Forage :: Library :: Messaging :: Spring RabbitMQ</name>
+    <artifactId>forage-core-messaging</artifactId>
+    <name>Forage :: Core :: Messaging</name>
+    <description>Core interfaces and utilities for messaging connection factories providers</description>
 
     <dependencies>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
-            <artifactId>forage-spring-rabbitmq-common</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-core-common</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.amqp</groupId>
+            <artifactId>spring-rabbit</artifactId>
         </dependency>
     </dependencies>
 

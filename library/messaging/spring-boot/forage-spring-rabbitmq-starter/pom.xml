@@ -18,6 +18,11 @@
         </dependency>
         <dependency>
             <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-spring-rabbitmq</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-spring-boot-common</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -37,6 +42,47 @@
         <dependency>
             <groupId>org.springframework.amqp</groupId>
             <artifactId>spring-rabbit</artifactId>
+        </dependency>
+
+        <!-- Spring Boot Actuator for Health Indicators (optional) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-actuator</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-actuator-autoconfigure</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Micrometer for Metrics (optional) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

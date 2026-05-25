@@ -1,0 +1,25 @@
+# Spring RabbitMQ CachingConnectionFactory configuration
+# Connection settings for RabbitMQ broker (overridden by test)
+forage.spring.rabbitmq.host=localhost
+forage.spring.rabbitmq.port=5672
+forage.spring.rabbitmq.username=guest
+forage.spring.rabbitmq.password=guest
+forage.spring.rabbitmq.virtual.host=/
+
+# Connection pooling and cache settings
+forage.spring.rabbitmq.channel.cache.size=25
+forage.spring.rabbitmq.cache.mode=CHANNEL
+
+# Auto-declare exchanges and queues
+camel.component.spring-rabbitmq.auto-declare=true
+
+# Spring Boot Actuator configuration
+management.endpoints.web.exposure.include=health,metrics
+management.endpoint.health.show-details=always
+management.health.rabbit.enabled=true
+
+# Enable RabbitMQ metrics
+management.metrics.enable.rabbitmq=true
+
+# Server port (will be replaced with random port by test)
+server.port=0

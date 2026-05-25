@@ -3,18 +3,18 @@
     from:
       uri: timer
       parameters:
-        timerName: foo
-        period: "5000"
-        repeatCount: 3
+        timerName: healthMetricsTest
+        period: "3000"
+        repeatCount: 5
       steps:
         - setBody:
             simple:
-              expression: Hello Camel from ${routeId} - ${random(0,100)}
+              expression: Health/Metrics Test Message ${exchangeId}
         - to:
             id: to-rabbitmq
             uri: spring-rabbitmq
             parameters:
-              exchangeName: foo
+              exchangeName: health-metrics-exchange
               routingKey: test
               connectionFactory: "#rabbitConnectionFactory"
 - route:
@@ -23,8 +23,8 @@
       id: from-rabbitmq
       uri: spring-rabbitmq
       parameters:
-        exchangeName: foo
-        queues: myqueue
+        exchangeName: health-metrics-exchange
+        queues: health-metrics-queue
         routingKey: test
         connectionFactory: "#rabbitConnectionFactory"
       steps:

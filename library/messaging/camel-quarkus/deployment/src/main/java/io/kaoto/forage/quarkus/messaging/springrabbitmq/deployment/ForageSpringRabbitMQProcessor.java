@@ -1,25 +1,24 @@
 package io.kaoto.forage.quarkus.messaging.springrabbitmq.deployment;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.camel.quarkus.core.deployment.spi.CamelRuntimeBeanBuildItem;
+import org.apache.camel.quarkus.core.deployment.spi.CamelRegistryBuildItem;
 import org.jboss.logging.Logger;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import io.kaoto.forage.core.annotations.FactoryType;
 import io.kaoto.forage.core.annotations.FactoryVariant;
 import io.kaoto.forage.core.annotations.ForageFactory;
 import io.kaoto.forage.core.util.config.ConfigHelper;
 import io.kaoto.forage.core.util.config.ConfigStore;
 import io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfig;
+import io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConstants;
 import io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQModuleDescriptor;
 import io.kaoto.forage.quarkus.messaging.springrabbitmq.ForageSpringRabbitMQRecorder;
-import io.quarkus.deployment.annotations.BuildProducer;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.annotations.ExecutionTime;
 import io.quarkus.deployment.annotations.Record;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
-import io.quarkus.runtime.RuntimeValue;
 
 /**
  * Quarkus deployment processor for Forage Spring RabbitMQ.
@@ -51,33 +50,35 @@ public class ForageSpringRabbitMQProcessor {
 
     @BuildStep
     @Record(value = ExecutionTime.STATIC_INIT)
-    void registerRabbitConnectionFactories(
-            ForageSpringRabbitMQRecorder recorder, BuildProducer<CamelRuntimeBeanBuildItem> beans) {
-
+    void registerIbmMqConnectionFactory(
+            ForageSpringRabbitMQRecorder recorder, CamelRegistryBuildItem camelRegistryBuildItem) {
+        LOG.debug("ForageSpringRabbitMQProcessor.registerRabbitConnectionFactories() called at build time");
         SpringRabbitMQConfig defaultConfig = DESCRIPTOR.createConfig(null);
         Set<String> named = ConfigStore.getInstance()
                 .readPrefixes(defaultConfig, ConfigHelper.getNamedPropertyRegexp(DESCRIPTOR.modulePrefix()));
 
-        Map<String, SpringRabbitMQConfig> configs =
-                named.stream().collect(Collectors.toMap(n -> n, DESCRIPTOR::createConfig));
-
-        Set<String> defaultPrefixes = ConfigStore.getInstance()
-                .readPrefixes(defaultConfig, ConfigHelper.getDefaultPropertyRegexp(DESCRIPTOR.modulePrefix()));
-        if (!defaultPrefixes.isEmpty()) {
-            configs.put(null, defaultConfig);
-        }
-        if (configs.isEmpty()) {
-            LOG.debug("No Forage Spring RabbitMQ configuration found, skipping ConnectionFactory discovery");
-            return;
+        Map<String, SpringRabbitMQConfig> configs;
+        if (!named.isEmpty()) {
+            configs = named.stream().collect(Collectors.toMap(n -> n, DESCRIPTOR::createConfig));
+        } else {
+            // Check if default (unprefixed) properties exist before creating a default config
+            Set<String> defaultPrefixes = ConfigStore.getInstance()
+                    .readPrefixes(defaultConfig, ConfigHelper.getDefaultPropertyRegexp(DESCRIPTOR.modulePrefix()));
+            if (!defaultPrefixes.isEmpty()) {
+                configs = Collections.singletonMap((String) null, defaultConfig);
+            } else {
+                LOG.debug("No Forage Spring RabbitMQ configuration found, skipping ConnectionFactory discovery");
+                return;
+            }
         }
 
         for (Map.Entry<String, SpringRabbitMQConfig> entry : configs.entrySet()) {
-            String beanName = entry.getKey() != null ? entry.getKey() : DESCRIPTOR.defaultBeanName();
-            LOG.infof("Recording Spring RabbitMQ connection factory for bean: %s", beanName);
+            LOG.infof(
+                    "Recording Spring RabbitMQ connection factory for bean: %s",
+                    entry.getKey() == null ? SpringRabbitMQConstants.DEFAULT_BEAN_NAME : entry.getKey());
 
-            RuntimeValue<ConnectionFactory> connectionFactory = recorder.createRabbitConnectionFactory(entry.getKey());
-            beans.produce(
-                    new CamelRuntimeBeanBuildItem(beanName, ConnectionFactory.class.getName(), connectionFactory));
+            // create connection factory
+            recorder.createRabbitConnectionFactory(entry.getKey(), camelRegistryBuildItem.getRegistry());
         }
     }
 }

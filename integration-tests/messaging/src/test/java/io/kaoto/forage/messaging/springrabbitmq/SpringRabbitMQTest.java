@@ -1,10 +1,12 @@
 package io.kaoto.forage.messaging.springrabbitmq;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
 import org.citrusframework.annotations.CitrusTest;
 import org.citrusframework.junit.jupiter.CitrusSupport;
 import org.citrusframework.spi.Resource;
@@ -36,30 +38,35 @@ public class SpringRabbitMQTest implements ForageIntegrationTest {
 
     @Override
     public String runBeforeAll(ForageTestCaseRunner runner, Consumer<AutoCloseable> afterAll) {
-        // Load original properties file and replace testcontainer-specific values
+        // Load template properties file and replace testcontainer-specific values
         try {
-            Resource originalProperties = classResource("forage-rabbitmq.properties");
-            String original = new String(originalProperties.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            Resource templateProperties = classResource("forage-spring-rabbitmq.properties.template");
+            String template;
+            try (var inputStream = templateProperties.getInputStream()) {
+                template = new String(templateProperties.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            }
 
             // Replace connection details with testcontainer values
-            String propertiesContent = original.replaceAll(
-                            "forage\\.spring\\.rabbitmq\\.host=.*", "forage.spring.rabbitmq.host=" + rabbitmq.getHost())
-                    .replaceAll(
-                            "forage\\.spring\\.rabbitmq\\.port=.*",
-                            "forage.spring.rabbitmq.port=" + rabbitmq.getMappedPort(5672))
-                    .replaceAll(
-                            "forage\\.spring\\.rabbitmq\\.username=.*",
-                            "forage.spring.rabbitmq.username=" + rabbitmq.getAdminUsername())
-                    .replaceAll(
-                            "forage\\.spring\\.rabbitmq\\.password=.*",
-                            "forage.spring.rabbitmq.password=" + rabbitmq.getAdminPassword());
+            String propertiesContent = template.replaceAll(
+                    "forage\\.spring\\.rabbitmq\\.port=.*",
+                    Matcher.quoteReplacement("forage.spring.rabbitmq.port=" + rabbitmq.getMappedPort(5672)));
 
-            // Write to temporary file (ByteArrayResource doesn't support getFile())
-            Path tempPropertiesFile = Files.createTempFile("forage-rabbitmq-", ".properties");
+            // Write to temp directory with proper name so it gets discovered by config system
+            Path tempDir = Files.createTempDirectory("forage-test-");
+            Path tempPropertiesFile = tempDir.resolve("forage-spring-rabbitmq.properties");
             Files.writeString(tempPropertiesFile, propertiesContent, StandardCharsets.UTF_8);
 
-            // Register cleanup to delete temp file
-            afterAll.accept(() -> Files.deleteIfExists(tempPropertiesFile));
+            // Register cleanup to delete temp file and directory
+            afterAll.accept(() -> {
+                try {
+                    Files.deleteIfExists(tempPropertiesFile);
+                    Files.deleteIfExists(tempDir);
+                } catch (java.nio.file.DirectoryNotEmptyException e) {
+                    // Ignore - temp directory will be cleaned up by OS
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
 
             Resource dynamicProperties = Resources.create(tempPropertiesFile.toFile());
 
@@ -72,7 +79,7 @@ public class SpringRabbitMQTest implements ForageIntegrationTest {
                     .dumpIntegrationOutput(true));
 
         } catch (IOException e) {
-            throw new RuntimeException("Failed to prepare forage-rabbitmq.properties", e);
+            throw new RuntimeException("Failed to prepare forage-spring-rabbitmq.properties", e);
         }
 
         return INTEGRATION_NAME;

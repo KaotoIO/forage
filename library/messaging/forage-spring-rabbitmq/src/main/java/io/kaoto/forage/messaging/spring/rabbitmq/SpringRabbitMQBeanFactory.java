@@ -5,6 +5,7 @@ import org.apache.camel.CamelContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import io.kaoto.forage.core.annotations.FactoryType;
 import io.kaoto.forage.core.annotations.ForageFactory;
 import io.kaoto.forage.core.common.BeanFactory;
@@ -12,6 +13,7 @@ import io.kaoto.forage.core.util.config.ConfigHelper;
 import io.kaoto.forage.core.util.config.ConfigStore;
 import io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConfig;
 import io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConnectionFactoryHelper;
+import io.kaoto.forage.messaging.spring.rabbitmq.common.SpringRabbitMQConstants;
 
 @ForageFactory(
         value = "Spring RabbitMQ Connection",
@@ -24,7 +26,6 @@ public class SpringRabbitMQBeanFactory implements BeanFactory {
     private static final Logger LOG = LoggerFactory.getLogger(SpringRabbitMQBeanFactory.class);
 
     private CamelContext camelContext;
-    private static final String DEFAULT_BEAN_NAME = "rabbitConnectionFactory";
 
     @Override
     public void cleanup() {
@@ -35,7 +36,7 @@ public class SpringRabbitMQBeanFactory implements BeanFactory {
         for (String name : prefixes) {
             closeAndUnbind(name);
         }
-        closeAndUnbind(DEFAULT_BEAN_NAME);
+        closeAndUnbind(SpringRabbitMQConstants.DEFAULT_BEAN_NAME);
     }
 
     private void closeAndUnbind(String name) {
@@ -53,11 +54,7 @@ public class SpringRabbitMQBeanFactory implements BeanFactory {
 
         if (!prefixes.isEmpty()) {
             for (String name : prefixes) {
-                if (camelContext
-                                .getRegistry()
-                                .lookupByNameAndType(
-                                        name, org.springframework.amqp.rabbit.connection.ConnectionFactory.class)
-                        == null) {
+                if (camelContext.getRegistry().lookupByNameAndType(name, ConnectionFactory.class) == null) {
                     try {
                         SpringRabbitMQConfig namedConfig = new SpringRabbitMQConfig(name);
                         CachingConnectionFactory connectionFactory = createConnectionFactory(namedConfig);
@@ -71,12 +68,10 @@ public class SpringRabbitMQBeanFactory implements BeanFactory {
             try {
                 if (camelContext
                                 .getRegistry()
-                                .lookupByNameAndType(
-                                        DEFAULT_BEAN_NAME,
-                                        org.springframework.amqp.rabbit.connection.ConnectionFactory.class)
+                                .lookupByNameAndType(SpringRabbitMQConstants.DEFAULT_BEAN_NAME, ConnectionFactory.class)
                         == null) {
                     CachingConnectionFactory connectionFactory = createConnectionFactory(config);
-                    camelContext.getRegistry().bind(DEFAULT_BEAN_NAME, connectionFactory);
+                    camelContext.getRegistry().bind(SpringRabbitMQConstants.DEFAULT_BEAN_NAME, connectionFactory);
                 }
             } catch (Exception e) {
                 throw new IllegalStateException("Failed to create default RabbitMQ connection factory", e);
@@ -85,16 +80,6 @@ public class SpringRabbitMQBeanFactory implements BeanFactory {
     }
 
     private CachingConnectionFactory createConnectionFactory(SpringRabbitMQConfig config) {
-        LOG.info(
-                "Creating CachingConnectionFactory - Host: {}, Port: {}, Username: {}, VirtualHost: {}, "
-                        + "ChannelCacheSize: {}, CacheMode: {}",
-                config.host(),
-                config.port(),
-                config.username(),
-                config.virtualHost(),
-                config.channelCacheSize(),
-                config.cacheMode());
-
         CachingConnectionFactory cachingConnectionFactory =
                 SpringRabbitMQConnectionFactoryHelper.createCachingConnectionFactory(config);
 

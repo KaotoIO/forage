@@ -59,6 +59,96 @@ forage.spring.rabbitmq.automatic.recovery.enabled=true
 forage.spring.rabbitmq.network.recovery.interval=5000
 ```
 
+## Health and Metrics
+
+Forage automatically enables Spring Boot Actuator health indicators and Micrometer metrics for RabbitMQ when the corresponding dependencies are present.
+
+### Health Indicators
+
+When `spring-boot-starter-actuator` is on the classpath, Forage registers health indicators for all RabbitMQ connection factories:
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+```
+
+The health indicator checks broker connectivity and reports server version:
+
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+```json
+{
+  "status": "UP",
+  "components": {
+    "rabbit": {
+      "status": "UP",
+      "details": {
+        "version": "3.13.0"
+      }
+    }
+  }
+}
+```
+
+### Metrics
+
+When `micrometer-core` and actuator are on the classpath, Forage automatically configures RabbitMQ client metrics for all connection factories:
+
+```xml
+<dependency>
+    <groupId>io.micrometer</groupId>
+    <artifactId>micrometer-core</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+```
+
+Available metrics include:
+- `rabbitmq.connections` - Number of open connections
+- `rabbitmq.channels` - Number of open channels
+- `rabbitmq.consumed` - Messages consumed
+- `rabbitmq.published` - Messages published
+- `rabbitmq.acknowledged` - Messages acknowledged
+- `rabbitmq.rejected` - Messages rejected
+
+Each metric is tagged with the connection factory name:
+
+```bash
+curl http://localhost:8080/actuator/metrics/rabbitmq.published
+```
+
+```json
+{
+  "name": "rabbitmq.published",
+  "measurements": [
+    {
+      "statistic": "COUNT",
+      "value": 42.0
+    }
+  ],
+  "availableTags": [
+    {
+      "tag": "name",
+      "values": ["rabbit"]
+    }
+  ]
+}
+```
+
 ## Cache Modes
 
 The `CachingConnectionFactory` supports two cache modes:

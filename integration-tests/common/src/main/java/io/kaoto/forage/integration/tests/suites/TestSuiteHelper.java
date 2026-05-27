@@ -1,6 +1,7 @@
 package io.kaoto.forage.integration.tests.suites;
 
 import org.slf4j.Logger;
+import io.kaoto.forage.core.common.RuntimeType;
 import io.kaoto.forage.integration.tests.IntegrationTestSetupExtension;
 import io.kaoto.forage.plugin.ExportHelper;
 
@@ -14,9 +15,9 @@ class TestSuiteHelper {
         System.clearProperty("citrus.camel.jbang.version");
     }
 
-    public static void beforeSuite(String runtimeValue, Logger log) {
-        if (!runtimeValue.startsWith("<")) {
-            System.setProperty(IntegrationTestSetupExtension.RUNTIME_PROPERTY, runtimeValue);
+    public static void beforeSuite(RuntimeType runtime, Logger log) {
+        if (runtime != RuntimeType.main) {
+            System.setProperty(IntegrationTestSetupExtension.RUNTIME_PROPERTY, runtime.runtime());
         } else {
             System.clearProperty(IntegrationTestSetupExtension.RUNTIME_PROPERTY);
         }

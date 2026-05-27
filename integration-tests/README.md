@@ -67,12 +67,39 @@ Every test is executed trice times (for each different runtime).
 You do not need to take care of runtimes when writing an integration tests.
 (Implementation, taking care of runtimes, is located in `io.kaoto.forage.integration.tests.ForageTestCaseRunner`).
 
-When you run the integration test via IDE or via cmd, the test runs `<plain Camel>` runtime.
-To select runtime, export `INTEGRATION_TEST_RUNTIME` property as an environmental property.
+When you run the integration test via IDE or via cmd, all three runtimes are tested by default.
+To select a specific runtime, export `INTEGRATION_TEST_RUNTIME` environment variable.
 
-Example:
+**Supported INTEGRATION_TEST_RUNTIME values:**
+- `main` - Plain Camel Main runtime (alias: `camel-main`)
+- `quarkus` - Quarkus runtime
+- `spring-boot` - Spring Boot runtime
+
+**Note:** If `INTEGRATION_TEST_RUNTIME` is not set, all three runtimes will be tested (default behavior).
+
+**Examples:**
+
+Run tests with only Quarkus runtime:
 ```bash
 export INTEGRATION_TEST_RUNTIME=quarkus
+mvn clean verify -f integration-tests/jdbc -Dit.test=JdbcTest
+```
+
+Run tests with only Spring Boot runtime:
+```bash
+export INTEGRATION_TEST_RUNTIME=spring-boot
+mvn clean verify -f integration-tests/jdbc -Dit.test=JdbcTest
+```
+
+Run tests with only plain Camel Main runtime:
+```bash
+export INTEGRATION_TEST_RUNTIME=main
+mvn clean verify -f integration-tests/jdbc -Dit.test=JdbcTest
+```
+
+Run tests with all runtimes (default behavior):
+```bash
+unset INTEGRATION_TEST_RUNTIME
 mvn clean verify -f integration-tests/jdbc -Dit.test=JdbcTest
 ```
 

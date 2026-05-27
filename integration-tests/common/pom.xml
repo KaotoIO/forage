@@ -53,6 +53,11 @@
             <artifactId>camel-jbang-plugin-forage</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-core-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
 

@@ -58,7 +58,7 @@
                         <dependency>io.kaoto.forage:integration-tests-common</dependency>
                     </dependenciesToScan>
                     <includes>
-                        <include>**/*Suite</include>
+                        <include>${suite.includes}</include>
                     </includes>
                     <systemPropertyVariables>
                         <citrus.camel.jbang.work.dir>${project.build.directory}/.run</citrus.camel.jbang.work.dir>
@@ -109,6 +109,11 @@
         </plugins>
     </build>
 
+    <properties>
+        <!-- Default: run all suites when INTEGRATION_TEST_RUNTIME is not set -->
+        <suite.includes>**/*Suite</suite.includes>
+    </properties>
+
     <profiles>
         <profile>
             <id>skip-test-container-config-generation</id>
@@ -119,6 +124,56 @@
             </activation>
             <properties>
                 <skip-test-containers-config-generation>true</skip-test-containers-config-generation>
+            </properties>
+        </profile>
+
+        <!-- Runtime filtering profiles -->
+        <profile>
+            <id>runtime-main</id>
+            <activation>
+                <property>
+                    <name>env.INTEGRATION_TEST_RUNTIME</name>
+                    <value>main</value>
+                </property>
+            </activation>
+            <properties>
+                <suite.includes>**/PlainSuite.class</suite.includes>
+            </properties>
+        </profile>
+        <profile>
+            <id>runtime-camel-main</id>
+            <activation>
+                <property>
+                    <name>env.INTEGRATION_TEST_RUNTIME</name>
+                    <value>camel-main</value>
+                </property>
+            </activation>
+            <properties>
+                <suite.includes>**/PlainSuite.class</suite.includes>
+            </properties>
+        </profile>
+        <profile>
+            <id>runtime-quarkus</id>
+            <activation>
+                <property>
+                    <name>env.INTEGRATION_TEST_RUNTIME</name>
+                    <value>quarkus</value>
+                </property>
+            </activation>
+            <properties>
+                <suite.includes>**/QuarkusSuite.class</suite.includes>
+            </properties>
+        </profile>
+        <profile>
+            <id>runtime-spring-boot</id>
+            <activation>
+                <property>
+                    <name>env.INTEGRATION_TEST_RUNTIME</name>
+                    <value>spring-boot</value>
+                </property>
+            </activation>
+            <properties>
+                <suite.includes>**/SpringBootSuite.class</suite.includes>
             </properties>
         </profile>
     </profiles>

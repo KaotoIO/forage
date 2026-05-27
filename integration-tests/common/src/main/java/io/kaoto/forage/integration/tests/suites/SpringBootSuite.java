@@ -2,6 +2,7 @@ package io.kaoto.forage.integration.tests.suites;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.kaoto.forage.core.common.RuntimeType;
 
 import org.junit.platform.suite.api.AfterSuite;
 import org.junit.platform.suite.api.BeforeSuite;
@@ -23,6 +24,6 @@ public class SpringBootSuite {
 
     @BeforeSuite
     public static void beforeSuite() {
-        TestSuiteHelper.beforeSuite("spring-boot", LOG);
+        TestSuiteHelper.beforeSuite(RuntimeType.springBoot, LOG);
     }
 }

@@ -6,8 +6,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.Collections;
+import java.util.Map;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
 import org.citrusframework.GherkinTestActionRunner;
 import org.citrusframework.annotations.CitrusResource;
 import org.citrusframework.annotations.CitrusTest;
@@ -24,6 +25,7 @@ import org.testcontainers.utility.DockerImageName;
 import io.kaoto.forage.integration.tests.ForageIntegrationTest;
 import io.kaoto.forage.integration.tests.ForageTestCaseRunner;
 import io.kaoto.forage.integration.tests.IntegrationTestSetupExtension;
+import io.kaoto.forage.integration.tests.PropertiesTemplateHelper;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -68,13 +70,22 @@ public class JdbcTest implements ForageIntegrationTest {
 
     @Override
     public String runBeforeAll(ForageTestCaseRunner runner, Consumer<AutoCloseable> afterAll) {
-        // running jbang forage run with required resources and required runtime
-        runner.when(forageRun(INTEGRATION_NAME, "forage-datasource-factory.properties", "jdbc-routes.camel.yaml")
+        // Load template properties and replace testcontainer-specific values
+        Resource dynamicProperties = PropertiesTemplateHelper.createFromTemplate(
+                classResource("forage-datasource-factory.properties.template"),
+                Map.of("forage\\.jdbc\\.url=.*", Matcher.quoteReplacement("forage.jdbc.url=" + postgres.getJdbcUrl())),
+                afterAll);
+
+        // running jbang forage run with dynamically modified properties
+        runner.when(camel().jbang()
+                .custom("forage", "run")
+                .processName(INTEGRATION_NAME)
+                .addResource(dynamicProperties)
+                .addResource(classResource("jdbc-routes.camel.yaml"))
                 .addResource(classResource("MyAggregationStrategy.java"))
                 .dumpIntegrationOutput(true)
                 // required if more test are using the same route
-                .autoRemove(false)
-                .withEnvs(Collections.singletonMap("FORAGE_JDBC_URL", postgres.getJdbcUrl())));
+                .autoRemove(false));
 
         return INTEGRATION_NAME;
     }

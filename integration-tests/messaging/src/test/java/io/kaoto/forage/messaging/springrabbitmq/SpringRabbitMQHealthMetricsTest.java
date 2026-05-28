@@ -1,22 +1,18 @@
 package io.kaoto.forage.messaging.springrabbitmq;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.ServerSocket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import org.citrusframework.annotations.CitrusTest;
 import org.citrusframework.junit.jupiter.CitrusSupport;
 import org.citrusframework.spi.Resource;
-import org.citrusframework.spi.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.junit.jupiter.Container;
@@ -28,6 +24,7 @@ import io.kaoto.forage.integration.tests.DisableOnQuarkus;
 import io.kaoto.forage.integration.tests.ForageIntegrationTest;
 import io.kaoto.forage.integration.tests.ForageTestCaseRunner;
 import io.kaoto.forage.integration.tests.IntegrationTestSetupExtension;
+import io.kaoto.forage.integration.tests.PropertiesTemplateHelper;
 import io.kaoto.forage.integration.tests.RuntimeConditionExtension;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -74,56 +71,30 @@ public class SpringRabbitMQHealthMetricsTest implements ForageIntegrationTest {
 
     @Override
     public String runBeforeAll(ForageTestCaseRunner runner, Consumer<AutoCloseable> afterAll) {
-        try {
-            // Find an unused random port for actuator endpoints
-            actuatorPort = findAvailablePort();
-            LOG.info("Using random port {} for actuator endpoints", actuatorPort);
+        // Find an unused random port for actuator endpoints
+        actuatorPort = findAvailablePort();
+        LOG.info("Using random port {} for actuator endpoints", actuatorPort);
 
-            Resource templateProperties = classResource("forage-spring-rabbitmq.properties.template");
-            String template;
-            try (var inputStream = templateProperties.getInputStream()) {
-                template = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-            }
+        // Load template properties and replace testcontainer-specific values
+        Resource dynamicProperties = PropertiesTemplateHelper.createFromTemplate(
+                classResource("forage-spring-rabbitmq.properties.template"),
+                Map.of(
+                        "forage\\.spring\\.rabbitmq\\.port=.*",
+                        Matcher.quoteReplacement("forage.spring.rabbitmq.port=" + rabbitmq.getMappedPort(5672)),
+                        "server\\.port=.*",
+                        Matcher.quoteReplacement("server.port=" + actuatorPort)),
+                afterAll);
 
-            // Replace connection details with testcontainer values and set actuator port
-            String propertiesContent = template.replaceAll(
-                            "forage\\.spring\\.rabbitmq\\.port=.*",
-                            Matcher.quoteReplacement("forage.spring.rabbitmq.port=" + rabbitmq.getMappedPort(5672)))
-                    .replaceAll("server\\.port=.*", Matcher.quoteReplacement("server.port=" + actuatorPort));
-
-            // Write to temp directory with proper name so it gets discovered by config system
-            Path tempDir = Files.createTempDirectory("forage-test-");
-            Path tempPropertiesFile = tempDir.resolve("forage-spring-rabbitmq.properties");
-            Files.writeString(tempPropertiesFile, propertiesContent, StandardCharsets.UTF_8);
-
-            // Register cleanup to delete temp file and directory
-            afterAll.accept(() -> {
-                try {
-                    Files.deleteIfExists(tempPropertiesFile);
-                    Files.deleteIfExists(tempDir);
-                } catch (java.nio.file.DirectoryNotEmptyException e) {
-                    // Ignore - temp directory will be cleaned up by OS
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                }
-            });
-
-            Resource dynamicProperties = Resources.create(tempPropertiesFile.toFile());
-
-            // Start Spring Boot application with actuator and metrics
-            runner.when(camel().jbang()
-                    .custom("forage", "run")
-                    .processName(INTEGRATION_NAME)
-                    .addResource(dynamicProperties)
-                    .addResource(classResource("route.camel.yaml"))
-                    .withArg("--dep", "org.springframework.boot:spring-boot-starter-web")
-                    .withArg("--dep", "org.springframework.boot:spring-boot-starter-actuator")
-                    .withArg("--dep", "io.micrometer:micrometer-core")
-                    .dumpIntegrationOutput(true));
-
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to prepare forage-spring-rabbitmq.properties", e);
-        }
+        // Start Spring Boot application with actuator and metrics
+        runner.when(camel().jbang()
+                .custom("forage", "run")
+                .processName(INTEGRATION_NAME)
+                .addResource(dynamicProperties)
+                .addResource(classResource("route.camel.yaml"))
+                .withArg("--dep", "org.springframework.boot:spring-boot-starter-web")
+                .withArg("--dep", "org.springframework.boot:spring-boot-starter-actuator")
+                .withArg("--dep", "io.micrometer:micrometer-core")
+                .dumpIntegrationOutput(true));
 
         return INTEGRATION_NAME;
     }

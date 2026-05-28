@@ -1,8 +1,8 @@
-# IbmMQ JMS Configuration with XA Transactions
-forage.jms.kind=ibmmq
-forage.jms.broker.url=mq://localhost:1414/DEV.APP.SVRCONN/QM1
-forage.jms.username=app
-forage.jms.password=passw0rd
+# ActiveMQ Artemis JMS Configuration with XA Transactions
+forage.jms.kind=artemis
+forage.jms.broker.url=tcp://localhost:61616  # Overridden by test with testcontainer URL
+forage.jms.username=artemis
+forage.jms.password=artemis
 
 # Connection pool settings
 forage.jms.pool.enabled=true
@@ -17,3 +17,5 @@ forage.jms.transaction.enabled=true
 forage.jms.transaction.timeout.seconds=30
 forage.jms.transaction.node.id=node1
 forage.jms.transaction.enable.recovery=true
+forage.jms.transaction.object.store.directory=tx-object-store
+forage.jms.transaction.object.store.type=file-system

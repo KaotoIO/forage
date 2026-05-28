@@ -1,7 +1,7 @@
 # Named/prefixed Spring RabbitMQ CachingConnectionFactory configuration
 # The "mq1" prefix creates a bean named "mq1" in the Camel registry
 forage.mq1.spring.rabbitmq.host=localhost
-forage.mq1.spring.rabbitmq.port=5672
+forage.mq1.spring.rabbitmq.port=5672  # Overridden by test with testcontainer port
 forage.mq1.spring.rabbitmq.username=guest
 forage.mq1.spring.rabbitmq.password=guest
 forage.mq1.spring.rabbitmq.virtual.host=/

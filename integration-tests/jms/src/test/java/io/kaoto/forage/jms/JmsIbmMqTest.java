@@ -1,10 +1,11 @@
 package io.kaoto.forage.jms;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
 import org.citrusframework.annotations.CitrusTest;
 import org.citrusframework.junit.jupiter.CitrusSupport;
+import org.citrusframework.spi.Resource;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,7 @@ import org.testcontainers.utility.DockerImageName;
 import io.kaoto.forage.integration.tests.ForageIntegrationTest;
 import io.kaoto.forage.integration.tests.ForageTestCaseRunner;
 import io.kaoto.forage.integration.tests.IntegrationTestSetupExtension;
+import io.kaoto.forage.integration.tests.PropertiesTemplateHelper;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
@@ -77,18 +79,23 @@ public class JmsIbmMqTest implements ForageIntegrationTest {
         destinations.createQueue("DLQ");
         destinations.createQueue("DLQ2");
 
-        // running jbang forage run with required resources and required runtime
-        runner.when(forageRun(INTEGRATION_NAME, "forage-connectionfactory.properties", "route-ibm.camel.yaml")
-                .dumpIntegrationOutput(true)
-                //                .withArg("--jvm-debug", "5005")
-                .withEnvs(Collections.singletonMap(
-                        "FORAGE_JMS_BROKER_URL",
-                        "mq://%s:%d/%s/%s"
-                                .formatted(
-                                        ibmmq.getHost(),
-                                        ibmmq.getMappedPort(1414),
-                                        MESSAGING_CHANNEL,
-                                        QUEUE_MANAGER_NAME))));
+        // Load template properties and replace testcontainer-specific values
+        String brokerUrl = "mq://%s:%d/%s/%s"
+                .formatted(ibmmq.getHost(), ibmmq.getMappedPort(1414), MESSAGING_CHANNEL, QUEUE_MANAGER_NAME);
+        Resource dynamicProperties = PropertiesTemplateHelper.createFromTemplate(
+                classResource("forage-connectionfactory.properties.template"),
+                Map.of(
+                        "forage\\.jms\\.broker\\.url=.*",
+                        Matcher.quoteReplacement("forage.jms.broker.url=" + brokerUrl)),
+                afterAll);
+
+        // running jbang forage run with dynamically modified properties
+        runner.when(camel().jbang()
+                .custom("forage", "run")
+                .processName(INTEGRATION_NAME)
+                .addResource(dynamicProperties)
+                .addResource(classResource("route-ibm.camel.yaml"))
+                .dumpIntegrationOutput(true));
 
         return INTEGRATION_NAME;
     }

@@ -1,7 +1,7 @@
 # PostgreSQL JDBC Configuration
 # Database connection settings
 forage.jdbc.db.kind=postgresql
-#forage.jdbc.url is configured dynamically in the test
+forage.jdbc.url=jdbc:postgresql://localhost:5432/postgresql  # Overridden by test with testcontainer URL
 forage.jdbc.username=test
 forage.jdbc.password=test
 

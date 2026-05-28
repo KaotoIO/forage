@@ -1,0 +1,6 @@
+forage.cxf.address=http://localhost:8080/ws/hello  # Overridden by test with WireMock URL
+forage.cxf.wsdl.url=http://localhost:8080/ws/hello?wsdl  # Overridden by test with WireMock URL
+forage.cxf.service.name={http://example.com/hello}HelloService
+forage.cxf.port.name={http://example.com/hello}HelloPort
+forage.cxf.data.format=PAYLOAD
+forage.cxf.logging.enabled=true

@@ -1,7 +1,7 @@
 # PostgreSQL JDBC Configuration
 # Database connection settings
 forage.ds1.jdbc.db.kind=postgresql
-#ds1.forage.jdbc.url=jdbc:postgresql://localhost:5432/postgres
+forage.ds1.jdbc.url=jdbc:postgresql://localhost:5432/postgres  # Overridden by test with testcontainer URL
 forage.ds1.jdbc.username=test
 forage.ds1.jdbc.password=test
 
@@ -20,7 +20,7 @@ forage.ds1.jdbc.transaction.timeout.seconds=30
 # MySQL JDBC Configuration
 # Database connection settings
 forage.ds2.jdbc.db.kind=mysql
-#ds2.forage.jdbc.url=jdbc:mysql://localhost:3306/test
+forage.ds2.jdbc.url=jdbc:mysql://localhost:3306/test  # Overridden by test with testcontainer URL
 forage.ds2.jdbc.username=test
 forage.ds2.jdbc.password=test
 

@@ -2,8 +2,10 @@ package io.kaoto.forage.jdbc;
 
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
 import org.citrusframework.annotations.CitrusTest;
 import org.citrusframework.junit.jupiter.CitrusSupport;
+import org.citrusframework.spi.Resource;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -13,6 +15,7 @@ import org.testcontainers.utility.DockerImageName;
 import io.kaoto.forage.integration.tests.ForageIntegrationTest;
 import io.kaoto.forage.integration.tests.ForageTestCaseRunner;
 import io.kaoto.forage.integration.tests.IntegrationTestSetupExtension;
+import io.kaoto.forage.integration.tests.PropertiesTemplateHelper;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,12 +49,25 @@ public class MultiTest implements ForageIntegrationTest {
 
     @Override
     public String runBeforeAll(ForageTestCaseRunner runner, Consumer<AutoCloseable> afterAll) {
-        runner.when(forageRun("route", "forage-datasource-factory.properties", "route.camel.yaml")
+        // Load template properties and replace testcontainer-specific values
+        Resource dynamicProperties = PropertiesTemplateHelper.createFromTemplate(
+                classResource("forage-datasource-factory.properties.template"),
+                Map.of(
+                        "forage\\.ds1\\.jdbc\\.url=.*",
+                        Matcher.quoteReplacement("forage.ds1.jdbc.url=" + postgres.getJdbcUrl()),
+                        "forage\\.ds2\\.jdbc\\.url=.*",
+                        Matcher.quoteReplacement("forage.ds2.jdbc.url=" + mysql.getJdbcUrl())),
+                afterAll);
+
+        // running jbang forage run with dynamically modified properties
+        runner.when(camel().jbang()
+                .custom("forage", "run")
+                .processName("route")
+                .addResource(dynamicProperties)
+                .addResource(classResource("route.camel.yaml"))
                 // required if more test are using the same route
                 .autoRemove(false)
-                .dumpIntegrationOutput(true)
-                .withEnvs(Map.of(
-                        "FORAGE_DS1_JDBC_URL", postgres.getJdbcUrl(), "FORAGE_DS2_JDBC_URL", mysql.getJdbcUrl())));
+                .dumpIntegrationOutput(true));
 
         return "route";
     }

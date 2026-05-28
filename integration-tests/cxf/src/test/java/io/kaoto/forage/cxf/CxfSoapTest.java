@@ -1,15 +1,17 @@
 package io.kaoto.forage.cxf;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
 import org.citrusframework.annotations.CitrusTest;
 import org.citrusframework.junit.jupiter.CitrusSupport;
+import org.citrusframework.spi.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.kaoto.forage.integration.tests.ForageIntegrationTest;
 import io.kaoto.forage.integration.tests.ForageTestCaseRunner;
 import io.kaoto.forage.integration.tests.IntegrationTestSetupExtension;
+import io.kaoto.forage.integration.tests.PropertiesTemplateHelper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -115,13 +117,23 @@ public class CxfSoapTest implements ForageIntegrationTest {
 
         String wireMockUrl = "http://localhost:" + wireMock.port();
 
-        Map<String, String> envs = new HashMap<>();
-        envs.put("FORAGE_CXF_ADDRESS", wireMockUrl + "/ws/hello");
-        envs.put("FORAGE_CXF_WSDL_URL", wireMockUrl + "/ws/hello?wsdl");
+        // Load template properties and replace testcontainer-specific values
+        Resource dynamicProperties = PropertiesTemplateHelper.createFromTemplate(
+                classResource("forage-cxf.properties.template"),
+                Map.of(
+                        "forage\\.cxf\\.address=.*",
+                        Matcher.quoteReplacement("forage.cxf.address=" + wireMockUrl + "/ws/hello"),
+                        "forage\\.cxf\\.wsdl\\.url=.*",
+                        Matcher.quoteReplacement("forage.cxf.wsdl.url=" + wireMockUrl + "/ws/hello?wsdl")),
+                afterAll);
 
-        runner.when(forageRun(INTEGRATION_NAME, "forage-cxf.properties", "cxf-soap-client.camel.yaml")
-                .dumpIntegrationOutput(true)
-                .withEnvs(envs));
+        // running jbang forage run with dynamically modified properties
+        runner.when(camel().jbang()
+                .custom("forage", "run")
+                .processName(INTEGRATION_NAME)
+                .addResource(dynamicProperties)
+                .addResource(classResource("cxf-soap-client.camel.yaml"))
+                .dumpIntegrationOutput(true));
 
         return INTEGRATION_NAME;
     }

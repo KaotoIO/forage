@@ -36,7 +36,8 @@ public class JmsArtemisTest implements ForageIntegrationTest {
                     DockerImageName.parse(ARTEMIS_IMAGE_NAME).asCompatibleSubstituteFor("apache/activemq-artemis"))
             .withExposedPorts(61616, 8161)
             .withUser("artemis")
-            .withPassword("artemis");
+            .withPassword("artemis")
+            .withEnv("JAVA_ARGS", "-Dbrokerconfig.maxDiskUsage=-1");
 
     @Override
     public String runBeforeAll(ForageTestCaseRunner runner, Consumer<AutoCloseable> afterAll) {

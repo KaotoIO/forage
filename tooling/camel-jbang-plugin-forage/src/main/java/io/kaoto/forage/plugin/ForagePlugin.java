@@ -1,13 +1,17 @@
 package io.kaoto.forage.plugin;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.common.CamelJBangPlugin;
+import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
 import org.apache.camel.dsl.jbang.core.common.Plugin;
 import org.apache.camel.dsl.jbang.core.common.PluginExporter;
 import org.apache.camel.dsl.jbang.core.common.PluginRunCustomizer;
@@ -18,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.kaoto.forage.core.common.ExportCustomizer;
 import io.kaoto.forage.core.common.RuntimeType;
+import io.kaoto.forage.core.util.config.ConfigStore;
 import io.kaoto.forage.plugin.config.ConfigCommand;
 import io.kaoto.forage.plugin.config.ConfigReadCommand;
 import io.kaoto.forage.plugin.config.ConfigWriteCommand;
@@ -53,8 +58,14 @@ public class ForagePlugin implements Plugin {
     @Override
     public Optional<PluginExporter> getExporter() {
         return Optional.of(new PluginExporter() {
+
             @Override
             public Set<String> getDependencies(org.apache.camel.dsl.jbang.core.common.RuntimeType runtimeType) {
+                if (RuntimeType.quarkus.name().equals(runtimeType.name())) {
+                    // mirrors ExportBaseCommand.BUILD_DIR (protected, not accessible from plugins)
+                    Path buildDir = Path.of(CommandLineHelper.CAMEL_JBANG_WORK_DIR, "work");
+                    translateForageProperties(buildDir);
+                }
                 // gather dependencies across all (enabled) export customizers for the specific runtime
                 return ExportHelper.getAllCustomizers()
                         .filter(ExportCustomizer::isEnabled)
@@ -72,6 +83,88 @@ public class ForagePlugin implements Plugin {
             @Override
             public void addSourceFiles(Path buildDir, String packageName, Printer printer) {}
         });
+    }
+
+    private static void translateForageProperties(Path buildDir) {
+        String configDir = System.getProperty("forage.config.dir");
+        File workingDir = configDir != null ? new File(configDir) : new File(System.getProperty("user.dir"));
+
+        QuarkusPropertyTranslator.TranslationResult result;
+        try {
+            result = QuarkusPropertyTranslator.translate(workingDir);
+        } catch (IOException e) {
+            LOG.warn("Failed to scan forage properties for Quarkus translation: {}", e.getMessage());
+            return;
+        } finally {
+            // translate() populates the global ConfigStore singleton via config.register() — clean up
+            // so scanned values don't leak into subsequent operations in the same JVM
+            ConfigStore.getInstance().reload();
+        }
+
+        if (result.isEmpty()) {
+            return;
+        }
+
+        Path appPropsPath = buildDir.resolve("src/main/resources/application.properties");
+        if (!Files.exists(appPropsPath)) {
+            LOG.warn("application.properties not found at {} — skipping property translation", appPropsPath);
+            return;
+        }
+
+        try {
+            rewriteApplicationProperties(appPropsPath, result);
+            LOG.info("Translated {} forage properties to Quarkus-native format", result.propertyCount());
+        } catch (IOException e) {
+            LOG.warn("Failed to rewrite application.properties: {}", e.getMessage());
+        }
+    }
+
+    static void rewriteApplicationProperties(Path appPropsPath, QuarkusPropertyTranslator.TranslationResult result)
+            throws IOException {
+        List<String> originalLines = Files.readAllLines(appPropsPath);
+        Set<String> keysToRemove = result.translatedForageKeys();
+
+        // Keep every line except those whose key was translated to Quarkus format
+        Stream<String> filtered = originalLines.stream().filter(line -> {
+            String key = extractPropertyKey(line);
+            return key == null || !keysToRemove.contains(key);
+        });
+
+        // Append each translation group with a header showing the original forage properties
+        Stream<String> translated = result.groups().stream().flatMap(ForagePlugin::translationGroupToLines);
+
+        Files.write(appPropsPath, Stream.concat(filtered, translated).toList());
+    }
+
+    /**
+     * Extracts the property key from a .properties file line.
+     * Returns {@code null} for blank lines, comments, and lines without '='.
+     */
+    private static String extractPropertyKey(String line) {
+        String trimmed = line.trim();
+        if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith("!")) {
+            return null;
+        }
+        int eqIdx = trimmed.indexOf('=');
+        return eqIdx < 0 ? null : trimmed.substring(0, eqIdx).trim();
+    }
+
+    private static Stream<String> translationGroupToLines(QuarkusPropertyTranslator.TranslationGroup group) {
+        Stream.Builder<String> lines = Stream.builder();
+        lines.add("");
+        if (group.prefix() != null) {
+            lines.add("# Properties for " + group.moduleType() + " with prefix '" + group.prefix() + "'");
+        } else {
+            lines.add("# Properties for " + group.moduleType());
+        }
+        lines.add("# Translated from:");
+        group.sourceProperties().forEach((k, v) -> lines.add("#   " + k + "=" + v));
+        group.properties().forEach((k, v) -> {
+            if (v != null) {
+                lines.add(k + "=" + v);
+            }
+        });
+        return lines.build();
     }
 
     private static final String SHIBBOLETH_REPO = "https://build.shibboleth.net/maven/releases/";

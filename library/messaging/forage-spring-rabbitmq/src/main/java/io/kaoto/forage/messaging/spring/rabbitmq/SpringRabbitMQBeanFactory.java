@@ -30,8 +30,8 @@ public class SpringRabbitMQBeanFactory implements BeanFactory {
     @Override
     public void cleanup() {
         SpringRabbitMQConfig config = new SpringRabbitMQConfig();
-        Set<String> prefixes =
-                ConfigStore.getInstance().readPrefixes(config, ConfigHelper.getNamedPropertyRegexp("spring.rabbitmq"));
+        Set<String> prefixes = ConfigStore.getInstance()
+                .readPrefixes(config, ConfigHelper.getNamedPropertyRegexp(SpringRabbitMQConstants.MODULE_PREFIX));
 
         for (String name : prefixes) {
             closeAndUnbind(name);
@@ -49,8 +49,8 @@ public class SpringRabbitMQBeanFactory implements BeanFactory {
     @Override
     public void configure() {
         SpringRabbitMQConfig config = new SpringRabbitMQConfig();
-        Set<String> prefixes =
-                ConfigStore.getInstance().readPrefixes(config, ConfigHelper.getNamedPropertyRegexp("spring.rabbitmq"));
+        Set<String> prefixes = ConfigStore.getInstance()
+                .readPrefixes(config, ConfigHelper.getNamedPropertyRegexp(SpringRabbitMQConstants.MODULE_PREFIX));
 
         if (!prefixes.isEmpty()) {
             for (String name : prefixes) {

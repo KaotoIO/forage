@@ -79,8 +79,8 @@ public class SpringRabbitMQHealthMetricsTest implements ForageIntegrationTest {
         Resource dynamicProperties = PropertiesTemplateHelper.createFromTemplate(
                 classResource("forage-spring-rabbitmq.properties.template"),
                 Map.of(
-                        "forage\\.spring\\.rabbitmq\\.port=.*",
-                        Matcher.quoteReplacement("forage.spring.rabbitmq.port=" + rabbitmq.getMappedPort(5672)),
+                        "forage\\.rabbitmq\\.port=.*",
+                        Matcher.quoteReplacement("forage.rabbitmq.port=" + rabbitmq.getMappedPort(5672)),
                         "server\\.port=.*",
                         Matcher.quoteReplacement("server.port=" + actuatorPort)),
                 afterAll);

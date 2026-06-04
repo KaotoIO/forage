@@ -1,14 +1,14 @@
 # Spring RabbitMQ CachingConnectionFactory configuration
 # Connection settings for RabbitMQ broker
-forage.spring.rabbitmq.host=localhost
-forage.spring.rabbitmq.port=5672  # Overridden by test with testcontainer port
-forage.spring.rabbitmq.username=guest
-forage.spring.rabbitmq.password=guest
-forage.spring.rabbitmq.virtual.host=/
+forage.rabbitmq.host=localhost
+forage.rabbitmq.port=5672  # Overridden by test with testcontainer port
+forage.rabbitmq.username=guest
+forage.rabbitmq.password=guest
+forage.rabbitmq.virtual.host=/
 
 # Connection pooling and cache settings
-forage.spring.rabbitmq.channel.cache.size=25
-forage.spring.rabbitmq.cache.mode=CHANNEL
+forage.rabbitmq.channel.cache.size=25
+forage.rabbitmq.cache.mode=CHANNEL
 
 # Auto-declare exchanges and queues
 camel.component.spring-rabbitmq.auto-declare=true

@@ -5,10 +5,10 @@ Forage creates Spring RabbitMQ `CachingConnectionFactory` beans for AMQP messagi
 ## Quick Start
 
 ```properties
-forage.spring.rabbitmq.host=localhost
-forage.spring.rabbitmq.port=5672
-forage.spring.rabbitmq.username=guest
-forage.spring.rabbitmq.password=guest
+forage.rabbitmq.host=localhost
+forage.rabbitmq.port=5672
+forage.rabbitmq.username=guest
+forage.rabbitmq.password=guest
 ```
 
 ```yaml
@@ -27,15 +27,15 @@ forage.spring.rabbitmq.password=guest
 Use prefixed configuration to create multiple named connection factories:
 
 ```properties
-forage.primary.spring.rabbitmq.host=broker1.example.com
-forage.primary.spring.rabbitmq.port=5672
-forage.primary.spring.rabbitmq.username=admin
-forage.primary.spring.rabbitmq.password=secret
+forage.primary.rabbitmq.host=broker1.example.com
+forage.primary.rabbitmq.port=5672
+forage.primary.rabbitmq.username=admin
+forage.primary.rabbitmq.password=secret
 
-forage.backup.spring.rabbitmq.host=broker2.example.com
-forage.backup.spring.rabbitmq.port=5672
-forage.backup.spring.rabbitmq.username=admin
-forage.backup.spring.rabbitmq.password=secret
+forage.backup.rabbitmq.host=broker2.example.com
+forage.backup.rabbitmq.port=5672
+forage.backup.rabbitmq.username=admin
+forage.backup.rabbitmq.password=secret
 ```
 
 ```yaml
@@ -54,9 +54,9 @@ forage.backup.spring.rabbitmq.password=secret
 Use the `addresses` property to connect to a RabbitMQ cluster. When set, it takes precedence for connection routing:
 
 ```properties
-forage.spring.rabbitmq.addresses=broker1:5672,broker2:5672,broker3:5672
-forage.spring.rabbitmq.automatic.recovery.enabled=true
-forage.spring.rabbitmq.network.recovery.interval=5000
+forage.rabbitmq.addresses=broker1:5672,broker2:5672,broker3:5672
+forage.rabbitmq.automatic.recovery.enabled=true
+forage.rabbitmq.network.recovery.interval=5000
 ```
 
 ## Health and Metrics
@@ -157,7 +157,7 @@ The `CachingConnectionFactory` supports two cache modes:
 - **CONNECTION** — caches connections and channels. Use when you need multiple connections to the broker.
 
 ```properties
-forage.spring.rabbitmq.cache.mode=CONNECTION
-forage.spring.rabbitmq.connection.cache.size=5
-forage.spring.rabbitmq.channel.cache.size=25
+forage.rabbitmq.cache.mode=CONNECTION
+forage.rabbitmq.connection.cache.size=5
+forage.rabbitmq.channel.cache.size=25
 ```

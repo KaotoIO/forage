@@ -25,7 +25,7 @@ import io.kaoto.forage.springboot.common.ForageSpringBootModuleAdapter;
  * Automatically creates ConnectionFactory beans from Spring RabbitMQ configuration properties,
  * supporting both single and multi-instance (prefixed) configurations.
  *
- * <p>Named/prefixed connection factories (e.g., {@code forage.mq1.spring.rabbitmq.host})
+ * <p>Named/prefixed connection factories (e.g., {@code forage.mq1.rabbitmq.host})
  * are registered dynamically by {@link ForageSpringBootModuleAdapter} using the
  * {@link SpringRabbitMQModuleDescriptor}.
  *
@@ -62,7 +62,7 @@ public class ForageSpringRabbitMQAutoConfiguration {
      * <p>This bean is only registered when:
      * <ul>
      *   <li>No "rabbitConnectionFactory" bean already exists (e.g., from the module adapter's prefix discovery)</li>
-     *   <li>The {@code forage.spring.rabbitmq.host} property is configured</li>
+     *   <li>The {@code forage.rabbitmq.host} property is configured</li>
      * </ul>
      *
      * @param forageSpringRabbitMQModuleAdapter injected to ensure the adapter runs first and discovers

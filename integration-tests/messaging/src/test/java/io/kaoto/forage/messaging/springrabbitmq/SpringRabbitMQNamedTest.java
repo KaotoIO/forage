@@ -43,8 +43,8 @@ public class SpringRabbitMQNamedTest implements ForageIntegrationTest {
         Resource dynamicProperties = PropertiesTemplateHelper.createFromTemplate(
                 classResource("forage-spring-rabbitmq.properties.template"),
                 Map.of(
-                        "forage\\.mq1\\.spring\\.rabbitmq\\.port=.*",
-                        Matcher.quoteReplacement("forage.mq1.spring.rabbitmq.port=" + rabbitmq.getMappedPort(5672))),
+                        "forage\\.mq1\\.rabbitmq\\.port=.*",
+                        Matcher.quoteReplacement("forage.mq1.rabbitmq.port=" + rabbitmq.getMappedPort(5672))),
                 afterAll);
 
         // running jbang forage run with dynamically modified properties

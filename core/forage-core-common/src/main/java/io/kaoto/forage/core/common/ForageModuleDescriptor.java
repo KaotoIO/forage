@@ -77,6 +77,15 @@ public interface ForageModuleDescriptor<C extends Config, P extends BeanProvider
     }
 
     /**
+     * Translates forage properties for export-time use. By default delegates to
+     * {@link #translateProperties(String, Config)}, but subclasses can override to skip
+     * runtime-only checks (e.g., classpath verification) that don't apply at export time.
+     */
+    default Map<String, String> translatePropertiesForExport(String prefix, C config) {
+        return translateProperties(prefix, config);
+    }
+
+    /**
      * Returns auxiliary bean descriptors (e.g., aggregation repos, idempotent repos)
      * that should be created alongside the primary bean for the given prefix.
      *

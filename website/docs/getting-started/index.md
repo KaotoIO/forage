@@ -107,3 +107,4 @@ When you're ready to deploy, export to Spring Boot or Quarkus:
 - Explore the [Core Concepts](../concepts/index.md) to understand how Forage works
 - Browse working [Examples](../examples/index.md) covering JDBC, JMS, transactions, and AI agents
 - See all available [Modules](../modules/index.md) for a full list of supported technologies
+- Try the latest development features with [Snapshot Builds](snapshot.md)

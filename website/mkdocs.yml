@@ -82,7 +82,9 @@ plugins:
 
 nav:
   - Home: index.md
-  - Getting Started: getting-started/index.md
+  - Getting Started:
+      - getting-started/index.md
+      - Snapshot Builds: getting-started/snapshot.md
   - Core Concepts:
       - concepts/index.md
       - Bean Providers: concepts/bean-providers.md

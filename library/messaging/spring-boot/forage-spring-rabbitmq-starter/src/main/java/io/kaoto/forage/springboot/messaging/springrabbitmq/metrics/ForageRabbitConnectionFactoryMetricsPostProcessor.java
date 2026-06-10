@@ -2,7 +2,7 @@ package io.kaoto.forage.springboot.messaging.springrabbitmq.metrics;
 
 import org.springframework.amqp.rabbit.connection.AbstractConnectionFactory;
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.boot.actuate.metrics.amqp.RabbitMetrics;
+import org.springframework.boot.amqp.metrics.RabbitMetrics;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.Ordered;
 import io.micrometer.core.instrument.MeterRegistry;

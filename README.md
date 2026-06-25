@@ -294,6 +294,15 @@ This project follows standard Maven conventions. To build:
 mvn clean install
 ```
 
+### AI-assisted contributions
+
+Contributors using AI coding assistants (such as [Claude Code](https://github.com/anthropics/claude-code) or similar tools) can take advantage of the project rules in the `.oss-ai-helper-rules/` directory and the `CLAUDE.md` file at the repository root.
+
+These files provide AI agents with project-specific context such as build commands, code style restrictions, branching conventions, issue tracker details, and contribution guidelines.
+They are maintained as part of the repository so that AI-assisted contributions follow the same standards as manual ones.
+
+The `.oss-ai-helper-rules/` files are designed for use with the [OSS Helper](https://github.com/Open-Harness-Engineering/ai-agents-oss-helper) toolset, which provides ready-made skills for common contribution tasks (fixing issues, creating PRs, running CI checks, and more).
+
 ### Integrating Apache Camel Components
 
 If you're developing Apache Camel components and want to integrate them with the Forage library, or if you want to create new providers for AI models, vector databases, or other services, please refer to our comprehensive [Contributing Beans Guide](docs/contributing-beans.md).

@@ -25,7 +25,6 @@ import io.kaoto.forage.core.util.config.ConfigHelper;
 import io.kaoto.forage.core.util.config.ConfigStore;
 import io.kaoto.forage.jms.common.ConnectionFactoryCommonExportHelper;
 import io.kaoto.forage.jms.common.ConnectionFactoryConfig;
-import io.kaoto.forage.jms.common.ForageConnectionFactory;
 
 @ForageFactory(
         value = "JMS Connection",
@@ -130,8 +129,12 @@ public class ConnectionFactoryBeanFactory implements BeanFactory {
             for (String name : prefixes) {
                 if (camelContext.getRegistry().lookupByNameAndType(name, ConnectionFactory.class) == null) {
                     ConnectionFactoryConfig cfConfig = new ConnectionFactoryConfig(name);
-                    ForageConnectionFactory forageConnectionFactory = newConnectionFactory(cfConfig, name);
-                    camelContext.getRegistry().bind(name, forageConnectionFactory.connectionFactory());
+                    ConnectionFactory connectionFactory = newConnectionFactory(cfConfig, name);
+                    if (connectionFactory != null) {
+                        camelContext.getRegistry().bind(name, connectionFactory);
+                    } else {
+                        LOG.warn("Skipping binding for '{}' because ConnectionFactory creation returned null", name);
+                    }
                 }
             }
         } else {
@@ -141,11 +144,8 @@ public class ConnectionFactoryBeanFactory implements BeanFactory {
                     final List<ServiceLoader.Provider<ConnectionFactoryProvider>> providers =
                             findProviders(ConnectionFactoryProvider.class);
                     if (providers.size() == 1) {
-                        ForageConnectionFactory forageConnectionFactory =
-                                doCreateConnectionFactory(providers.get(0), null);
-                        camelContext
-                                .getRegistry()
-                                .bind(DEFAULT_CONNECTION_FACTORY, forageConnectionFactory.connectionFactory());
+                        ConnectionFactory connectionFactory = doCreateConnectionFactory(providers.get(0), null);
+                        camelContext.getRegistry().bind(DEFAULT_CONNECTION_FACTORY, connectionFactory);
                     } else {
                         throw new IllegalArgumentException(
                                 "No ConnectionFactory implementation is present in the classpath");
@@ -157,7 +157,7 @@ public class ConnectionFactoryBeanFactory implements BeanFactory {
         }
     }
 
-    private synchronized ForageConnectionFactory newConnectionFactory(
+    private synchronized ConnectionFactory newConnectionFactory(
             ConnectionFactoryConfig connectionFactoryConfig, String name) {
         final String connectionFactoryProviderClass =
                 ConnectionFactoryCommonExportHelper.transformJmsKindIntoProviderClass(
@@ -178,10 +178,10 @@ public class ConnectionFactoryBeanFactory implements BeanFactory {
         return doCreateConnectionFactory(connectionFactoryProvider, name);
     }
 
-    private ForageConnectionFactory doCreateConnectionFactory(
+    private ConnectionFactory doCreateConnectionFactory(
             ServiceLoader.Provider<ConnectionFactoryProvider> provider, String name) {
         final ConnectionFactoryProvider connectionFactoryProvider = provider.get();
-        return new ForageConnectionFactory(connectionFactoryProvider.create(name));
+        return connectionFactoryProvider.create(name);
     }
 
     @Override

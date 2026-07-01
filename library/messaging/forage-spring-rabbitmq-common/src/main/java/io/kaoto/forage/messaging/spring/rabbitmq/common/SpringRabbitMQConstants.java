@@ -13,8 +13,8 @@ public final class SpringRabbitMQConstants {
         // Utility class
     }
 
-    /** Module prefix used in property names: {@code "spring.rabbitmq"} */
-    public static final String MODULE_PREFIX = "spring.rabbitmq";
+    /** Module prefix used in property names: {@code "rabbitmq"} */
+    public static final String MODULE_PREFIX = "rabbitmq";
 
     /** Default bean name for unprefixed configurations: {@code "rabbitConnectionFactory"} */
     public static final String DEFAULT_BEAN_NAME = "rabbitConnectionFactory";

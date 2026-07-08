@@ -684,6 +684,33 @@ public final class ForageCatalogReader {
                 .toList();
     }
 
+    /**
+     * Gets all runtime versions from the catalog.
+     *
+     * @return map of group ID to version string, or empty map if not available
+     */
+    public Map<String, String> getRuntimeVersions() {
+        Map<String, String> versions = catalog.getRuntimeVersions();
+        return versions != null ? Collections.unmodifiableMap(versions) : Collections.emptyMap();
+    }
+
+    /**
+     * Gets the runtime version for a specific group ID.
+     *
+     * @param groupId the group ID (e.g., "org.apache.camel")
+     * @return Optional containing the version string if found
+     */
+    public Optional<String> getRuntimeVersion(String groupId) {
+        if (groupId == null) {
+            return Optional.empty();
+        }
+        Map<String, String> versions = catalog.getRuntimeVersions();
+        if (versions == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(versions.get(groupId));
+    }
+
     // ─── Helper Methods ───────────────────────────────────────────────────
 
     /**

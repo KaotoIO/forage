@@ -7,6 +7,7 @@
 | `java` | 17+ | `java -version` |
 | `jbang` | 0.114+ | `jbang version` |
 | `camel` (JBang) | 4.16+ | `camel version` |
+| `mvn` | 3.9+ (for local builds) | `mvn -version` |
 
 ### Installing Camel JBang
 
@@ -22,7 +23,7 @@ The Forage plugin must be installed before `camel forage run` or automatic bean 
 
 **From a released version:**
 ```bash
-FORAGE_VERSION="${FORAGE_VERSION:-1.4.0}"
+FORAGE_VERSION="${FORAGE_VERSION:?set FORAGE_VERSION to the desired release}"
 camel plugin add forage \
   --gav io.kaoto.forage:camel-jbang-plugin-forage:${FORAGE_VERSION}
 ```
@@ -43,7 +44,7 @@ camel plugin add forage \
 
 **From snapshots:**
 ```bash
-FORAGE_SNAPSHOT_VERSION="${FORAGE_SNAPSHOT_VERSION:-1.4.0-SNAPSHOT}"
+FORAGE_SNAPSHOT_VERSION="${FORAGE_SNAPSHOT_VERSION:?set FORAGE_SNAPSHOT_VERSION to the desired snapshot}"
 camel plugin add forage \
   --repos=https://central.sonatype.com/repository/maven-snapshots/ \
   --gav io.kaoto.forage:camel-jbang-plugin-forage:${FORAGE_SNAPSHOT_VERSION}

@@ -33,10 +33,10 @@ Verify all required tools are present.
 ### Test 0.1: Verify required tools
 
 ```bash
-java -version 2>&1 | head -1
+java -version >/dev/null 2>&1
 JAVA_EXIT=$?
 
-camel version 2>&1 | head -1
+camel version >/dev/null 2>&1
 CAMEL_EXIT=$?
 
 if command -v podman > /dev/null 2>&1; then

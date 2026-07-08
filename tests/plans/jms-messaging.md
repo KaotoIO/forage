@@ -27,13 +27,13 @@ Users write a `forage-connectionfactory.properties` file with `forage.jms.*` set
 Verify all required tools are available.
 
 ```bash
-java -version 2>&1 | head -1
+java -version >/dev/null 2>&1
 if [ $? -ne 0 ]; then
   echo "FAIL: Java is not installed"
   exit 1
 fi
 
-camel version 2>&1 | head -1
+camel version >/dev/null 2>&1
 if [ $? -ne 0 ]; then
   echo "FAIL: Camel JBang is not installed"
   exit 1

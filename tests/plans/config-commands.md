@@ -4,7 +4,7 @@
 
 This test plan verifies Forage's `camel forage config read` and `camel forage config write` CLI commands. These commands are part of the Camel JBang plugin at `tooling/camel-jbang-plugin-forage`.
 
-- `config read` scans a directory for properties files, parses `forage.*` properties, and outputs a JSON list of detected beans with their configuration, kind, and Java type. It supports filtering by factory type (`--filter`), directory selection (`--dir`), and strategy selection (`--strategy`).
+- `config read` scans a directory for properties files, parses `forage.*` properties, and outputs a structured JSON object with `success`, `directory`, `beanCount`, and a `beans` array. It supports filtering by factory type (`--filter`), directory selection (`--dir`), and strategy selection (`--strategy`).
 - `config write` accepts JSON input (via `--input` or stdin), maps properties to factory types using the Forage catalog, and writes them to properties files. It prefixes properties with the bean name when `forage.bean.name` is provided.
 - `config write --delete` removes all `forage.{instanceName}.*` properties for a given `--name` and cleans up unused dependencies.
 

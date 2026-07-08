@@ -319,15 +319,15 @@ cat > "${PROJECT_DIR}/route.camel.yaml" << 'ROUTE'
                   </soap:Body>
                 </soap:Envelope>
         - setHeader:
-            name: CamelHttpMethod
+            name: operationName
             constant:
-              expression: POST
+              expression: sayHello
         - setHeader:
-            name: Content-Type
+            name: operationNamespace
             constant:
-              expression: text/xml
+              expression: "http://example.com/hello"
         - to:
-            uri: "http://localhost:8080/services/hello"
+            uri: cxf:bean:helloClient
         - log:
             message: "Client received response: ${body}"
 ROUTE

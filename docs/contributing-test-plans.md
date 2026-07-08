@@ -25,6 +25,7 @@ Every plan must declare required tools in a prerequisites table:
 | `java` | 17+ | `java -version` |
 | `camel` (JBang) | 4.16+ | `camel version` |
 | `docker` or `podman` | any | `docker --version` or `podman --version` |
+| `mvn` | 3.9+ (for local builds) | `mvn -version` |
 
 The Forage plugin must be installed before running. See [common/forage-run.md](../tests/plans/common/forage-run.md) for installation instructions.
 
@@ -60,6 +61,7 @@ if grep -q "expected message" output.log; then
 else
   echo "FAIL: expected message not found"
   cat output.log
+  exit 1
 fi
 
 kill "${CAMEL_PID}" 2>/dev/null
@@ -168,8 +170,10 @@ Verify that invalid inputs are rejected:
 
 ```bash
 # Typo in property name + strict mode → should fail
-camel forage run --strict project/*
-if [ $? -ne 0 ]; then
+if camel forage run --strict project/*; then
+  echo "FAIL: strict mode accepted invalid properties"
+  exit 1
+else
   echo "PASS: strict mode rejected invalid properties"
 fi
 ```

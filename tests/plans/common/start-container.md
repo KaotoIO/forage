@@ -50,6 +50,7 @@ if [ $? -eq 0 ]; then
   echo "PASS: PostgreSQL is ready on port ${POSTGRES_PORT}"
 else
   echo "FAIL: PostgreSQL did not become ready"
+  ${CONTAINER_RUNTIME} rm -f "${POSTGRES_CONTAINER}" 2>/dev/null || true
   exit 1
 fi
 ```
@@ -87,6 +88,7 @@ if [ $? -eq 0 ]; then
   echo "PASS: Artemis is ready on port ${ARTEMIS_PORT}"
 else
   echo "FAIL: Artemis did not become ready"
+  ${CONTAINER_RUNTIME} rm -f "${ARTEMIS_CONTAINER}" 2>/dev/null || true
   exit 1
 fi
 ```
@@ -127,6 +129,7 @@ if [ $? -eq 0 ]; then
   echo "PASS: RabbitMQ is ready on port ${RABBITMQ_PORT}"
 else
   echo "FAIL: RabbitMQ did not become ready"
+  ${CONTAINER_RUNTIME} rm -f "${RABBITMQ_CONTAINER}" 2>/dev/null || true
   exit 1
 fi
 ```

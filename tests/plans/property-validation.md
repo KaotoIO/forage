@@ -24,10 +24,10 @@ jbang app install camel@apache/camel
 ### Prerequisite check
 
 ```bash
-java -version 2>&1 | head -1
+java -version >/dev/null 2>&1
 JAVA_EXIT=$?
 
-camel version 2>&1 | head -1
+camel version >/dev/null 2>&1
 CAMEL_EXIT=$?
 
 if [ "${JAVA_EXIT}" -eq 0 ] && [ "${CAMEL_EXIT}" -eq 0 ]; then
@@ -45,10 +45,10 @@ fi
 ### Test 0.1: Verify required tools
 
 ```bash
-java -version 2>&1 | head -1
+java -version >/dev/null 2>&1
 JAVA_EXIT=$?
 
-camel version 2>&1 | head -1
+camel version >/dev/null 2>&1
 CAMEL_EXIT=$?
 
 if [ "${JAVA_EXIT}" -eq 0 ] && [ "${CAMEL_EXIT}" -eq 0 ]; then
@@ -115,7 +115,7 @@ fi
 ### Test 1.2: Run with --strict and valid properties
 
 ```bash
-camel forage run --strict "${PROJECT_DIR}/*" > "${PROJECT_DIR}/output.log" 2>&1 &
+camel forage run --strict "${PROJECT_DIR}"/* > "${PROJECT_DIR}/output.log" 2>&1 &
 CAMEL_PID=$!
 
 # Wait for the route to start (H2 is embedded, so it should start quickly)
@@ -197,7 +197,7 @@ fi
 ### Test 2.2: Run with --strict and typo property
 
 ```bash
-camel forage run --strict "${PROJECT_DIR}/*" > "${PROJECT_DIR}/output.log" 2>&1
+camel forage run --strict "${PROJECT_DIR}"/* > "${PROJECT_DIR}/output.log" 2>&1
 EXIT_CODE=$?
 
 if [ "${EXIT_CODE}" -ne 0 ]; then
@@ -298,7 +298,7 @@ echo "PASS: phase 3 project files created"
 The route may fail later due to missing valid config (no real PostgreSQL), but validation itself should not block execution.
 
 ```bash
-camel forage run "${PROJECT_DIR}/*" > "${PROJECT_DIR}/output.log" 2>&1 &
+camel forage run "${PROJECT_DIR}"/* > "${PROJECT_DIR}/output.log" 2>&1 &
 CAMEL_PID=$!
 
 # Give it time to start and produce output
@@ -329,7 +329,7 @@ wait "${CAMEL_PID}" 2>/dev/null
 if grep -q "Forage Property Validation Warnings" "${PROJECT_DIR}/output.log" 2>/dev/null; then
   echo "PASS: validation warnings are displayed without --strict"
 else
-  echo "INFO: warnings may not appear in non-strict mode if output is suppressed (check log)"
+  echo "FAIL: expected validation warnings without --strict"
   cat "${PROJECT_DIR}/output.log"
 fi
 ```
@@ -378,7 +378,7 @@ echo "PASS: phase 4 project files created"
 ### Test 4.2: Run with --strict and multiple typos
 
 ```bash
-camel forage run --strict "${PROJECT_DIR}/*" > "${PROJECT_DIR}/output.log" 2>&1
+camel forage run --strict "${PROJECT_DIR}"/* > "${PROJECT_DIR}/output.log" 2>&1
 EXIT_CODE=$?
 
 if [ "${EXIT_CODE}" -ne 0 ]; then
@@ -416,12 +416,8 @@ if grep -q "Total warnings: 2" "${PROJECT_DIR}/output.log" 2>/dev/null; then
   echo "PASS: total warning count is 2"
 else
   TOTAL=$(grep "Total warnings:" "${PROJECT_DIR}/output.log" 2>/dev/null)
-  if [ -n "${TOTAL}" ]; then
-    echo "INFO: ${TOTAL} (expected 2)"
-  else
-    echo "FAIL: no total warnings line found"
-    cat "${PROJECT_DIR}/output.log"
-  fi
+  echo "FAIL: ${TOTAL:-no total warnings line found} (expected 2)"
+  cat "${PROJECT_DIR}/output.log"
 fi
 ```
 

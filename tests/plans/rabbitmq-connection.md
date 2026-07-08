@@ -22,10 +22,10 @@ Both phases verify end-to-end message flow: a timer-driven producer sends messag
 ### Prerequisite check
 
 ```bash
-java -version 2>&1 | head -1
+java -version >/dev/null 2>&1
 JAVA_EXIT=$?
 
-camel version 2>&1 | head -1
+camel version >/dev/null 2>&1
 CAMEL_EXIT=$?
 
 if command -v podman > /dev/null 2>&1; then
@@ -60,10 +60,10 @@ If Camel JBang is not installed, see [common/forage-run.md](common/forage-run.md
 ### Test 0.1: Verify required tools
 
 ```bash
-java -version 2>&1 | head -1
+java -version >/dev/null 2>&1
 JAVA_EXIT=$?
 
-camel version 2>&1 | head -1
+camel version >/dev/null 2>&1
 CAMEL_EXIT=$?
 
 if command -v podman > /dev/null 2>&1; then
@@ -329,11 +329,14 @@ echo "PASS: temporary directories cleaned up"
 ### Step 3.4: Verify RabbitMQ container is gone
 
 ```bash
-${CONTAINER_RUNTIME} ps -a --filter "name=${RABBITMQ_CONTAINER}" --format '{{.Names}}' | grep -q "${RABBITMQ_CONTAINER}"
-if [ $? -ne 0 ]; then
-  echo "PASS: RabbitMQ container is no longer present"
+if container_names="$(${CONTAINER_RUNTIME} ps -a --filter "name=${RABBITMQ_CONTAINER}" --format '{{.Names}}' 2>/dev/null)"; then
+  if printf '%s\n' "${container_names}" | grep -Fxq -- "${RABBITMQ_CONTAINER}"; then
+    echo "FAIL: RabbitMQ container still exists"
+  else
+    echo "PASS: RabbitMQ container is no longer present"
+  fi
 else
-  echo "FAIL: RabbitMQ container still exists"
+  echo "FAIL: container lookup failed"
 fi
 ```
 

@@ -72,6 +72,7 @@ public class CatalogGenerator {
         ForageCatalog catalog = new ForageCatalog();
         catalog.setVersion("2.0");
         catalog.setFactories(factories);
+        catalog.setRuntimeVersions(collectRuntimeVersions(project.getProperties()));
         catalog.setGeneratedBy("forage-maven-catalog-plugin");
         catalog.setTimestamp(System.currentTimeMillis());
 
@@ -658,6 +659,23 @@ public class CatalogGenerator {
         File outputFile = new File(outputDirectory, "forage-catalog.yaml");
         yamlObjectMapper.writeValue(outputFile, catalog);
         return outputFile;
+    }
+
+    private Map<String, String> collectRuntimeVersions(Properties projectProperties) {
+        Map<String, String> versions = new LinkedHashMap<>();
+        addVersionIfPresent(versions, projectProperties, "org.apache.camel", "camel.version");
+        addVersionIfPresent(versions, projectProperties, "org.apache.camel.springboot", "camel-spring-boot.version");
+        addVersionIfPresent(
+                versions, projectProperties, "org.apache.camel.extensions.quarkus", "camel-quarkus.version");
+        return versions;
+    }
+
+    private void addVersionIfPresent(
+            Map<String, String> versions, Properties properties, String key, String propertyName) {
+        String value = properties.getProperty(propertyName);
+        if (value != null && !value.isEmpty()) {
+            versions.put(key, value);
+        }
     }
 
     // Setters for configuration

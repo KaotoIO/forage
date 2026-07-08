@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,11 @@ class ForageCatalogReaderTest {
               "version": "1.0-test",
               "generatedBy": "test",
               "timestamp": 1234567890,
+              "runtimeVersions": {
+                "org.apache.camel": "4.18.2",
+                "org.apache.camel.springboot": "4.18.2",
+                "org.apache.camel.extensions.quarkus": "3.33.0"
+              },
               "factories": [
                 {
                   "name": "JDBC DataSource Factory",
@@ -197,5 +203,35 @@ class ForageCatalogReaderTest {
         assertThat(metadata).isPresent();
         Optional<String> shortKey = metadata.get().getShortPrefixPropertyKey();
         assertThat(shortKey).isPresent().hasValue("jdbc.name");
+    }
+
+    @Test
+    void testGetRuntimeVersions() {
+        Map<String, String> versions = reader.getRuntimeVersions();
+        assertThat(versions).hasSize(3);
+        assertThat(versions).containsEntry("org.apache.camel", "4.18.2");
+        assertThat(versions).containsEntry("org.apache.camel.springboot", "4.18.2");
+        assertThat(versions).containsEntry("org.apache.camel.extensions.quarkus", "3.33.0");
+    }
+
+    @Test
+    void testGetRuntimeVersion() {
+        Optional<String> version = reader.getRuntimeVersion("org.apache.camel");
+        assertThat(version).isPresent().hasValue("4.18.2");
+
+        version = reader.getRuntimeVersion("org.apache.camel.extensions.quarkus");
+        assertThat(version).isPresent().hasValue("3.33.0");
+    }
+
+    @Test
+    void testGetRuntimeVersionNotFound() {
+        Optional<String> version = reader.getRuntimeVersion("org.unknown");
+        assertThat(version).isEmpty();
+    }
+
+    @Test
+    void testGetRuntimeVersionNull() {
+        Optional<String> version = reader.getRuntimeVersion(null);
+        assertThat(version).isEmpty();
     }
 }

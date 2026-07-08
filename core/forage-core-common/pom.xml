@@ -59,12 +59,14 @@
                 <filtering>true</filtering>
                 <includes>
                     <include>**/forage-version.txt</include>
+                    <include>**/runtime-versions.properties</include>
                 </includes>
             </resource>
             <resource>
                 <directory>src/main/resources</directory>
                 <excludes>
                     <exclude>**/forage-version.txt</exclude>
+                    <exclude>**/runtime-versions.properties</exclude>
                 </excludes>
             </resource>
         </resources>

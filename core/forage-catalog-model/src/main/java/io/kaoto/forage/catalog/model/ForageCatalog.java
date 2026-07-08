@@ -1,6 +1,7 @@
 package io.kaoto.forage.catalog.model;
 
 import java.util.List;
+import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -19,6 +20,9 @@ public class ForageCatalog {
 
     @JsonProperty("timestamp")
     private long timestamp;
+
+    @JsonProperty("runtimeVersions")
+    private Map<String, String> runtimeVersions;
 
     @JsonProperty("factories")
     private List<ForageFactory> factories;
@@ -47,6 +51,14 @@ public class ForageCatalog {
 
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public Map<String, String> getRuntimeVersions() {
+        return runtimeVersions;
+    }
+
+    public void setRuntimeVersions(Map<String, String> runtimeVersions) {
+        this.runtimeVersions = runtimeVersions;
     }
 
     public List<ForageFactory> getFactories() {

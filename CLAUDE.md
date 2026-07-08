@@ -87,6 +87,15 @@ forage/
 │   ├── cloud/                     # Cloud provider implementations
 │   └── vertx/                     # Vert.x implementations
 ├── integration-tests/              # Citrus-based integration tests
+├── tests/plans/                    # End-to-end test plans (Markdown)
+│   ├── common/                    # Shared procedures (container setup, forage-run)
+│   ├── jdbc-datasource.md         # JDBC DataSource provisioning
+│   ├── jms-messaging.md           # JMS ConnectionFactory provisioning
+│   ├── cxf-soap-endpoints.md      # CXF/SOAP endpoint provisioning
+│   ├── rabbitmq-connection.md     # Spring RabbitMQ provisioning
+│   ├── property-validation.md     # Property typo detection and --strict mode
+│   ├── config-commands.md         # camel forage config read/write
+│   └── route-policies.md          # Flip and schedule route policies
 ├── tooling/                        # Build tooling
 │   ├── camel-jbang-plugin-forage/ # Camel JBang plugin
 │   └── forage-maven-catalog-plugin/ # Catalog generation plugin
@@ -214,6 +223,25 @@ See **[docs/adding-modules.md](docs/adding-modules.md)** for the complete guide 
 - Spring Boot auto-configuration and bean registration
 - Quarkus `ConfigSourceFactory` and deployment processors
 - Integration testing with Citrus
+
+## Test Plans
+
+End-to-end test plans live in `tests/plans/`. Each plan creates a sample project (properties + YAML route), runs it via `camel run` or `camel forage run`, and verifies behavior. They test Forage as a user would use it — not by wrapping Maven unit tests.
+
+### Running a test plan
+
+```bash
+# Install the Forage JBang plugin (required once)
+mvn clean install -DskipTests
+FORAGE_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+camel plugin add forage --gav io.kaoto.forage:camel-jbang-plugin-forage:${FORAGE_VERSION}
+
+# Then follow the phases in any test plan
+```
+
+Plans that require containers (JDBC, JMS, RabbitMQ) use `${CONTAINER_RUNTIME}` for Docker/Podman compatibility. Plans without containers (CXF, property validation, route policies, config commands) need only Java and Camel JBang.
+
+See **[docs/contributing-test-plans.md](docs/contributing-test-plans.md)** for the guide on writing new test plans.
 
 ## Development Guidelines
 

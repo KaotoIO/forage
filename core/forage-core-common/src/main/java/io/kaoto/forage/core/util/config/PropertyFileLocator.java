@@ -27,8 +27,9 @@ import org.slf4j.LoggerFactory;
  * <p><strong>Filesystem resolution order:</strong>
  * <ol>
  *   <li>Current working directory</li>
- *   <li>{@code forage.config.dir} system property</li>
- *   <li>{@code FORAGE_CONFIG_DIR} environment variable</li>
+ *   <li>{@code forage.config.dir} system property / {@code FORAGE_CONFIG_DIR} environment variable</li>
+ *   <li>User home directory ({@code $HOME/.forage/} by default, override with {@code forage.home.dir} or {@code FORAGE_HOME_DIR})</li>
+ *   <li>Classpath resources</li>
  *   <li>Pluggable sources discovered via {@link PluggablePropertyFileSourceLoader}</li>
  * </ol>
  *
@@ -54,6 +55,7 @@ public final class PropertyFileLocator {
         List<PropertyFileSource> sources = new ArrayList<>();
         sources.add(new WorkingDirectoryPropertyFileSource());
         sources.add(new ConfigDirPropertyFileSource());
+        sources.add(new HomeDirectoryPropertyFileSource());
         sources.add(new ClassPathPropertyFileSource());
         sources.sort(Comparator.comparingInt(PropertyFileSource::priority).reversed());
         BUILT_IN_SOURCES = List.copyOf(sources);
@@ -81,7 +83,7 @@ public final class PropertyFileLocator {
      * Attempts to open a properties file by consulting all registered
      * {@link PropertyFileSource} instances (built-in and pluggable) in priority order.
      *
-     * <p>Built-in sources (working directory, config directory, classpath) are tried first,
+     * <p>Built-in sources (working directory, config directory, user home directory, classpath) are tried first,
      * followed by any {@link PluggablePropertyFileSource} implementations discovered via
      * {@link java.util.ServiceLoader}.
      *

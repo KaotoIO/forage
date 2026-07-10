@@ -28,6 +28,12 @@
             <artifactId>citrus-camel</artifactId>
             <version>${citrus.version}</version>
         </dependency>
+        <!-- provided-scope inside citrus-camel, needed at compile time by ForageCmdSendAction -->
+        <dependency>
+            <groupId>org.citrusframework</groupId>
+            <artifactId>citrus-jbang-connector</artifactId>
+            <version>${citrus.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.citrusframework</groupId>
             <artifactId>citrus-junit5</artifactId>

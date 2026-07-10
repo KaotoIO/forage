@@ -92,26 +92,18 @@ public class JdbcTest implements ForageIntegrationTest {
     @CitrusTest()
     public void aggregationTest(ForageTestCaseRunner runner) {
 
-        // send events to be aggregated together
-        runner.when(camel().jbang()
-                        .cmd()
-                        .send()
+        // send events to be aggregated together; sent by PID because name-addressed
+        // sends are silently dropped on exported runtimes (see ForageCmdSendAction)
+        runner.when(forageCmdSend(INTEGRATION_NAME)
                         .endpoint("direct:events")
-                        .integration(INTEGRATION_NAME)
                         .body("Hello 1!")
                         .header("eventId", "1"))
-                .and(camel().jbang()
-                        .cmd()
-                        .send()
+                .and(forageCmdSend(INTEGRATION_NAME)
                         .endpoint("direct:events")
-                        .integration(INTEGRATION_NAME)
                         .body("Hello 2!")
                         .header("eventId", "1"))
-                .and(camel().jbang()
-                        .cmd()
-                        .send()
+                .and(forageCmdSend(INTEGRATION_NAME)
                         .endpoint("direct:events")
-                        .integration(INTEGRATION_NAME)
                         .body("Hello 3!")
                         .header("eventId", "1"));
 

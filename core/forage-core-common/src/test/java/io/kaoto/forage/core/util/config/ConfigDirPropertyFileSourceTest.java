@@ -45,4 +45,11 @@ class ConfigDirPropertyFileSourceTest {
         }
         assertThat(props.getProperty("key")).isEqualTo("from-config-dir");
     }
+
+    @Test
+    void rejectsPathTraversalAttempt(@TempDir Path tempDir) throws Exception {
+        ConfigDirPropertyFileSource source = new ConfigDirPropertyFileSource(tempDir::toString);
+        InputStream is = source.locate("../../etc/passwd");
+        assertThat(is).isNull();
+    }
 }

@@ -7,6 +7,7 @@ import java.nio.file.Path;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class HomeDirectoryPropertyFileSourceTest {
@@ -65,5 +66,13 @@ class HomeDirectoryPropertyFileSourceTest {
         HomeDirectoryPropertyFileSource source =
                 new HomeDirectoryPropertyFileSource(() -> "/nonexistent-dir-" + System.nanoTime());
         assertThat(source.locate("anything.properties")).isNull();
+    }
+
+    @Test
+    @DisplayName("Rejects path traversal attempts that escape the home directory")
+    void rejectsPathTraversal(@TempDir Path tempDir) {
+        HomeDirectoryPropertyFileSource source = new HomeDirectoryPropertyFileSource(tempDir::toString);
+        assertThat(source.locate("../../etc/passwd")).isNull();
+        assertThat(source.locate("/etc/passwd")).isNull();
     }
 }

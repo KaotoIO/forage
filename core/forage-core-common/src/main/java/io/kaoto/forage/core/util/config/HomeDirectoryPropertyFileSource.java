@@ -1,8 +1,8 @@
 package io.kaoto.forage.core.util.config;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
@@ -29,11 +29,20 @@ final class HomeDirectoryPropertyFileSource implements PropertyFileSource {
     public InputStream locate(String fileName) {
         String homeDir = homeDirSupplier.get();
         if (homeDir != null) {
-            Path file = Path.of(homeDir, fileName).toAbsolutePath();
-            if (file.toFile().exists()) {
+            Path resolvedPath = Path.of(homeDir, fileName).toAbsolutePath().normalize();
+            Path homeDirPath = Path.of(homeDir).toAbsolutePath().normalize();
+            if (!resolvedPath.startsWith(homeDirPath)) {
+                LOG.warn(
+                        "Rejected path traversal attempt for file '{}': resolved path '{}' escapes home dir '{}'",
+                        fileName,
+                        resolvedPath,
+                        homeDirPath);
+                return null;
+            }
+            if (Files.isRegularFile(resolvedPath)) {
                 try {
                     LOG.info("Loading {} from home directory ({})", fileName, homeDir);
-                    return new FileInputStream(file.toFile());
+                    return Files.newInputStream(resolvedPath);
                 } catch (IOException e) {
                     LOG.debug("Failed to load {} from home directory ({})", fileName, homeDir, e);
                 }

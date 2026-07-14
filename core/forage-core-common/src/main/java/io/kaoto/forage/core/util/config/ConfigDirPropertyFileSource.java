@@ -38,7 +38,17 @@ public final class ConfigDirPropertyFileSource implements PropertyFileSource {
     public InputStream locate(String fileName) {
         String configDir = configDirSupplier.get();
         if (configDir != null) {
-            File file = Path.of(configDir, fileName).toAbsolutePath().toFile();
+            Path resolvedPath = Path.of(configDir, fileName).toAbsolutePath().normalize();
+            Path configDirPath = Path.of(configDir).toAbsolutePath().normalize();
+            if (!resolvedPath.startsWith(configDirPath)) {
+                LOG.warn(
+                        "Rejected path traversal attempt for file '{}': resolved path '{}' escapes config dir '{}'",
+                        fileName,
+                        resolvedPath,
+                        configDirPath);
+                return null;
+            }
+            File file = resolvedPath.toFile();
             if (file.exists()) {
                 try {
                     LOG.debug("Loading {} from config dir: {}", fileName, file.getAbsolutePath());

@@ -12,8 +12,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
 
@@ -23,7 +21,12 @@ import io.kaoto.forage.catalog.reader.ForageCatalogReader;
  */
 public final class ForagePropertyScanner {
 
-    private static final Pattern FORAGE_PROPERTY_PATTERN = Pattern.compile("^forage\\.(.+)$");
+    private static final String FORAGE_PREFIX = "forage.";
+    private static final String UNKNOWN = "__unknown__";
+
+    /** The shared application properties file name. */
+    public static final String APPLICATION_PROPERTIES = "application.properties";
+
     private static final String PROFILE_PROPERTY = "camel.main.profile";
     private static final String PROFILE_ENV_VAR = "CAMEL_MAIN_PROFILE";
 
@@ -81,6 +84,7 @@ public final class ForagePropertyScanner {
             File directory, ForageCatalogReader catalog, boolean trackUnknown) throws IOException {
 
         Map<String, Map<String, List<PropertyOccurrence>>> result = new HashMap<>();
+        ForagePropertyParser parser = new ForagePropertyParser(catalog);
 
         // Load application properties with profile override semantics (like Camel does):
         // scan base first, then profile file — profile occurrences replace base ones per property key
@@ -91,30 +95,27 @@ public final class ForagePropertyScanner {
             try (FileInputStream fis = new FileInputStream(applicationPropsFile)) {
                 baseProps.load(fis);
             }
-            collectForageProperties(baseProps, applicationPropsFile, catalog, trackUnknown, result);
+            collectForageProperties(baseProps, applicationPropsFile, parser, trackUnknown, result);
         }
 
-        String profile = resolveProfile(baseProps);
-        if (profile != null) {
-            File profileFile = new File(directory, "application-" + profile + ".properties");
-            if (profileFile.isFile()) {
-                Properties profileProps = new Properties();
-                try (FileInputStream fis = new FileInputStream(profileFile)) {
-                    profileProps.load(fis);
-                }
-                // Profile properties override base: replace matching occurrences
-                overrideForageProperties(profileProps, profileFile, catalog, trackUnknown, result);
+        File profileFile = findProfileProperties(directory, baseProps);
+        if (profileFile != null) {
+            Properties profileProps = new Properties();
+            try (FileInputStream fis = new FileInputStream(profileFile)) {
+                profileProps.load(fis);
             }
+            // Profile properties override base: replace matching occurrences
+            overrideForageProperties(profileProps, profileFile, parser, trackUnknown, result);
         }
 
         // Load forage-specific and catalog-named properties files independently
-        List<File> nonAppFiles = findNonApplicationPropertiesFiles(directory, catalog);
+        List<File> nonAppFiles = findForagePropertiesFiles(directory, catalog);
         for (File file : nonAppFiles) {
             Properties props = new Properties();
             try (FileInputStream fis = new FileInputStream(file)) {
                 props.load(fis);
             }
-            collectForageProperties(props, file, catalog, trackUnknown, result);
+            collectForageProperties(props, file, parser, trackUnknown, result);
         }
 
         return result;
@@ -137,65 +138,56 @@ public final class ForagePropertyScanner {
     private static void collectForageProperties(
             Properties props,
             File sourceFile,
-            ForageCatalogReader catalog,
+            ForagePropertyParser parser,
             boolean trackUnknown,
             Map<String, Map<String, List<PropertyOccurrence>>> result) {
 
         for (String key : props.stringPropertyNames()) {
-            Matcher matcher = FORAGE_PROPERTY_PATTERN.matcher(key);
-            if (!matcher.matches()) {
+            if (!key.startsWith(FORAGE_PREFIX)) {
                 continue;
             }
-
-            String remainder = matcher.group(1);
-            ParseResult parsed = parsePropertyKey(remainder, catalog);
-
-            String value = props.getProperty(key);
-            PropertyOccurrence occurrence = new PropertyOccurrence(sourceFile, key, value);
-
-            if (parsed == null) {
-                if (trackUnknown) {
-                    result.computeIfAbsent("__unknown__", k -> new HashMap<>())
-                            .computeIfAbsent(remainder, k -> new ArrayList<>())
-                            .add(occurrence);
-                }
-                continue;
+            PropertyOccurrence occurrence = new PropertyOccurrence(sourceFile, key, props.getProperty(key));
+            Optional<ForagePropertyParser.ParsedProperty> parsed = parser.parse(key);
+            if (parsed.isPresent()) {
+                result.computeIfAbsent(parsed.get().factoryType(), k -> new HashMap<>())
+                        .computeIfAbsent(scannedPropertyName(parsed.get()), k -> new ArrayList<>())
+                        .add(occurrence);
+            } else if (trackUnknown) {
+                result.computeIfAbsent(UNKNOWN, k -> new HashMap<>())
+                        .computeIfAbsent(key.substring(FORAGE_PREFIX.length()), k -> new ArrayList<>())
+                        .add(occurrence);
             }
-
-            result.computeIfAbsent(parsed.factoryTypeKey, k -> new HashMap<>())
-                    .computeIfAbsent(parsed.propertyName, k -> new ArrayList<>())
-                    .add(occurrence);
         }
     }
 
     private static void overrideForageProperties(
             Properties profileProps,
             File profileFile,
-            ForageCatalogReader catalog,
+            ForagePropertyParser parser,
             boolean trackUnknown,
             Map<String, Map<String, List<PropertyOccurrence>>> result) {
 
         for (String key : profileProps.stringPropertyNames()) {
-            Matcher matcher = FORAGE_PROPERTY_PATTERN.matcher(key);
-            if (!matcher.matches()) {
+            if (!key.startsWith(FORAGE_PREFIX)) {
                 continue;
             }
-
-            String remainder = matcher.group(1);
-            ParseResult parsed = parsePropertyKey(remainder, catalog);
-
-            String value = profileProps.getProperty(key);
-            PropertyOccurrence occurrence = new PropertyOccurrence(profileFile, key, value);
-
-            if (parsed == null) {
-                if (trackUnknown) {
-                    replaceBaseOccurrence("__unknown__", remainder, key, occurrence, result);
-                }
-                continue;
+            PropertyOccurrence occurrence = new PropertyOccurrence(profileFile, key, profileProps.getProperty(key));
+            Optional<ForagePropertyParser.ParsedProperty> parsed = parser.parse(key);
+            if (parsed.isPresent()) {
+                replaceBaseOccurrence(
+                        parsed.get().factoryType(), scannedPropertyName(parsed.get()), key, occurrence, result);
+            } else if (trackUnknown) {
+                replaceBaseOccurrence(UNKNOWN, key.substring(FORAGE_PREFIX.length()), key, occurrence, result);
             }
-
-            replaceBaseOccurrence(parsed.factoryTypeKey, parsed.propertyName, key, occurrence, result);
         }
+    }
+
+    /**
+     * The property name the scan groups values under: relative to the factory for factory properties
+     * (e.g. {@code db.kind}), and including the bean prefix for bean properties (e.g. {@code ollama.model.name}).
+     */
+    private static String scannedPropertyName(ForagePropertyParser.ParsedProperty parsed) {
+        return parsed.beanType() != null ? parsed.entryKey() : parsed.propertyName();
     }
 
     // Override is only called after collectForageProperties has processed application.properties,
@@ -216,9 +208,66 @@ public final class ForagePropertyScanner {
         groupMap.computeIfAbsent(propertyName, k -> new ArrayList<>()).add(occurrence);
     }
 
-    private static File loadApplicationProperties(File dir) {
-        File file = new File(dir, "application.properties");
+    /**
+     * Returns the {@code application.properties} file of the given directory.
+     *
+     * @param dir the directory to look in
+     * @return the file, or {@code null} if it does not exist
+     */
+    public static File loadApplicationProperties(File dir) {
+        File file = new File(dir, APPLICATION_PROPERTIES);
         return file.isFile() ? file : null;
+    }
+
+    /**
+     * Returns the {@code application-<profile>.properties} file for the active Camel profile, resolved from
+     * {@code camel.main.profile} / {@code CAMEL_MAIN_PROFILE} or the given base properties.
+     *
+     * @return the profile file, or {@code null} if no profile is active or the file does not exist
+     */
+    private static File findProfileProperties(File dir, Properties applicationProps) {
+        String profile = resolveProfile(applicationProps);
+        if (profile == null) {
+            return null;
+        }
+        File file = new File(dir, "application-" + profile + ".properties");
+        return file.isFile() ? file : null;
+    }
+
+    /**
+     * Returns every properties file that can hold Forage configuration for the directory, whatever the active
+     * profile: {@code application.properties}, every {@code application-<profile>.properties}, and the files
+     * returned by {@link #findForagePropertiesFiles(File, ForageCatalogReader)}. Only the top level of the
+     * directory is scanned.
+     *
+     * <p>Use this when every profile matters, e.g. for the {@code camel.jbang.dependencies*} lists in
+     * {@code application.properties}, which are shared by all profiles.
+     *
+     * @param dir the directory to scan
+     * @param catalog the catalog reader
+     * @return the existing files, never {@code null}
+     * @throws IOException if the directory cannot be scanned
+     */
+    public static List<File> findAllConfigurationFiles(File dir, ForageCatalogReader catalog) throws IOException {
+        List<File> files = new ArrayList<>();
+        File applicationPropsFile = loadApplicationProperties(dir);
+        if (applicationPropsFile != null) {
+            files.add(applicationPropsFile);
+        }
+        if (dir.isDirectory()) {
+            try (Stream<Path> paths = Files.list(dir.toPath())) {
+                paths.filter(Files::isRegularFile)
+                        .filter(p -> {
+                            String fileName = p.getFileName().toString();
+                            return fileName.startsWith("application-") && fileName.endsWith(".properties");
+                        })
+                        .sorted()
+                        .map(Path::toFile)
+                        .forEach(files::add);
+            }
+            files.addAll(findForagePropertiesFiles(dir, catalog));
+        }
+        return files;
     }
 
     static String resolveProfile(Properties applicationProps) {
@@ -241,8 +290,20 @@ public final class ForagePropertyScanner {
         return System.getenv(PROFILE_ENV_VAR);
     }
 
-    private static List<File> findNonApplicationPropertiesFiles(File dir, ForageCatalogReader catalog)
-            throws IOException {
+    /**
+     * Finds the non-application Forage properties files in the given directory: the catalog-known file names
+     * (one per module, named after its {@code Config.name()}) plus any {@code forage-*.properties} file. Only the
+     * top level of the directory is scanned.
+     *
+     * <p>Note that the {@code forage-*.properties} wildcard is only loaded at runtime on Spring Boot; plain Camel
+     * and Quarkus only load the catalog-known file names (and {@code application.properties}).
+     *
+     * @param dir the directory to scan
+     * @param catalog the catalog reader
+     * @return the matching files, never {@code null}
+     * @throws IOException if the directory cannot be scanned
+     */
+    public static List<File> findForagePropertiesFiles(File dir, ForageCatalogReader catalog) throws IOException {
         Set<String> catalogFileNames = new java.util.HashSet<>();
 
         for (ForageCatalogReader.FactoryMetadata metadata : catalog.getAllFactories()) {
@@ -263,47 +324,4 @@ public final class ForagePropertyScanner {
                     .toList();
         }
     }
-
-    private static ParseResult parsePropertyKey(String key, ForageCatalogReader catalog) {
-        String[] parts = key.split("\\.", 2);
-        if (parts.length < 2) {
-            return null;
-        }
-
-        String firstPart = parts[0];
-        String restOfKey = parts[1];
-
-        // Check if the first part is a known factory type key
-        if (catalog.getFactoryMetadata(firstPart).isPresent()) {
-            return new ParseResult(firstPart, restOfKey);
-        }
-
-        // Check if the first part is a known bean type
-        Optional<String> beanFactory = catalog.findFactoryTypeKeyForBeanName(firstPart);
-        if (beanFactory.isPresent()) {
-            return new ParseResult(beanFactory.get(), key);
-        }
-
-        // The first part might be an instance name, check second segment
-        String[] restParts = restOfKey.split("\\.", 2);
-        if (restParts.length >= 1) {
-            String secondPart = restParts[0];
-            String propertyName = restParts.length > 1 ? restParts[1] : "";
-
-            if (catalog.getFactoryMetadata(secondPart).isPresent()) {
-                return new ParseResult(secondPart, propertyName);
-            }
-
-            Optional<String> beanFactory2 = catalog.findFactoryTypeKeyForBeanName(secondPart);
-            if (beanFactory2.isPresent()) {
-                return new ParseResult(beanFactory2.get(), restOfKey);
-            }
-        }
-
-        // Try property prefix mapping
-        Optional<String> factoryType = catalog.findFactoryTypeKeyForPropertyPrefix(firstPart);
-        return factoryType.map(s -> new ParseResult(s, key)).orElse(null);
-    }
-
-    private record ParseResult(String factoryTypeKey, String propertyName) {}
 }

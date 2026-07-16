@@ -8,7 +8,7 @@ This test plan verifies Forage's `camel forage config read` and `camel forage co
 - `config write` accepts JSON input (via `--input` or stdin), maps properties to factory types using the Forage catalog, and writes them to properties files. It prefixes properties with the bean name when `forage.bean.name` is provided.
 - `config write --delete` removes all `forage.{instanceName}.*` properties for a given `--name` and cleans up unused dependencies.
 
-Both commands output structured JSON (success/error) and return exit code 0 on success, 1 on error.
+Both commands output structured JSON (success/error) and return exit code 0 on success, 1 on error, including for an unknown `--strategy` value.
 
 **Important**: The existing unit tests (`ConfigReadCommandTest`, `ConfigWriteCommandTest`) are currently `@Disabled`. This plan tests the commands at the CLI level via `camel forage config read|write`. Flag names and JSON structures are derived from the current source code; verify they match the installed Camel JBang plugin version before execution.
 
@@ -1257,7 +1257,207 @@ rm -rf "${PROJECT_DIR}"
 
 ---
 
-## Phase 11: Cleanup
+## Phase 11: Forage Strategy (`--strategy forage`)
+
+The `forage` strategy writes each factory to its own catalog-defined file (for JDBC,
+`forage-datasource-factory.properties`, named after the module's `Config.name()`), keeps
+dependencies in `application.properties`, and reads/deletes from the catalog file names plus any
+`forage-*.properties` file in the top level of the directory.
+
+### Test 11.1: Write uses the catalog file, read and delete use the same files
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+fail() { echo "FAIL: $1"; [ -n "$2" ] && echo "$2"; rm -rf "${PROJECT_DIR}"; exit 1; }
+
+FORAGE_FILE="${PROJECT_DIR}/forage-datasource-factory.properties"
+
+JSON_INPUT='{"forage.jdbc.db.kind":"postgresql","forage.jdbc.url":"jdbc:postgresql://localhost:5432/","kind":"postgresql","forage.bean.name":"foragePG"}'
+OUTPUT=$(camel forage config write --input "${JSON_INPUT}" --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "config write --strategy forage failed" "${OUTPUT}"
+
+grep -q '^forage.foragePG.jdbc.db.kind=postgresql' "${FORAGE_FILE}" 2>/dev/null \
+  || fail "forage-datasource-factory.properties not written" "${OUTPUT}"
+echo "PASS: forage strategy wrote forage-datasource-factory.properties"
+
+grep -q '^camel.jbang.dependencies=.*forage-jdbc-postgresql' "${PROJECT_DIR}/application.properties" \
+  || fail "dependencies missing from application.properties"
+echo "PASS: dependencies written to application.properties"
+
+# A file matched only by the forage-*.properties wildcard
+echo 'forage.customPG.jdbc.db.kind=postgresql' > "${PROJECT_DIR}/forage-custom.properties"
+
+OUTPUT=$(camel forage config read --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "config read --strategy forage failed" "${OUTPUT}"
+NAMES=$(echo "${OUTPUT}" | jq -r '[.beans[].name] | sort | join(",")')
+[ "${NAMES}" = "customPG,foragePG" ] || fail "expected 'customPG,foragePG', got '${NAMES}'" "${OUTPUT}"
+echo "PASS: read lists beans from catalog and wildcard files"
+
+OUTPUT=$(camel forage config write --delete --name customPG --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "config write --delete customPG failed" "${OUTPUT}"
+[ "$(echo "${OUTPUT}" | jq -r '.success')" = "true" ] || fail "delete did not return success" "${OUTPUT}"
+! grep -q 'customPG' "${PROJECT_DIR}/forage-custom.properties" || fail "customPG still present after delete"
+echo "PASS: delete removes an instance that read listed from a wildcard file"
+
+rm -rf "${PROJECT_DIR}"
+```
+
+### Test 11.2: Delete keeps dependencies needed by the other file family
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+fail() { echo "FAIL: $1"; [ -n "$2" ] && echo "$2"; rm -rf "${PROJECT_DIR}"; exit 1; }
+
+FORAGE_FILE="${PROJECT_DIR}/forage-datasource-factory.properties"
+
+APP_JSON='{"forage.jdbc.db.kind":"postgresql","forage.jdbc.url":"jdbc:postgresql://localhost:5432/","kind":"postgresql","forage.bean.name":"appPG"}'
+FORAGE_JSON='{"forage.jdbc.db.kind":"postgresql","forage.jdbc.url":"jdbc:postgresql://localhost:5432/","kind":"postgresql","forage.bean.name":"foragePG"}'
+
+OUTPUT=$(camel forage config write --input "${APP_JSON}" --dir "${PROJECT_DIR}" --strategy application 2>&1) \
+  || fail "config write --strategy application failed" "${OUTPUT}"
+OUTPUT=$(camel forage config write --input "${FORAGE_JSON}" --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "config write --strategy forage failed" "${OUTPUT}"
+grep -q '^forage.foragePG.jdbc.db.kind=postgresql' "${FORAGE_FILE}" 2>/dev/null \
+  || fail "foragePG not written to forage-datasource-factory.properties"
+
+OUTPUT=$(camel forage config write --delete --name foragePG --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "config write --delete foragePG failed" "${OUTPUT}"
+[ "$(echo "${OUTPUT}" | jq -r '.success')" = "true" ] || fail "delete did not return success" "${OUTPUT}"
+! grep -q 'foragePG' "${FORAGE_FILE}" || fail "foragePG still present after delete"
+echo "PASS: foragePG removed from forage-datasource-factory.properties"
+
+# appPG (in application.properties) still needs the PostgreSQL dependency
+grep -q '^forage.appPG.jdbc.db.kind=postgresql' "${PROJECT_DIR}/application.properties" \
+  || fail "appPG was removed by deleting foragePG"
+grep -q '^camel.jbang.dependencies=.*forage-jdbc-postgresql' "${PROJECT_DIR}/application.properties" \
+  || fail "dependency removed although appPG still needs it"
+echo "PASS: dependency kept for appPG defined in application.properties"
+
+rm -rf "${PROJECT_DIR}"
+```
+
+### Test 11.3: Unknown strategy is rejected with a JSON error
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+fail() { echo "FAIL: $1"; [ -n "$2" ] && echo "$2"; rm -rf "${PROJECT_DIR}"; exit 1; }
+
+OUTPUT=$(camel forage config read --dir "${PROJECT_DIR}" --strategy app 2>/dev/null)
+EXIT_CODE=$?
+[ "${EXIT_CODE}" -eq 1 ] || fail "expected exit code 1 for --strategy app, got ${EXIT_CODE}" "${OUTPUT}"
+[ "$(echo "${OUTPUT}" | jq -r '.success')" = "false" ] || fail "expected JSON success=false" "${OUTPUT}"
+echo "${OUTPUT}" | jq -r '.error' | grep -q "Unknown properties file strategy 'app'" \
+  || fail "error does not name the unknown strategy" "${OUTPUT}"
+echo "PASS: unknown strategy 'app' rejected with a JSON error"
+
+OUTPUT=$(camel forage config read --dir "${PROJECT_DIR}" --strategy FORAGE 2>&1) \
+  || fail "--strategy FORAGE rejected" "${OUTPUT}"
+[ "$(echo "${OUTPUT}" | jq -r '.success')" = "true" ] || fail "--strategy FORAGE did not return success" "${OUTPUT}"
+echo "PASS: strategy value is case-insensitive"
+
+rm -rf "${PROJECT_DIR}"
+```
+
+### Test 11.4: Forage strategy rejects factories without a dedicated file
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+fail() { echo "FAIL: $1"; [ -n "$2" ] && echo "$2"; rm -rf "${PROJECT_DIR}"; exit 1; }
+
+# WebSearch is in the catalog but has no properties file of its own
+OUTPUT=$(camel forage config write --input '{"forage.tavily.api.key":"secret"}' --dir "${PROJECT_DIR}" --strategy forage 2>/dev/null)
+EXIT_CODE=$?
+[ "${EXIT_CODE}" -eq 1 ] || fail "expected exit code 1, got ${EXIT_CODE}" "${OUTPUT}"
+[ "$(echo "${OUTPUT}" | jq -r '.success')" = "false" ] || fail "expected JSON success=false" "${OUTPUT}"
+[ -z "$(ls -A "${PROJECT_DIR}")" ] || fail "files were written although the write failed" "$(ls -A "${PROJECT_DIR}")"
+echo "PASS: WebSearch configuration rejected under --strategy forage, nothing written"
+
+rm -rf "${PROJECT_DIR}"
+```
+
+### Test 11.5: Delete keeps dependencies needed by a default instance or any profile file
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+fail() { echo "FAIL: $1"; [ -n "$2" ] && echo "$2"; rm -rf "${PROJECT_DIR}"; exit 1; }
+APP_FILE="${PROJECT_DIR}/application.properties"
+
+# Default (unnamed) RabbitMQ instance plus a named one
+OUTPUT=$(camel forage config write --input '{"forage.rabbitmq.host":"a"}' --dir "${PROJECT_DIR}" --strategy application 2>&1) \
+  || fail "write of default rabbitmq instance failed" "${OUTPUT}"
+OUTPUT=$(camel forage config write --input '{"forage.rabbitmq.host":"b","forage.bean.name":"second"}' --dir "${PROJECT_DIR}" --strategy application 2>&1) \
+  || fail "write of named rabbitmq instance failed" "${OUTPUT}"
+OUTPUT=$(camel forage config write --delete --name second --dir "${PROJECT_DIR}" --strategy application 2>&1) \
+  || fail "delete of 'second' failed" "${OUTPUT}"
+grep -q '^camel.jbang.dependencies.main=.*forage-spring-rabbitmq:' "${APP_FILE}" \
+  || fail "rabbitmq dependency removed although the default instance still needs it"
+echo "PASS: dependency kept for the default rabbitmq instance"
+
+rm -rf "${PROJECT_DIR}"
+PROJECT_DIR=$(mktemp -d)
+APP_FILE="${PROJECT_DIR}/application.properties"
+
+# Instance only defined in a profile file that is not active (dependency lists are shared by all profiles)
+OUTPUT=$(camel forage config write --input '{"forage.jdbc.db.kind":"postgresql","kind":"postgresql","forage.bean.name":"myPG"}' --dir "${PROJECT_DIR}" --strategy application 2>&1) \
+  || fail "write of myPG failed" "${OUTPUT}"
+echo 'forage.prodPG.jdbc.db.kind=postgresql' > "${PROJECT_DIR}/application-prod.properties"
+OUTPUT=$(env -u CAMEL_MAIN_PROFILE camel forage config write --delete --name myPG --dir "${PROJECT_DIR}" --strategy application 2>&1) \
+  || fail "delete of myPG failed" "${OUTPUT}"
+grep -q '^camel.jbang.dependencies=.*forage-jdbc-postgresql' "${APP_FILE}" \
+  || fail "postgresql dependency removed although prodPG in application-prod.properties still needs it"
+echo "PASS: dependency kept for prodPG defined in an inactive profile file"
+
+rm -rf "${PROJECT_DIR}"
+```
+
+### Test 11.6: Delete parses instances like the runtime (agents, bean-named and dotted instances)
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+fail() { echo "FAIL: $1"; [ -n "$2" ] && echo "$2"; rm -rf "${PROJECT_DIR}"; exit 1; }
+APP_FILE="${PROJECT_DIR}/application.properties"
+write() {
+  OUTPUT=$(camel forage config write --input "$1" --dir "${PROJECT_DIR}" --strategy application 2>&1) \
+    || fail "write failed: $1" "${OUTPUT}"
+}
+delete() {
+  OUTPUT=$(camel forage config write --delete --name "$1" --dir "${PROJECT_DIR}" --strategy application 2>&1) \
+    || fail "delete of '$1' failed" "${OUTPUT}"
+}
+
+# A Gemini agent (bean prefix "google") and a DataSource that happens to be called "ollama"
+write '{"forage.google.api.key":"x","forage.google.model.name":"gemini","kind":"google-gemini","forage.bean.name":"myG"}'
+write '{"forage.jdbc.db.kind":"postgresql","kind":"postgresql","forage.bean.name":"ollama"}'
+delete ollama
+grep -q '^camel.jbang.dependencies.main=.*forage-agent:' "${APP_FILE}" \
+  || fail "agent dependency removed by deleting the DataSource 'ollama'"
+grep -q 'forage-jdbc-postgresql' "${APP_FILE}" && fail "postgresql dependency kept after deleting the only DataSource"
+echo "PASS: deleting an instance named like a bean only removes its own dependencies"
+
+# A second agent: deleting it keeps the agent dependencies Gemini still needs
+write '{"forage.ollama.model.name":"llama3","kind":"ollama","forage.bean.name":"myOllama"}'
+delete myOllama
+grep -q '^camel.jbang.dependencies.quarkus=.*forage-quarkus-agent-deployment:' "${APP_FILE}" \
+  || fail "agent dependency removed although myG still needs it"
+echo "PASS: agent dependencies kept for the remaining agent"
+
+# Dotted instance name: "my" is not an instance, "my.ds" is
+write '{"forage.jdbc.db.kind":"postgresql","kind":"postgresql","forage.bean.name":"myPG"}'
+echo 'forage.my.ds.jdbc.url=jdbc:h2:mem:x' >> "${APP_FILE}"
+camel forage config write --delete --name my --dir "${PROJECT_DIR}" --strategy application > /dev/null 2>&1 \
+  && fail "--name my matched the instance my.ds"
+grep -q '^forage.my.ds.jdbc.url=' "${APP_FILE}" || fail "my.ds removed by --name my"
+delete myPG
+grep -q '^camel.jbang.dependencies.main=.*forage-jdbc:' "${APP_FILE}" \
+  || fail "jdbc dependency removed although my.ds still needs it"
+echo "PASS: dotted instance names are kept apart and keep their dependencies"
+
+rm -rf "${PROJECT_DIR}"
+```
+
+---
+
+## Phase 12: Cleanup
 
 No persistent state is created. All tests use `mktemp -d` and clean up via `rm -rf "${PROJECT_DIR}"`.
 
@@ -1282,4 +1482,5 @@ echo "PASS: all temporary directories cleaned up by individual tests"
 | 8 | 8.1-8.6 | Delete instance, preserves others, error cases | Critical |
 | 9 | 9.1-9.3 | Delete dependency cleanup | High |
 | 10 | 10.1-10.2 | Round-trip write-read, write-delete-read | Critical |
-| 11 | 11 | Cleanup | Low |
+| 11 | 11.1-11.6 | Forage strategy write/read/delete, invalid values, dependency cleanup across files, profiles, default and dotted instances, bean-named instances | High |
+| 12 | 12 | Cleanup | Low |

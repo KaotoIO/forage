@@ -108,7 +108,7 @@ public final class ForagePropertyScanner {
         }
 
         // Load forage-specific and catalog-named properties files independently
-        List<File> nonAppFiles = findNonApplicationPropertiesFiles(directory, catalog);
+        List<File> nonAppFiles = findForagePropertiesFiles(directory, catalog);
         for (File file : nonAppFiles) {
             Properties props = new Properties();
             try (FileInputStream fis = new FileInputStream(file)) {
@@ -241,8 +241,17 @@ public final class ForagePropertyScanner {
         return System.getenv(PROFILE_ENV_VAR);
     }
 
-    private static List<File> findNonApplicationPropertiesFiles(File dir, ForageCatalogReader catalog)
-            throws IOException {
+    /**
+     * Finds the non-application Forage properties files the runtime loads from the given directory:
+     * the catalog-known file names plus any {@code forage-*.properties} file. Only the top level of the
+     * directory is scanned.
+     *
+     * @param dir the directory to scan
+     * @param catalog the catalog reader
+     * @return the matching files, never {@code null}
+     * @throws IOException if the directory cannot be scanned
+     */
+    public static List<File> findForagePropertiesFiles(File dir, ForageCatalogReader catalog) throws IOException {
         Set<String> catalogFileNames = new java.util.HashSet<>();
 
         for (ForageCatalogReader.FactoryMetadata metadata : catalog.getAllFactories()) {

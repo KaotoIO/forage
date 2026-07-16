@@ -32,7 +32,6 @@ public class ConfigWriteCommand extends CamelCommand {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final String KEY_SUCCESS = "success";
-    private static final String APPLICATION_PROPERTIES = "application.properties";
     private static final String FORAGE_PREFIX = "forage.";
 
     @CommandLine.Option(
@@ -55,14 +54,12 @@ public class ConfigWriteCommand extends CamelCommand {
             description = "Instance name to delete (used with --delete).")
     private String instanceName;
 
-    @CommandLine.Option(
-            names = {"--strategy", "-s"},
-            description = "Property file strategy: 'application' writes to application.properties (default), "
-                    + "'forage' writes to forage-*.properties files.",
-            defaultValue = "application")
-    private String strategy;
+    @CommandLine.Mixin
+    private PropertiesFileStrategyOption strategyOption = new PropertiesFileStrategyOption();
 
     private ForageCatalogReader catalog;
+
+    private PropertiesFileStrategy strategy;
 
     public ConfigWriteCommand(CamelJBangMain main) {
         super(main);
@@ -72,6 +69,7 @@ public class ConfigWriteCommand extends CamelCommand {
     public Integer doCall() throws Exception {
         try {
             catalog = ForageCatalogReader.getInstance();
+            strategy = strategyOption.resolve(catalog);
 
             if (directory == null) {
                 directory = new File(System.getProperty("user.dir"));
@@ -141,7 +139,7 @@ public class ConfigWriteCommand extends CamelCommand {
             String factoryTypeKey = entry.getKey();
             FactoryConfig factoryConfig = entry.getValue();
 
-            String propertiesFileName = getPropertiesFileName(factoryTypeKey);
+            String propertiesFileName = strategy.getPropertiesFileName(factoryTypeKey);
             if (propertiesFileName == null) {
                 continue;
             }
@@ -170,7 +168,7 @@ public class ConfigWriteCommand extends CamelCommand {
         // Collect and write dependencies to application.properties
         DependencyInfo dependencies = collectDependencies(factoryConfigs);
         if (hasDependencies(dependencies)) {
-            File appPropertiesFile = new File(directory, APPLICATION_PROPERTIES);
+            File appPropertiesFile = new File(directory, ApplicationPropertiesStrategy.APPLICATION_PROPERTIES);
             updateDependencies(appPropertiesFile, dependencies);
 
             // Add dependency info to results
@@ -368,13 +366,6 @@ public class ConfigWriteCommand extends CamelCommand {
         }
         sb.append(inputKey);
         return sb.toString();
-    }
-
-    private String getPropertiesFileName(String factoryTypeKey) {
-        if ("application".equalsIgnoreCase(strategy)) {
-            return APPLICATION_PROPERTIES;
-        }
-        return catalog.getPropertiesFileName(factoryTypeKey).orElse(null);
     }
 
     /**
@@ -625,11 +616,8 @@ public class ConfigWriteCommand extends CamelCommand {
         Set<String> allDeletedTypes = new HashSet<>();
         Set<String> allDeletedFactoryTypeKeys = new HashSet<>();
 
-        // Determine which properties files to scan based on strategy
-        final Set<File> propertiesFilesToScan = determineScanableProperties();
-
-        // Delete instance configuration from all relevant files
-        for (File propertiesFile : propertiesFilesToScan) {
+        // Delete instance configuration from the same files `config read` lists for this strategy
+        for (File propertiesFile : strategy.findPropertiesFiles(directory)) {
             DeletedConfigInfo deletedInfo = deleteInstanceConfiguration(propertiesFile, instanceName);
             if (!deletedInfo.deletedPropertyKeys().isEmpty()) {
                 allDeletedTypes.addAll(deletedInfo.deletedTypes());
@@ -653,7 +641,7 @@ public class ConfigWriteCommand extends CamelCommand {
         }
 
         // After deletion, clean up dependencies that are no longer needed
-        File appPropertiesFile = new File(directory, APPLICATION_PROPERTIES);
+        File appPropertiesFile = new File(directory, ApplicationPropertiesStrategy.APPLICATION_PROPERTIES);
         Map<String, Object> dependencyCleanupResult =
                 cleanupUnusedDependencies(appPropertiesFile, allDeletedTypes, allDeletedFactoryTypeKeys);
         if (!dependencyCleanupResult.isEmpty()) {
@@ -668,27 +656,6 @@ public class ConfigWriteCommand extends CamelCommand {
         printer().println(OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(output));
 
         return 0;
-    }
-
-    private Set<File> determineScanableProperties() {
-        Set<File> propertiesFilesToScan = new HashSet<>();
-        if ("application".equalsIgnoreCase(strategy)) {
-            File appProps = new File(directory, APPLICATION_PROPERTIES);
-            if (appProps.exists()) {
-                propertiesFilesToScan.add(appProps);
-            }
-        } else {
-            for (ForageCatalogReader.FactoryMetadata metadata : catalog.getAllFactories()) {
-                String propertiesFileName = getPropertiesFileName(metadata.factoryTypeKey());
-                if (propertiesFileName != null) {
-                    File propertiesFile = new File(directory, propertiesFileName);
-                    if (propertiesFile.exists()) {
-                        propertiesFilesToScan.add(propertiesFile);
-                    }
-                }
-            }
-        }
-        return propertiesFilesToScan;
     }
 
     // Property key suffixes that contain the bean kind (e.g., *.db.kind, *.kind)
@@ -801,14 +768,16 @@ public class ConfigWriteCommand extends CamelCommand {
      * This includes both type segments from property keys (e.g., "jdbc", "jms")
      * and kind values from property values (e.g., "postgresql", "artemis").
      *
+     * <p>The runtime loads {@code application.properties} and the {@code forage-*.properties} files
+     * together, so both families are scanned regardless of the selected strategy. Otherwise deleting an
+     * instance could drop dependencies still needed by an instance defined in the other family.
+     *
      * @return set of type segments still in use (e.g., "jdbc", "ollama", "postgresql")
      */
     private Set<String> findConfiguredTypes() throws IOException {
         Set<String> configuredTypes = new HashSet<>();
 
-        final Set<File> propertiesFilesToScan = determineScanableProperties();
-
-        for (File propertiesFile : propertiesFilesToScan) {
+        for (File propertiesFile : findAllRuntimePropertiesFiles()) {
             List<String> lines = java.nio.file.Files.readAllLines(propertiesFile.toPath(), StandardCharsets.UTF_8);
             for (String line : lines) {
                 String trimmed = line.trim();
@@ -847,6 +816,18 @@ public class ConfigWriteCommand extends CamelCommand {
         }
 
         return configuredTypes;
+    }
+
+    /**
+     * Returns every properties file the runtime loads Forage configuration from: {@code application.properties}
+     * plus the {@code forage-*.properties} files.
+     */
+    private Set<File> findAllRuntimePropertiesFiles() throws IOException {
+        Set<File> files = new LinkedHashSet<>();
+        for (PropertiesFileStrategyType type : PropertiesFileStrategyType.values()) {
+            files.addAll(type.create(catalog).findPropertiesFiles(directory));
+        }
+        return files;
     }
 
     /**

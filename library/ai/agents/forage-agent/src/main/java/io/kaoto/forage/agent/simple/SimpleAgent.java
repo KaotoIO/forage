@@ -13,6 +13,7 @@ import dev.langchain4j.data.message.Content;
 import dev.langchain4j.guardrail.InputGuardrail;
 import dev.langchain4j.guardrail.OutputGuardrail;
 import dev.langchain4j.service.AiServices;
+import dev.langchain4j.service.Result;
 import dev.langchain4j.service.tool.ToolProvider;
 import dev.langchain4j.service.tool.ToolProviderRequest;
 import dev.langchain4j.service.tool.ToolProviderResult;
@@ -64,7 +65,7 @@ public class SimpleAgent implements Agent, ConfigurationAware {
     }
 
     @Override
-    public String chat(AiAgentBody<?> aiAgentBody, ToolProvider toolProvider) {
+    public Result<String> chat(AiAgentBody<?> aiAgentBody, ToolProvider toolProvider) {
         LOG.debug("Chatting using ForageAgent");
 
         Content content = aiAgentBody.getContent();

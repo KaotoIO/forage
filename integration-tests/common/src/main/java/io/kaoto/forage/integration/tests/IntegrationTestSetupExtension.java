@@ -150,6 +150,14 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
                             try {
                                 handle.onExit().get(10, TimeUnit.SECONDS);
                                 LOG.info("Camel integration '{}' (pid: {}) stopped", integrationName, pid);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                LOG.warn(
+                                        "Interrupted while waiting for Camel integration '{}' (pid: {}) to stop, forcing kill",
+                                        integrationName,
+                                        pid);
+                                handle.descendants().forEach(ProcessHandle::destroyForcibly);
+                                handle.destroyForcibly();
                             } catch (Exception e) {
                                 LOG.warn(
                                         "Camel integration '{}' (pid: {}) did not stop gracefully, forcing kill",
@@ -255,6 +263,10 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
             }
             LOG.warn("Could not parse Camel CLI version from output: {}", output);
             return "BROKEN";
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOG.warn("Interrupted while checking Camel CLI version");
+            return null;
         } catch (Exception e) {
             LOG.warn("Failed to check Camel CLI version: {}", e.getMessage());
             return null;
@@ -285,6 +297,12 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
             }
         } catch (IllegalStateException e) {
             throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "Interrupted while installing Camel CLI. Run manually: jbang app install --force -Dcamel.jbang.version="
+                            + version + " camel@apache/camel",
+                    e);
         } catch (Exception e) {
             throw new IllegalStateException(
                     "Failed to install Camel CLI. Run manually: jbang app install --force -Dcamel.jbang.version="
@@ -328,6 +346,9 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
             } else {
                 LOG.debug("No existing forage plugin to delete (exit code {})", exitCode);
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOG.debug("Interrupted while deleting forage plugin");
         } catch (Exception e) {
             LOG.debug("Could not delete forage plugin (may not exist): {}", e.getMessage());
         }

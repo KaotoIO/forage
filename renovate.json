@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>KaotoIO/renovate-config"
+  ],
+  "baseBranchPatterns": ["main", "camel-4.18.x"],
+  "schedule": ["before 6am on monday"],
+  "packageRules": [
+    {
+      "description": "Camel, and everything version-paired with it (Quarkus, Spring Boot/Framework, CXF, langchain4j), is bumped manually alongside camel.version as part of the Camel-version alignment process — see CLAUDE.md's Branching and Versioning Strategy",
+      "matchPackageNames": [
+        "org.apache.camel:*",
+        "org.apache.camel.quarkus:*",
+        "org.apache.camel.springboot:*",
+        "dev.langchain4j:*",
+        "io.quarkus:*",
+        "io.quarkus.platform:*",
+        "org.springframework.boot:*",
+        "org.springframework:*",
+        "org.apache.cxf:*",
+        "io.quarkiverse.cxf:*"
+      ],
+      "enabled": false
+    }
+  ]
+}

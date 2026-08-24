@@ -11,7 +11,7 @@ name: Multiplatform PR Builds
 on:
   pull_request:
     branches:
-      - "main"
+      - "camel-4.18.x"
     paths-ignore:
       - .github/**
       - docs/**

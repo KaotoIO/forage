@@ -41,6 +41,15 @@ public final class BedrockConfigEntries extends ConfigEntries {
             "password",
             true,
             ConfigTag.SECURITY);
+    public static final ConfigModule SESSION_TOKEN = ConfigModule.of(
+            BedrockConfig.class,
+            "forage.bedrock.session.token",
+            "AWS session token for temporary STS credentials (optional, used together with access key ID and secret access key)",
+            "Session Token",
+            null,
+            "password",
+            true,
+            ConfigTag.SECURITY);
     public static final ConfigModule TEMPERATURE = ConfigModule.of(
             BedrockConfig.class,
             "forage.bedrock.temperature",
@@ -76,6 +85,7 @@ public final class BedrockConfigEntries extends ConfigEntries {
                 MODEL_ID,
                 ACCESS_KEY_ID,
                 SECRET_ACCESS_KEY,
+                SESSION_TOKEN,
                 TEMPERATURE,
                 MAX_TOKENS,
                 TOP_P);

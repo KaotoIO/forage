@@ -5,6 +5,8 @@ import io.kaoto.forage.core.util.config.ConfigModule;
 import io.kaoto.forage.core.util.config.ConfigTag;
 
 public final class BedrockConfigEntries extends ConfigEntries {
+    private static final String TYPE_PASSWORD = "password";
+
     public static final ConfigModule REGION = ConfigModule.of(
             BedrockConfig.class,
             "forage.bedrock.region",
@@ -29,7 +31,7 @@ public final class BedrockConfigEntries extends ConfigEntries {
             "AWS access key ID (optional, uses default credential chain if not provided)",
             "Access Key ID",
             null,
-            "password",
+            TYPE_PASSWORD,
             true,
             ConfigTag.SECURITY);
     public static final ConfigModule SECRET_ACCESS_KEY = ConfigModule.of(
@@ -38,7 +40,7 @@ public final class BedrockConfigEntries extends ConfigEntries {
             "AWS secret access key (optional, uses default credential chain if not provided)",
             "Secret Access Key",
             null,
-            "password",
+            TYPE_PASSWORD,
             true,
             ConfigTag.SECURITY);
     public static final ConfigModule SESSION_TOKEN = ConfigModule.of(
@@ -47,7 +49,7 @@ public final class BedrockConfigEntries extends ConfigEntries {
             "AWS session token for temporary STS credentials (optional, used together with access key ID and secret access key)",
             "Session Token",
             null,
-            "password",
+            TYPE_PASSWORD,
             true,
             ConfigTag.SECURITY);
     public static final ConfigModule TEMPERATURE = ConfigModule.of(

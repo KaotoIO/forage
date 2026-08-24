@@ -2,8 +2,9 @@ package io.kaoto.forage.springboot.messaging.springrabbitmq.health;
 
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.boot.actuate.health.HealthContributor;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.health.contributor.HealthContributor;
+import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -79,5 +80,10 @@ class ForageRabbitHealthContributorAutoConfigurationTest {
         }
     }
 
-    static class CustomHealthContributor implements HealthContributor {}
+    static class CustomHealthContributor implements HealthIndicator {
+        @Override
+        public org.springframework.boot.health.contributor.Health health() {
+            return org.springframework.boot.health.contributor.Health.up().build();
+        }
+    }
 }

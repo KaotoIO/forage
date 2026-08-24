@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.kaoto.forage</groupId>
         <artifactId>integration-tests</artifactId>
-        <version>1.4.1-SNAPSHOT</version>
+        <version>1.6.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -26,6 +26,12 @@
         <dependency>
             <groupId>org.citrusframework</groupId>
             <artifactId>citrus-camel</artifactId>
+            <version>${citrus.version}</version>
+        </dependency>
+        <!-- provided-scope inside citrus-camel, needed at compile time by ForageCmdSendAction -->
+        <dependency>
+            <groupId>org.citrusframework</groupId>
+            <artifactId>citrus-jbang-connector</artifactId>
             <version>${citrus.version}</version>
         </dependency>
         <dependency>

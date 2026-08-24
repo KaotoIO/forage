@@ -79,4 +79,15 @@ public interface ForageIntegrationTest extends TestActionSupport {
             }
         });
     }
+
+    /**
+     * Sends a message to a running integration via {@code camel cmd send}, addressing it by the
+     * PID of its {@code Running} process. Use this instead of {@code camel().jbang().cmd().send()},
+     * which addresses by name: with exported runtimes (spring-boot, quarkus) on Camel JBang 4.20
+     * the launcher's leftover {@code Terminated} entry makes the name ambiguous and the send is
+     * silently dropped (exit code 0). See {@link ForageCmdSendAction}.
+     */
+    default ForageCmdSendAction.Builder forageCmdSend(String integrationName) {
+        return new ForageCmdSendAction.Builder().integration(integrationName);
+    }
 }

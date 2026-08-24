@@ -48,6 +48,11 @@ public class ForageTestCaseRunner extends DefaultTestCaseRunner {
                 System.getenv(IntegrationTestSetupExtension.RUNTIME_PROPERTY));
         if (runtime != null) {
             builder.withArg("--runtime=" + runtime);
+            // CAMEL-23355 narrowed the export dry-run stub pattern from "*" to
+            // "component:*", so bean references registered by ContextServicePlugin
+            // are no longer stubbed and cause NoSuchBeanException during export.
+            // Only needed for exported runtimes (spring-boot, quarkus), not plain Camel.
+            builder.withArg("--ignore-loading-error");
         }
         logTextInBox(runtime);
     }

@@ -38,6 +38,6 @@
             constant:
               expression: text/xml
         - to:
-            uri: "http://localhost:8080/services/hello"
+            uri: "cxf://http://localhost:8080/services/hello?dataFormat=RAW"
         - log:
             message: "Client received response: ${body}"

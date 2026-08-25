@@ -273,7 +273,7 @@ Uses `forage-agent-factory.properties` for configuration (see section 1 above).
 
 ### Prerequisites
 
-1. **Camel JBang 4.14+**
+1. **Camel JBang 4.22+**
 2. **JBang 0.129.0+**
 3. **API Keys**: Configure Google API key in `forage-agent-factory.properties`
 4. **Ollama**: For local model integration, ensure Ollama is running on localhost:11434

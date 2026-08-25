@@ -45,7 +45,7 @@ theme:
 
 extra:
   forage_version: "1.6.0"
-  forage_previous_lts_version: "1.4.0"
+  forage_previous_lts_version: "1.4.1"
   forage_latest_version: "1.5.0"
   camel_lts_version: "4.22.0"
   camel_previous_lts_version: "4.18.4"

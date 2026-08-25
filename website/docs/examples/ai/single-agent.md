@@ -7,7 +7,7 @@ An AI agent with tool use capabilities and conversation memory, powered by a loc
 ## What You'll Learn
 
 - How to configure an AI agent with Forage using named bean prefixes
-- How to give the agent access to tools via Camel's `langchain4j-tools` component
+- How to give the agent access to tools via Camel's `ai-tool` component
 - How to enable conversation memory with a message-window strategy
 - How the agent autonomously decides when to call a tool and how to interpret results
 
@@ -66,7 +66,7 @@ The route sends a natural-language question to the agent, which decides whether 
                 expression: "1"
             name: CamelLangChain4jAgentMemoryId          # (1)
         - setBody:
-            simple: give the details of user 123          # (2)
+            simple: look up user 123 in the user database and return their details  # (2)
         - to:
             uri: langchain4j-agent:agent
             parameters:
@@ -76,10 +76,12 @@ The route sends a natural-language question to the agent, which decides whether 
 - route:
     id: user-db-tool
     from:
-      uri: langchain4j-tools:userDb                       # (5)
+      uri: ai-tool:userDb                                  # (5)
       parameters:
-        description: Query user database                  # (6)
+        description: Query user database by user ID       # (6)
         parameter.userId: string                          # (7)
+        parameter.userId.description: The user ID to look up
+        parameter.userId.required: true
         tags: users                                       # (8)
       steps:
         - setBody:
@@ -104,11 +106,11 @@ The route sends a natural-language question to the agent, which decides whether 
 camel run *
 ```
 
-The route fires once, sends the prompt "give the details of user 123" to the agent. The agent recognizes it needs user data, calls the `userDb` tool, receives the JSON response, and formulates a natural-language answer containing the user's name and ID.
+The route fires once, sends the prompt to the agent. The agent recognizes it needs user data, calls the `userDb` tool, receives the JSON response, and formulates a natural-language answer containing the user's name and ID.
 
 ## Key Takeaways
 
 - **Named bean prefixes** (`forage.myAgent.agent.*`) define the bean name used in routes via `#myAgent`.
-- **Tool routing** is declarative: define a `langchain4j-tools` route, tag it, and the agent discovers it automatically.
+- **Tool routing** is declarative: define an `ai-tool` route, tag it, and the agent discovers it automatically.
 - **Memory** is a single property toggle (`features=memory`) with pluggable strategies.
 - **Zero boilerplate**: Forage handles all LangChain4j wiring -- model creation, memory setup, and tool binding.

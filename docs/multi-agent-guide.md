@@ -178,7 +178,7 @@ forage.ollama.agent.memory.max.messages=20
                 expression: "1"
             name: CamelLangChain4jAgentMemoryId
         - setBody:
-            simple: give the details of user 123
+            simple: look up user 123 in the user database and return their details
         - to:
             uri: langchain4j-agent:test
             parameters:
@@ -189,10 +189,12 @@ forage.ollama.agent.memory.max.messages=20
 - route:
     id: tool-route
     from:
-      uri: langchain4j-tools:userDb
+      uri: ai-tool:userDb
       parameters:
-        description: Query user database
+        description: Query user database by user ID
         parameter.userId: string
+        parameter.userId.description: The user ID to look up
+        parameter.userId.required: true
         tags: users
       steps:
         - setBody:
@@ -220,7 +222,7 @@ Uses `forage-agent-factory.properties` for configuration (see section 1 above).
                 expression: "1"
             name: CamelLangChain4jAgentMemoryId
         - setBody:
-            simple: give the details of user 123
+            simple: look up user 123 in the user database and return their details
         - to:
             uri: langchain4j-agent:foo-test
             parameters:
@@ -253,10 +255,12 @@ Uses `forage-agent-factory.properties` for configuration (see section 1 above).
 - route:
     id: user-database-tool
     from:
-      uri: langchain4j-tools:userDb
+      uri: ai-tool:userDb
       parameters:
-        description: Query user database
+        description: Query user database by user ID
         parameter.userId: string
+        parameter.userId.description: The user ID to look up
+        parameter.userId.required: true
         tags: users
       steps:
         - setBody:
@@ -269,7 +273,7 @@ Uses `forage-agent-factory.properties` for configuration (see section 1 above).
 
 ### Prerequisites
 
-1. **Camel JBang 4.14+**
+1. **Camel JBang 4.22+**
 2. **JBang 0.129.0+**
 3. **API Keys**: Configure Google API key in `forage-agent-factory.properties`
 4. **Ollama**: For local model integration, ensure Ollama is running on localhost:11434

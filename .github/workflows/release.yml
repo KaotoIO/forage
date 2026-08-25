@@ -65,20 +65,44 @@ jobs:
           BRANCH: ${{ github.ref_name }}
           VERSION: ${{ github.event.inputs.releaseVersion }}
         run: |
+          case "$BRANCH" in
+            main)
+              DOC_KEY=forage_version
+              DOC_LABEL="LTS"
+              ;;
+            camel-4.18.x)
+              DOC_KEY=forage_previous_lts_version
+              DOC_LABEL="previous LTS"
+              ;;
+            camel-latest)
+              DOC_KEY=forage_latest_version
+              DOC_LABEL="latest"
+              ;;
+            *)
+              echo "Unknown release branch '$BRANCH' — skipping website version bump"
+              exit 0
+              ;;
+          esac
+
+          # release:prepare may leave Spotless-formatted files behind; discard them so the
+          # commit below only contains the mkdocs bump (see failed run 29409942135).
+          git checkout -- .
+          git status --short
+
           if [ "$BRANCH" = "main" ]; then
-            sed -i "s/forage_version: \".*\"/forage_version: \"${VERSION}\"/" website/mkdocs.yml
+            sed -i "s/${DOC_KEY}: \".*\"/${DOC_KEY}: \"${VERSION}\"/" website/mkdocs.yml
             git add website/mkdocs.yml
             if ! git diff --cached --quiet; then
-              git commit -m "docs: update LTS version to ${VERSION}"
+              git commit -m "docs: update ${DOC_LABEL} version to ${VERSION}"
               git push
             fi
           else
             git fetch origin main
             git checkout main -- website/mkdocs.yml
-            sed -i "s/forage_latest_version: \".*\"/forage_latest_version: \"${VERSION}\"/" website/mkdocs.yml
+            sed -i "s/${DOC_KEY}: \".*\"/${DOC_KEY}: \"${VERSION}\"/" website/mkdocs.yml
             git add website/mkdocs.yml
             if ! git diff --cached --quiet; then
-              git commit -m "docs: update latest version to ${VERSION}"
+              git commit -m "docs: update ${DOC_LABEL} version to ${VERSION}"
               git push origin HEAD:main
             fi
           fi

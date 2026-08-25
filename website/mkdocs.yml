@@ -47,8 +47,8 @@ extra:
   forage_version: "1.4.0"
   forage_previous_lts_version: "1.4.0"
   forage_latest_version: "1.5.0"
-  camel_lts_version: "4.18.3"
-  camel_previous_lts_version: "4.18.3"
+  camel_lts_version: "4.22.0"
+  camel_previous_lts_version: "4.18.4"
   camel_latest_version: "4.20.0"
 
 extra_css:

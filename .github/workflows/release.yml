@@ -97,14 +97,19 @@ jobs:
               git push
             fi
           else
+            # Commit on top of origin/main in a separate worktree: committing on the
+            # maintenance branch and pushing HEAD:main would be rejected as non-fast-forward.
             git fetch origin main
-            git checkout main -- website/mkdocs.yml
+            git worktree add --detach "${RUNNER_TEMP}/docs-main" origin/main
+            pushd "${RUNNER_TEMP}/docs-main"
             sed -i "s/${DOC_KEY}: \".*\"/${DOC_KEY}: \"${VERSION}\"/" website/mkdocs.yml
             git add website/mkdocs.yml
             if ! git diff --cached --quiet; then
               git commit -m "docs: update ${DOC_LABEL} version to ${VERSION}"
               git push origin HEAD:main
             fi
+            popd
+            git worktree remove --force "${RUNNER_TEMP}/docs-main"
           fi
 
       # Create a release

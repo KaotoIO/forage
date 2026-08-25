@@ -178,7 +178,7 @@ forage.ollama.agent.memory.max.messages=20
                 expression: "1"
             name: CamelLangChain4jAgentMemoryId
         - setBody:
-            simple: give the details of user 123
+            simple: look up user 123 in the user database and return their details
         - to:
             uri: langchain4j-agent:test
             parameters:
@@ -189,10 +189,12 @@ forage.ollama.agent.memory.max.messages=20
 - route:
     id: tool-route
     from:
-      uri: langchain4j-tools:userDb
+      uri: ai-tool:userDb
       parameters:
-        description: Query user database
+        description: Query user database by user ID
         parameter.userId: string
+        parameter.userId.description: The user ID to look up
+        parameter.userId.required: true
         tags: users
       steps:
         - setBody:
@@ -220,7 +222,7 @@ Uses `forage-agent-factory.properties` for configuration (see section 1 above).
                 expression: "1"
             name: CamelLangChain4jAgentMemoryId
         - setBody:
-            simple: give the details of user 123
+            simple: look up user 123 in the user database and return their details
         - to:
             uri: langchain4j-agent:foo-test
             parameters:
@@ -253,10 +255,12 @@ Uses `forage-agent-factory.properties` for configuration (see section 1 above).
 - route:
     id: user-database-tool
     from:
-      uri: langchain4j-tools:userDb
+      uri: ai-tool:userDb
       parameters:
-        description: Query user database
+        description: Query user database by user ID
         parameter.userId: string
+        parameter.userId.description: The user ID to look up
+        parameter.userId.required: true
         tags: users
       steps:
         - setBody:

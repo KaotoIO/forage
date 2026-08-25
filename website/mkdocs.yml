@@ -44,7 +44,7 @@ theme:
     - toc.follow
 
 extra:
-  forage_version: "1.4.0"
+  forage_version: "1.6.0"
   forage_previous_lts_version: "1.4.0"
   forage_latest_version: "1.5.0"
   camel_lts_version: "4.22.0"

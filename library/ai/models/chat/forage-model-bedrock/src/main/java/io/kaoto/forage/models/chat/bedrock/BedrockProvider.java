@@ -9,6 +9,7 @@ import dev.langchain4j.model.bedrock.BedrockChatRequestParameters;
 import dev.langchain4j.model.chat.ChatModel;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -55,6 +56,7 @@ import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
         value = "bedrock",
         components = {"camel-langchain4j-agent"},
         feature = "Chat Model",
+        configClass = BedrockConfig.class,
         description = "Amazon Bedrock multi-model provider supporting Claude, Llama, Titan, Cohere, and Mistral")
 public class BedrockProvider implements ModelProvider {
     private static final Logger LOG = LoggerFactory.getLogger(BedrockProvider.class);
@@ -109,7 +111,10 @@ public class BedrockProvider implements ModelProvider {
     private BedrockRuntimeClient buildBedrockClient(BedrockConfig config) {
         AwsCredentialsProvider credentialsProvider;
 
-        if (config.accessKeyId() != null && config.secretAccessKey() != null) {
+        if (config.accessKeyId() != null && config.secretAccessKey() != null && config.sessionToken() != null) {
+            credentialsProvider = StaticCredentialsProvider.create(AwsSessionCredentials.create(
+                    config.accessKeyId(), config.secretAccessKey(), config.sessionToken()));
+        } else if (config.accessKeyId() != null && config.secretAccessKey() != null) {
             credentialsProvider = StaticCredentialsProvider.create(
                     AwsBasicCredentials.create(config.accessKeyId(), config.secretAccessKey()));
         } else {

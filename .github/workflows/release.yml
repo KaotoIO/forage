@@ -64,6 +64,10 @@ jobs:
         env:
           BRANCH: ${{ github.ref_name }}
           VERSION: ${{ github.event.inputs.releaseVersion }}
+          # main only accepts changes through PRs, which blocks GITHUB_TOKEN pushes.
+          # The SSH deploy key set up in "Create release" bypasses that rule (it is
+          # how release:prepare pushes its commits and tag), so push through it.
+          SSH_REMOTE: git@github.com:${{ github.repository }}.git
         run: |
           case "$BRANCH" in
             main)
@@ -94,7 +98,7 @@ jobs:
             git add website/mkdocs.yml
             if ! git diff --cached --quiet; then
               git commit -m "docs: update ${DOC_LABEL} version to ${VERSION}"
-              git push
+              git push "${SSH_REMOTE}" HEAD:main
             fi
           else
             # Commit on top of origin/main in a separate worktree: committing on the
@@ -106,7 +110,7 @@ jobs:
             git add website/mkdocs.yml
             if ! git diff --cached --quiet; then
               git commit -m "docs: update ${DOC_LABEL} version to ${VERSION}"
-              git push origin HEAD:main
+              git push "${SSH_REMOTE}" HEAD:main
             fi
             popd
             git worktree remove --force "${RUNNER_TEMP}/docs-main"

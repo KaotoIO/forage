@@ -22,7 +22,9 @@ public class ConfigurationModule {
     @JsonProperty("configEntries")
     private List<ConfigEntry> configEntries;
 
-    public ConfigurationModule() {}
+    public ConfigurationModule() {
+        // Required by Jackson for deserialization
+    }
 
     public String getArtifactId() {
         return artifactId;

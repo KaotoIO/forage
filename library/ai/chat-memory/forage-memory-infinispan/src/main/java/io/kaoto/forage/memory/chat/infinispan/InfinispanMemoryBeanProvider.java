@@ -58,7 +58,9 @@ public class InfinispanMemoryBeanProvider implements ChatMemoryBeanProvider, Max
     private volatile RemoteCacheManager defaultCacheManager;
     private volatile PersistentInfinispanStore defaultStore;
 
-    public InfinispanMemoryBeanProvider() {}
+    public InfinispanMemoryBeanProvider() {
+        // Required for ServiceLoader-based instantiation
+    }
 
     @Override
     public void withMaxMessages(int maxMessages) {

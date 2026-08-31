@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public final class ForageCatalogReader {
 
     private static final String CATALOG_RESOURCE = "catalog/forage-catalog.json";
+    private static final String FORAGE_PREFIX = "forage.";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private static volatile ForageCatalogReader instance;
@@ -222,12 +223,12 @@ public final class ForageCatalogReader {
      * For example: "forage.jdbc.name" -> "jdbc", "forage.jms.kind" -> "jms"
      */
     private String extractFactoryTypeKeyFromPropertyName(String propertyName) {
-        if (propertyName == null || !propertyName.startsWith("forage.")) {
+        if (propertyName == null || !propertyName.startsWith(FORAGE_PREFIX)) {
             return null;
         }
 
         // Remove "forage." prefix
-        String remaining = propertyName.substring("forage.".length());
+        String remaining = propertyName.substring(FORAGE_PREFIX.length());
 
         // The factory type key is the first segment
         int dotIndex = remaining.indexOf('.');
@@ -244,12 +245,12 @@ public final class ForageCatalogReader {
      * For example: "forage.google.api.key" -> "google", "forage.azure.openai.api.key" -> "azure.openai"
      */
     private String extractPropertyPrefixFromConfigName(String configName) {
-        if (configName == null || !configName.startsWith("forage.")) {
+        if (configName == null || !configName.startsWith(FORAGE_PREFIX)) {
             return null;
         }
 
         // Remove "forage." prefix
-        String remaining = configName.substring("forage.".length());
+        String remaining = configName.substring(FORAGE_PREFIX.length());
 
         // The prefix is everything before the last two segments (assuming name.property pattern)
         // E.g., "google.api.key" -> "google", "azure.openai.api.key" -> "azure.openai"
@@ -331,8 +332,8 @@ public final class ForageCatalogReader {
         String keyToProcess = inputPropertyKey;
 
         // Strip "forage." prefix if present
-        if (keyToProcess.startsWith("forage.")) {
-            keyToProcess = keyToProcess.substring("forage.".length());
+        if (keyToProcess.startsWith(FORAGE_PREFIX)) {
+            keyToProcess = keyToProcess.substring(FORAGE_PREFIX.length());
         }
 
         int dotIndex = keyToProcess.indexOf('.');
@@ -355,8 +356,8 @@ public final class ForageCatalogReader {
      * @return the normalized key without "forage." prefix
      */
     public String normalizePropertyKey(String inputPropertyKey) {
-        if (inputPropertyKey != null && inputPropertyKey.startsWith("forage.")) {
-            return inputPropertyKey.substring("forage.".length());
+        if (inputPropertyKey != null && inputPropertyKey.startsWith(FORAGE_PREFIX)) {
+            return inputPropertyKey.substring(FORAGE_PREFIX.length());
         }
         return inputPropertyKey;
     }
@@ -615,10 +616,10 @@ public final class ForageCatalogReader {
          * For example, if prefixPropertyName is "forage.jdbc.name", returns "jdbc.name".
          */
         public Optional<String> getShortPrefixPropertyKey() {
-            if (prefixPropertyName == null || !prefixPropertyName.startsWith("forage.")) {
+            if (prefixPropertyName == null || !prefixPropertyName.startsWith(FORAGE_PREFIX)) {
                 return Optional.empty();
             }
-            return Optional.of(prefixPropertyName.substring("forage.".length()));
+            return Optional.of(prefixPropertyName.substring(FORAGE_PREFIX.length()));
         }
     }
 

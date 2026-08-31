@@ -63,6 +63,8 @@ public class ConfigReadCommand extends CamelCommand {
 
     private ForageCatalogReader catalog;
 
+    private PropertiesFileStrategy strategyResolver;
+
     public ConfigReadCommand(CamelJBangMain main) {
         super(main);
     }
@@ -81,6 +83,7 @@ public class ConfigReadCommand extends CamelCommand {
     public Integer doCall() throws Exception {
         try {
             catalog = ForageCatalogReader.getInstance();
+            strategyResolver = PropertiesFileStrategy.from(strategy, catalog);
 
             if (directory == null) {
                 directory = new File(System.getProperty("user.dir"));
@@ -120,7 +123,7 @@ public class ConfigReadCommand extends CamelCommand {
         List<File> result = new ArrayList<>();
 
         // Determine which files to search based on strategy
-        final Set<String> targetFileNames = determineTargetFileNames();
+        final Set<String> targetFileNames = strategyResolver.getTargetFileNames();
 
         // Search for matching properties files
         try (Stream<Path> paths = Files.walk(dir.toPath())) {
@@ -132,35 +135,12 @@ public class ConfigReadCommand extends CamelCommand {
                             return true;
                         }
                         // Also match any forage-*.properties files for extensibility
-                        if (!"application".equalsIgnoreCase(strategy)
-                                && fileName.startsWith("forage-")
-                                && fileName.endsWith(".properties")) {
-                            return true;
-                        }
-                        return false;
+                        return strategyResolver.matchesWildcard(fileName);
                     })
                     .forEach(p -> result.add(p.toFile()));
         }
 
         return result;
-    }
-
-    private Set<String> determineTargetFileNames() {
-        Set<String> targetFileNames = new java.util.HashSet<>();
-
-        if ("application".equalsIgnoreCase(strategy)) {
-            // Only search in application.properties
-            targetFileNames.add("application.properties");
-        } else {
-            // Get properties file names from the catalog
-            for (ForageCatalogReader.FactoryMetadata metadata : catalog.getAllFactories()) {
-                String propsFile = metadata.propertiesFileName();
-                if (propsFile != null && !propsFile.isEmpty()) {
-                    targetFileNames.add(propsFile);
-                }
-            }
-        }
-        return targetFileNames;
     }
 
     private List<BeanInfo> parsePropertiesFile(File file) throws IOException {

@@ -61,6 +61,8 @@ public class ConfigWriteCommand extends CamelCommand {
 
     private ForageCatalogReader catalog;
 
+    private PropertiesFileStrategy strategyResolver;
+
     public ConfigWriteCommand(CamelJBangMain main) {
         super(main);
     }
@@ -69,6 +71,7 @@ public class ConfigWriteCommand extends CamelCommand {
     public Integer doCall() throws Exception {
         try {
             catalog = ForageCatalogReader.getInstance();
+            strategyResolver = PropertiesFileStrategy.from(strategy, catalog);
 
             if (directory == null) {
                 directory = new File(System.getProperty("user.dir"));
@@ -368,10 +371,7 @@ public class ConfigWriteCommand extends CamelCommand {
     }
 
     private String getPropertiesFileName(String factoryTypeKey) {
-        if ("application".equalsIgnoreCase(strategy)) {
-            return "application.properties";
-        }
-        return catalog.getPropertiesFileName(factoryTypeKey).orElse(null);
+        return strategyResolver.getPropertiesFileName(factoryTypeKey);
     }
 
     /**
@@ -668,24 +668,7 @@ public class ConfigWriteCommand extends CamelCommand {
     }
 
     private Set<File> determineScanableProperties() {
-        Set<File> propertiesFilesToScan = new HashSet<>();
-        if ("application".equalsIgnoreCase(strategy)) {
-            File appProps = new File(directory, "application.properties");
-            if (appProps.exists()) {
-                propertiesFilesToScan.add(appProps);
-            }
-        } else {
-            for (ForageCatalogReader.FactoryMetadata metadata : catalog.getAllFactories()) {
-                String propertiesFileName = getPropertiesFileName(metadata.factoryTypeKey());
-                if (propertiesFileName != null) {
-                    File propertiesFile = new File(directory, propertiesFileName);
-                    if (propertiesFile.exists()) {
-                        propertiesFilesToScan.add(propertiesFile);
-                    }
-                }
-            }
-        }
-        return propertiesFilesToScan;
+        return strategyResolver.getScanableProperties(directory);
     }
 
     // Property key suffixes that contain the bean kind (e.g., *.db.kind, *.kind)

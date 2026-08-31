@@ -31,7 +31,9 @@ public class ForageComponent {
 
     private Map<String, String> configClasses; // Not serialized to JSON, just for internal use
 
-    public ForageComponent() {}
+    public ForageComponent() {
+        // Required by Jackson for deserialization
+    }
 
     public String getArtifactId() {
         return artifactId;

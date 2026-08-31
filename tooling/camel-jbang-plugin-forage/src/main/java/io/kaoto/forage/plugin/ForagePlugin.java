@@ -70,7 +70,9 @@ public class ForagePlugin implements Plugin {
             }
 
             @Override
-            public void addSourceFiles(Path buildDir, String packageName, Printer printer) {}
+            public void addSourceFiles(Path buildDir, String packageName, Printer printer) {
+                // This exporter contributes only runtime dependencies, not source files.
+            }
         });
     }
 

@@ -42,7 +42,9 @@ public class SimpleAgent implements Agent, ConfigurationAware {
     private volatile ForageAgentWithMemory cachedMemoryService;
     private volatile ForageAgentWithoutMemory cachedNoMemoryService;
 
-    public SimpleAgent() {}
+    public SimpleAgent() {
+        // Required for ServiceLoader-based instantiation
+    }
 
     @Override
     public void configure(AgentConfiguration configuration) {

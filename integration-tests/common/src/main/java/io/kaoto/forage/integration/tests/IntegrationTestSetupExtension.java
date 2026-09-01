@@ -46,7 +46,8 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterAllCallback, ParameterResolver {
 
     private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestSetupExtension.class);
-    private static final String CAMEL_COMMAND = resolveExecutable("camel");
+    private static final String CAMEL_BUILDER_KEY = "camel";
+    private static final String CAMEL_COMMAND = resolveExecutable(CAMEL_BUILDER_KEY);
 
     public static final String RUNTIME_PROPERTY = "INTEGRATION_TEST_RUNTIME";
 
@@ -66,7 +67,7 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
             runBeforeAll = true;
             if (PLUGIN_INSTALLED.compareAndSet(false, true)) {
                 CamelActionBuilder camel = (CamelActionBuilder)
-                        TestActionBuilder.lookup(CAMEL_COMMAND).get();
+                        TestActionBuilder.lookup(CAMEL_BUILDER_KEY).get();
                 internalBeforeAll(context, camel);
             }
             runBeforeAll(context);

@@ -51,7 +51,7 @@ import redis.clients.jedis.exceptions.JedisException;
 public class PersistentRedisStore implements ChatMemoryStore {
 
     private static final Logger LOG = LoggerFactory.getLogger(PersistentRedisStore.class);
-    private static final String MEMORY_ID_NOT_NULL = MEMORY_ID_NOT_NULL;
+    private static final String MEMORY_ID_NOT_NULL = "Memory ID cannot be null";
     private static final String EMPTY_MESSAGES_JSON = "[]";
 
     private final JedisPool jedisPool;

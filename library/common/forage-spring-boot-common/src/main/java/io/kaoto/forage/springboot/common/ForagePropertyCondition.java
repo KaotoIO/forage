@@ -39,7 +39,7 @@ import io.kaoto.forage.core.util.config.ConfigStore;
 public class ForagePropertyCondition extends SpringBootCondition {
 
     private static final Logger log = LoggerFactory.getLogger(ForagePropertyCondition.class);
-    private static final String PROPERTY_PREFIX = PROPERTY_PREFIX;
+    private static final String PROPERTY_PREFIX = "property '";
 
     @Override
     public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {

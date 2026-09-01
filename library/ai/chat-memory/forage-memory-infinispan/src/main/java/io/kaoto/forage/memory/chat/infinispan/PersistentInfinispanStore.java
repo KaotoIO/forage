@@ -48,7 +48,7 @@ import dev.langchain4j.store.memory.chat.ChatMemoryStore;
 public class PersistentInfinispanStore implements ChatMemoryStore {
 
     private static final Logger LOG = LoggerFactory.getLogger(PersistentInfinispanStore.class);
-    private static final String MEMORY_ID_NOT_NULL = MEMORY_ID_NOT_NULL;
+    private static final String MEMORY_ID_NOT_NULL = "Memory ID cannot be null";
     private static final String EMPTY_MESSAGES_JSON = "[]";
 
     private final RemoteCache<String, String> cache;

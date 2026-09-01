@@ -1,8 +1,11 @@
 package io.kaoto.forage.integration.tests;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +46,7 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterAllCallback, ParameterResolver {
 
     private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestSetupExtension.class);
-    private static final String CAMEL_COMMAND = "camel";
+    private static final String CAMEL_COMMAND = resolveExecutable("camel");
 
     public static final String RUNTIME_PROPERTY = "INTEGRATION_TEST_RUNTIME";
 
@@ -239,7 +242,7 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
 
     private String getInstalledCamelVersion() {
         try {
-            ProcessBuilder pb = new ProcessBuilder(CAMEL_COMMAND, "version");
+            ProcessBuilder pb = new ProcessBuilder(List.of(CAMEL_COMMAND, "version"));
             pb.redirectErrorStream(true);
             Process process;
             try {
@@ -329,7 +332,7 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
      */
     private void deleteForagePlugin() {
         try {
-            ProcessBuilder pb = new ProcessBuilder(CAMEL_COMMAND, "plugin", "delete", "forage");
+            ProcessBuilder pb = new ProcessBuilder(List.of(CAMEL_COMMAND, "plugin", "delete", "forage"));
             pb.redirectErrorStream(true);
             Process process = pb.start();
             String output;
@@ -363,5 +366,23 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         return CitrusExtensionHelper.getTestRunner(extensionContext);
+    }
+
+    /**
+     * Resolves a command name to its absolute path by searching the directories listed in the
+     * {@code PATH} environment variable. Returns the absolute path if found, or the bare command
+     * name as a fallback (preserving existing behaviour when the executable is not yet installed).
+     */
+    private static String resolveExecutable(String command) {
+        String pathEnv = System.getenv("PATH");
+        if (pathEnv != null) {
+            for (String dir : pathEnv.split(File.pathSeparator)) {
+                Path candidate = Path.of(dir, command);
+                if (Files.isExecutable(candidate)) {
+                    return candidate.toAbsolutePath().toString();
+                }
+            }
+        }
+        return command;
     }
 }

@@ -124,7 +124,7 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
     // chat-model: model-id, temperature, top-p, top-k
     private Map<String, String> translateOllamaProperties(AgentConfig config) {
         Map<String, String> props = new HashMap<>();
-        String qp = quarkusPrefix("ollama");
+        String qp = quarkusPrefix(PROVIDER_OLLAMA);
 
         putIfNotNull(props, qp + PROP_BASE_URL, config.baseUrl());
         putIfNotNull(props, qp + PROP_MODEL_ID, config.modelName());
@@ -139,14 +139,14 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
     // quarkus.langchain4j.openai.*
     // chat-model: model-name, temperature, top-p, max-tokens
     private Map<String, String> translateOpenAiProperties(AgentConfig config) {
-        return translateStandardModelProperties("openai", config);
+        return translateStandardModelProperties(PROVIDER_OPENAI, config);
     }
 
     // quarkus.langchain4j.anthropic.*
     // chat-model: model-name, temperature, top-p, top-k, max-tokens
     private Map<String, String> translateAnthropicProperties(AgentConfig config) {
         Map<String, String> props = new HashMap<>();
-        String qp = quarkusPrefix("anthropic");
+        String qp = quarkusPrefix(PROVIDER_ANTHROPIC);
 
         putIfNotNull(props, qp + PROP_BASE_URL, config.baseUrl());
         putIfNotNull(props, qp + PROP_API_KEY, config.apiKey());
@@ -183,7 +183,7 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
     // chat-model: temperature, top-p, max-tokens
     private Map<String, String> translateAzureOpenAiProperties(AgentConfig config) {
         Map<String, String> props = new HashMap<>();
-        String qp = quarkusPrefix("azure-openai");
+        String qp = quarkusPrefix(PROVIDER_AZURE_OPENAI);
 
         putIfNotNull(props, qp + PROP_API_KEY, config.apiKey());
         putIfNotNull(props, qp + "endpoint", config.endpoint());
@@ -240,7 +240,7 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
     // chat-model: model-id, temperature, top-p, top-k, max-tokens
     private Map<String, String> translateBedrockProperties(AgentConfig config) {
         Map<String, String> props = new HashMap<>();
-        String qp = quarkusPrefix("bedrock");
+        String qp = quarkusPrefix(PROVIDER_BEDROCK);
 
         putIfNotNull(props, qp + PROP_MODEL_ID, config.modelName());
         putIfNotNull(props, qp + PROP_TEMPERATURE, config.temperature());

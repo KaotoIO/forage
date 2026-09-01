@@ -51,6 +51,7 @@ import redis.clients.jedis.exceptions.JedisException;
 public class PersistentRedisStore implements ChatMemoryStore {
 
     private static final Logger LOG = LoggerFactory.getLogger(PersistentRedisStore.class);
+    private static final String MEMORY_ID_NOT_NULL = MEMORY_ID_NOT_NULL;
     private static final String EMPTY_MESSAGES_JSON = "[]";
 
     private final JedisPool jedisPool;
@@ -78,7 +79,7 @@ public class PersistentRedisStore implements ChatMemoryStore {
      */
     @Override
     public void deleteMessages(Object memoryId) {
-        Objects.requireNonNull(memoryId, "Memory ID cannot be null");
+        Objects.requireNonNull(memoryId, MEMORY_ID_NOT_NULL);
 
         String key = memoryId.toString();
         try (Jedis jedis = jedisPool.getResource()) {
@@ -103,7 +104,7 @@ public class PersistentRedisStore implements ChatMemoryStore {
      */
     @Override
     public List<ChatMessage> getMessages(Object memoryId) {
-        Objects.requireNonNull(memoryId, "Memory ID cannot be null");
+        Objects.requireNonNull(memoryId, MEMORY_ID_NOT_NULL);
 
         String key = memoryId.toString();
         try (Jedis jedis = jedisPool.getResource()) {
@@ -146,7 +147,7 @@ public class PersistentRedisStore implements ChatMemoryStore {
      */
     @Override
     public void updateMessages(Object memoryId, List<ChatMessage> messages) {
-        Objects.requireNonNull(memoryId, "Memory ID cannot be null");
+        Objects.requireNonNull(memoryId, MEMORY_ID_NOT_NULL);
         Objects.requireNonNull(messages, "Messages list cannot be null");
 
         String key = memoryId.toString();

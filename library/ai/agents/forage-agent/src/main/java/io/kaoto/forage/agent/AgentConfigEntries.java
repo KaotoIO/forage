@@ -47,7 +47,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Comma-separated list of enabled features (e.g., memory)",
             "Features",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 
@@ -67,7 +67,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "API key for authentication with the model provider",
             "API Key",
             null,
-            "password",
+            ConfigModule.TYPE_PASSWORD,
             false,
             ConfigTag.SECURITY);
 
@@ -77,7 +77,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Base URL for the model provider API",
             "Base URL",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 
@@ -87,7 +87,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "The specific model name to use",
             "Model Name",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 
@@ -97,7 +97,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Temperature for response randomness (0.0-2.0)",
             "Temperature",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.COMMON);
 
@@ -107,7 +107,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Maximum number of tokens in the response",
             "Max Tokens",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
 
@@ -117,7 +117,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Top-P (nucleus) sampling parameter (0.0-1.0)",
             "Top P",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
 
@@ -127,7 +127,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Top-K sampling parameter",
             "Top K",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
 
@@ -138,7 +138,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Azure OpenAI resource endpoint URL",
             "Endpoint",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 
@@ -148,7 +148,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Azure OpenAI deployment name",
             "Deployment Name",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 
@@ -159,7 +159,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Enable request logging",
             "Log Requests",
             null,
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
 
@@ -169,7 +169,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Enable response logging",
             "Log Responses",
             null,
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
 
@@ -180,7 +180,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Request timeout duration in ISO-8601 format (e.g. PT120S for 120 seconds)",
             "Timeout",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 
@@ -191,7 +191,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Maximum number of messages to retain in memory",
             "Max Messages",
             "20",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.COMMON);
 
@@ -212,7 +212,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Path to a file to be loaded into store.",
             "File source",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 
@@ -243,7 +243,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Comma-separated list of input guardrail names (@ForageBean values, e.g., pii-detector,keyword-filter)",
             "Input Guardrails",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 
@@ -253,7 +253,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Comma-separated list of output guardrail names (@ForageBean values, e.g., sensitive-data,output-length)",
             "Output Guardrails",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 
@@ -266,7 +266,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "API key for the embedding model provider (falls back to forage.agent.api.key when not set)",
             "Embedding API Key",
             null,
-            "password",
+            ConfigModule.TYPE_PASSWORD,
             false,
             ConfigTag.SECURITY);
 
@@ -276,7 +276,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "Base URL for the embedding model provider (falls back to forage.agent.base.url when not set)",
             "Embedding Base URL",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 
@@ -286,7 +286,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "The specific model name to use",
             "Model Name",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule EMBEDDING_MODEL_TIMEOUT = ConfigModule.of(
@@ -325,7 +325,7 @@ public final class AgentConfigEntries extends ConfigEntries {
             "The minimum relevance score for the returned Contents.",
             "Min score",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.COMMON);
 

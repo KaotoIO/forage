@@ -43,6 +43,7 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterAllCallback, ParameterResolver {
 
     private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestSetupExtension.class);
+    private static final String CAMEL_COMMAND = "camel";
 
     public static final String RUNTIME_PROPERTY = "INTEGRATION_TEST_RUNTIME";
 
@@ -61,8 +62,8 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
         if (!runBeforeAll) {
             runBeforeAll = true;
             if (PLUGIN_INSTALLED.compareAndSet(false, true)) {
-                CamelActionBuilder camel =
-                        (CamelActionBuilder) TestActionBuilder.lookup("camel").get();
+                CamelActionBuilder camel = (CamelActionBuilder)
+                        TestActionBuilder.lookup(CAMEL_COMMAND).get();
                 internalBeforeAll(context, camel);
             }
             runBeforeAll(context);
@@ -238,7 +239,7 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
 
     private String getInstalledCamelVersion() {
         try {
-            ProcessBuilder pb = new ProcessBuilder("camel", "version");
+            ProcessBuilder pb = new ProcessBuilder(CAMEL_COMMAND, "version");
             pb.redirectErrorStream(true);
             Process process;
             try {
@@ -328,7 +329,7 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
      */
     private void deleteForagePlugin() {
         try {
-            ProcessBuilder pb = new ProcessBuilder("camel", "plugin", "delete", "forage");
+            ProcessBuilder pb = new ProcessBuilder(CAMEL_COMMAND, "plugin", "delete", "forage");
             pb.redirectErrorStream(true);
             Process process = pb.start();
             String output;

@@ -11,7 +11,7 @@ public final class OpenAIConfigEntries extends ConfigEntries {
             "OpenAI API key for authentication",
             "API Key",
             null,
-            "password",
+            ConfigModule.TYPE_PASSWORD,
             true,
             ConfigTag.SECURITY);
     public static final ConfigModule MODEL_NAME = ConfigModule.of(
@@ -20,7 +20,7 @@ public final class OpenAIConfigEntries extends ConfigEntries {
             "The specific OpenAI model to use",
             "Model Name",
             "gpt-4o-mini",
-            "string",
+            ConfigModule.TYPE_STRING,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule BASE_URL = ConfigModule.of(
@@ -29,7 +29,7 @@ public final class OpenAIConfigEntries extends ConfigEntries {
             "Custom base URL for OpenAI API",
             "Base URL",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule TEMPERATURE = ConfigModule.of(
@@ -38,7 +38,7 @@ public final class OpenAIConfigEntries extends ConfigEntries {
             "Temperature for response randomness (0.0-2.0)",
             "Temperature",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule MAX_TOKENS = ConfigModule.of(
@@ -47,7 +47,7 @@ public final class OpenAIConfigEntries extends ConfigEntries {
             "Maximum number of tokens to generate",
             "Max Tokens",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule TOP_P = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class OpenAIConfigEntries extends ConfigEntries {
             "Top-P (nucleus) sampling parameter (0.0-1.0)",
             "Top P",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule FREQUENCY_PENALTY = ConfigModule.of(
@@ -65,7 +65,7 @@ public final class OpenAIConfigEntries extends ConfigEntries {
             "Frequency penalty (-2.0 to 2.0)",
             "Frequency Penalty",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule PRESENCE_PENALTY = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class OpenAIConfigEntries extends ConfigEntries {
             "Presence penalty (-2.0 to 2.0)",
             "Presence Penalty",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule LOG_REQUESTS = ConfigModule.of(
@@ -83,7 +83,7 @@ public final class OpenAIConfigEntries extends ConfigEntries {
             "Enable request logging",
             "Log Requests",
             null,
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule LOG_RESPONSES = ConfigModule.of(
@@ -92,7 +92,7 @@ public final class OpenAIConfigEntries extends ConfigEntries {
             "Enable response logging",
             "Log Responses",
             null,
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule TIMEOUT = ConfigModule.of(
@@ -101,7 +101,7 @@ public final class OpenAIConfigEntries extends ConfigEntries {
             "Request timeout duration",
             "Timeout",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule HTTP1_1 = ConfigModule.of(
@@ -110,7 +110,7 @@ public final class OpenAIConfigEntries extends ConfigEntries {
             "Use HTTP/1.1 instead of HTTP/2",
             "Use HTTP/1.1",
             null,
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
 

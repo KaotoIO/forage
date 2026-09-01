@@ -11,7 +11,7 @@ public final class MilvusConfigEntries extends ConfigEntries {
             "Milvus server host address",
             "Host",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule PORT = ConfigModule.of(
@@ -29,7 +29,7 @@ public final class MilvusConfigEntries extends ConfigEntries {
             "Name of the Milvus collection",
             "Collection Name",
             "default",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule DIMENSION = ConfigModule.of(
@@ -47,7 +47,7 @@ public final class MilvusConfigEntries extends ConfigEntries {
             "Index type for vector search (e.g., IVF_FLAT, HNSW)",
             "Index Type",
             "FLAT",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule METRIC_TYPE = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class MilvusConfigEntries extends ConfigEntries {
             "Distance metric type (e.g., COSINE, L2, IP)",
             "Metric Type",
             "COSINE",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule URI = ConfigModule.of(
@@ -65,7 +65,7 @@ public final class MilvusConfigEntries extends ConfigEntries {
             "Milvus server URI (alternative to host/port)",
             "URI",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule TOKEN = ConfigModule.of(
@@ -83,7 +83,7 @@ public final class MilvusConfigEntries extends ConfigEntries {
             "Username for authentication",
             "Username",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.SECURITY);
     public static final ConfigModule PASSWORD = ConfigModule.of(
@@ -101,7 +101,7 @@ public final class MilvusConfigEntries extends ConfigEntries {
             "Consistency level for queries (e.g., STRONG, EVENTUALLY)",
             "Consistency Level",
             "EVENTUALLY",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule RETRIEVE_EMBEDDINGS_ON_SEARCH = ConfigModule.of(
@@ -128,7 +128,7 @@ public final class MilvusConfigEntries extends ConfigEntries {
             "Name of the Milvus database",
             "Database Name",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule ID_FIELD_NAME = ConfigModule.of(
@@ -137,7 +137,7 @@ public final class MilvusConfigEntries extends ConfigEntries {
             "Name of the ID field",
             "ID Field Name",
             "id",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule TEXT_FIELD_NAME = ConfigModule.of(
@@ -146,7 +146,7 @@ public final class MilvusConfigEntries extends ConfigEntries {
             "Name of the text field",
             "Text Field Name",
             "text",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule METADATA_FIELD_NAME = ConfigModule.of(
@@ -155,7 +155,7 @@ public final class MilvusConfigEntries extends ConfigEntries {
             "Name of the metadata field",
             "Metadata Field Name",
             "metadata",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule VECTOR_FIELD_NAME = ConfigModule.of(
@@ -164,7 +164,7 @@ public final class MilvusConfigEntries extends ConfigEntries {
             "Name of the vector field",
             "Vector Field Name",
             "vector",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
 

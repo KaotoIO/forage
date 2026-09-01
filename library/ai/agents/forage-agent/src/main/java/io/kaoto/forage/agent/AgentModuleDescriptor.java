@@ -53,16 +53,39 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
         return false;
     }
 
+    private static final String PROVIDER_OLLAMA = "ollama";
+    private static final String PROVIDER_OPENAI = "openai";
+    private static final String PROVIDER_ANTHROPIC = "anthropic";
+    private static final String PROVIDER_AZURE_OPENAI = "azure-openai";
+    private static final String PROVIDER_BEDROCK = "bedrock";
+    private static final String PROP_BASE_URL = "base-url";
+    private static final String PROP_MODEL_ID = "chat-model.model-id";
+    private static final String PROP_TEMPERATURE = "chat-model.temperature";
+    private static final String PROP_TOP_P = "chat-model.top-p";
+    private static final String PROP_TOP_K = "chat-model.top-k";
+    private static final String PROP_API_KEY = "api-key";
+    private static final String PROP_MODEL_NAME = "chat-model.model-name";
+    private static final String PROP_MAX_TOKENS = "chat-model.max-tokens";
+
     private static final Map<String, String> QUARKUS_EXTENSION_CLASSES = Map.of(
-            "ollama", "io.quarkiverse.langchain4j.ollama.runtime.config.LangChain4jOllamaConfig",
-            "openai", "io.quarkiverse.langchain4j.openai.runtime.config.LangChain4jOpenAiConfig",
-            "anthropic", "io.quarkiverse.langchain4j.anthropic.runtime.config.LangChain4jAnthropicConfig",
-            "google-gemini", "io.quarkiverse.langchain4j.ai.runtime.gemini.config.LangChain4jAiGeminiConfig",
-            "azure-openai", "io.quarkiverse.langchain4j.azure.openai.runtime.config.LangChain4jAzureOpenAiConfig",
-            "mistral-ai", "io.quarkiverse.langchain4j.mistralai.runtime.config.LangChain4jMistralAiConfig",
-            "hugging-face", "io.quarkiverse.langchain4j.huggingface.runtime.config.LangChain4jHuggingFaceConfig",
-            "watsonx-ai", "io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig",
-            "bedrock", "io.quarkiverse.langchain4j.bedrock.runtime.config.LangChain4jBedrockConfig");
+            PROVIDER_OLLAMA,
+            "io.quarkiverse.langchain4j.ollama.runtime.config.LangChain4jOllamaConfig",
+            PROVIDER_OPENAI,
+            "io.quarkiverse.langchain4j.openai.runtime.config.LangChain4jOpenAiConfig",
+            PROVIDER_ANTHROPIC,
+            "io.quarkiverse.langchain4j.anthropic.runtime.config.LangChain4jAnthropicConfig",
+            "google-gemini",
+            "io.quarkiverse.langchain4j.ai.runtime.gemini.config.LangChain4jAiGeminiConfig",
+            PROVIDER_AZURE_OPENAI,
+            "io.quarkiverse.langchain4j.azure.openai.runtime.config.LangChain4jAzureOpenAiConfig",
+            "mistral-ai",
+            "io.quarkiverse.langchain4j.mistralai.runtime.config.LangChain4jMistralAiConfig",
+            "hugging-face",
+            "io.quarkiverse.langchain4j.huggingface.runtime.config.LangChain4jHuggingFaceConfig",
+            "watsonx-ai",
+            "io.quarkiverse.langchain4j.watsonx.runtime.config.LangChain4jWatsonxConfig",
+            PROVIDER_BEDROCK,
+            "io.quarkiverse.langchain4j.bedrock.runtime.config.LangChain4jBedrockConfig");
 
     @Override
     public Map<String, String> translateProperties(String prefix, AgentConfig config) {
@@ -84,15 +107,15 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
         }
 
         return switch (modelKind) {
-            case "ollama" -> translateOllamaProperties(config);
-            case "openai" -> translateOpenAiProperties(config);
-            case "anthropic" -> translateAnthropicProperties(config);
+            case PROVIDER_OLLAMA -> translateOllamaProperties(config);
+            case PROVIDER_OPENAI -> translateOpenAiProperties(config);
+            case PROVIDER_ANTHROPIC -> translateAnthropicProperties(config);
             case "google-gemini" -> translateGeminiProperties(config);
-            case "azure-openai" -> translateAzureOpenAiProperties(config);
+            case PROVIDER_AZURE_OPENAI -> translateAzureOpenAiProperties(config);
             case "mistral-ai" -> translateMistralAiProperties(config);
             case "hugging-face" -> translateHuggingFaceProperties(config);
             case "watsonx-ai" -> translateWatsonxProperties(config);
-            case "bedrock" -> translateBedrockProperties(config);
+            case PROVIDER_BEDROCK -> translateBedrockProperties(config);
             default -> Map.of();
         };
     }
@@ -103,11 +126,11 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
         Map<String, String> props = new HashMap<>();
         String qp = quarkusPrefix("ollama");
 
-        putIfNotNull(props, qp + "base-url", config.baseUrl());
-        putIfNotNull(props, qp + "chat-model.model-id", config.modelName());
-        putIfNotNull(props, qp + "chat-model.temperature", config.temperature());
-        putIfNotNull(props, qp + "chat-model.top-p", config.topP());
-        putIfNotNull(props, qp + "chat-model.top-k", config.topK());
+        putIfNotNull(props, qp + PROP_BASE_URL, config.baseUrl());
+        putIfNotNull(props, qp + PROP_MODEL_ID, config.modelName());
+        putIfNotNull(props, qp + PROP_TEMPERATURE, config.temperature());
+        putIfNotNull(props, qp + PROP_TOP_P, config.topP());
+        putIfNotNull(props, qp + PROP_TOP_K, config.topK());
         addLoggingProperties(props, qp, config);
 
         return props;
@@ -125,13 +148,13 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
         Map<String, String> props = new HashMap<>();
         String qp = quarkusPrefix("anthropic");
 
-        putIfNotNull(props, qp + "base-url", config.baseUrl());
-        putIfNotNull(props, qp + "api-key", config.apiKey());
-        putIfNotNull(props, qp + "chat-model.model-name", config.modelName());
-        putIfNotNull(props, qp + "chat-model.temperature", config.temperature());
-        putIfNotNull(props, qp + "chat-model.top-p", config.topP());
-        putIfNotNull(props, qp + "chat-model.top-k", config.topK());
-        putIfNotNull(props, qp + "chat-model.max-tokens", config.maxTokens());
+        putIfNotNull(props, qp + PROP_BASE_URL, config.baseUrl());
+        putIfNotNull(props, qp + PROP_API_KEY, config.apiKey());
+        putIfNotNull(props, qp + PROP_MODEL_NAME, config.modelName());
+        putIfNotNull(props, qp + PROP_TEMPERATURE, config.temperature());
+        putIfNotNull(props, qp + PROP_TOP_P, config.topP());
+        putIfNotNull(props, qp + PROP_TOP_K, config.topK());
+        putIfNotNull(props, qp + PROP_MAX_TOKENS, config.maxTokens());
         addLoggingProperties(props, qp, config);
 
         return props;
@@ -143,12 +166,12 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
         Map<String, String> props = new HashMap<>();
         String qp = quarkusPrefix("ai.gemini");
 
-        putIfNotNull(props, qp + "api-key", config.apiKey());
-        putIfNotNull(props, qp + "base-url", config.baseUrl());
-        putIfNotNull(props, qp + "chat-model.model-id", config.modelName());
-        putIfNotNull(props, qp + "chat-model.temperature", config.temperature());
-        putIfNotNull(props, qp + "chat-model.top-p", config.topP());
-        putIfNotNull(props, qp + "chat-model.top-k", config.topK());
+        putIfNotNull(props, qp + PROP_API_KEY, config.apiKey());
+        putIfNotNull(props, qp + PROP_BASE_URL, config.baseUrl());
+        putIfNotNull(props, qp + PROP_MODEL_ID, config.modelName());
+        putIfNotNull(props, qp + PROP_TEMPERATURE, config.temperature());
+        putIfNotNull(props, qp + PROP_TOP_P, config.topP());
+        putIfNotNull(props, qp + PROP_TOP_K, config.topK());
         putIfNotNull(props, qp + "chat-model.max-output-tokens", config.maxTokens());
         addLoggingProperties(props, qp, config);
 
@@ -162,12 +185,12 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
         Map<String, String> props = new HashMap<>();
         String qp = quarkusPrefix("azure-openai");
 
-        putIfNotNull(props, qp + "api-key", config.apiKey());
+        putIfNotNull(props, qp + PROP_API_KEY, config.apiKey());
         putIfNotNull(props, qp + "endpoint", config.endpoint());
         putIfNotNull(props, qp + "deployment-name", config.deploymentName());
-        putIfNotNull(props, qp + "chat-model.temperature", config.temperature());
-        putIfNotNull(props, qp + "chat-model.top-p", config.topP());
-        putIfNotNull(props, qp + "chat-model.max-tokens", config.maxTokens());
+        putIfNotNull(props, qp + PROP_TEMPERATURE, config.temperature());
+        putIfNotNull(props, qp + PROP_TOP_P, config.topP());
+        putIfNotNull(props, qp + PROP_MAX_TOKENS, config.maxTokens());
         addLoggingProperties(props, qp, config);
 
         return props;
@@ -185,11 +208,11 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
         Map<String, String> props = new HashMap<>();
         String qp = quarkusPrefix("huggingface");
 
-        putIfNotNull(props, qp + "api-key", config.apiKey());
+        putIfNotNull(props, qp + PROP_API_KEY, config.apiKey());
         putIfNotNull(props, qp + "chat-model.inference-endpoint-url", config.baseUrl());
-        putIfNotNull(props, qp + "chat-model.temperature", config.temperature());
-        putIfNotNull(props, qp + "chat-model.top-p", config.topP());
-        putIfNotNull(props, qp + "chat-model.top-k", config.topK());
+        putIfNotNull(props, qp + PROP_TEMPERATURE, config.temperature());
+        putIfNotNull(props, qp + PROP_TOP_P, config.topP());
+        putIfNotNull(props, qp + PROP_TOP_K, config.topK());
         putIfNotNull(props, qp + "chat-model.max-new-tokens", config.maxTokens());
         addLoggingProperties(props, qp, config);
 
@@ -202,11 +225,11 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
         Map<String, String> props = new HashMap<>();
         String qp = quarkusPrefix("watsonx");
 
-        putIfNotNull(props, qp + "base-url", config.baseUrl());
-        putIfNotNull(props, qp + "api-key", config.apiKey());
-        putIfNotNull(props, qp + "chat-model.model-name", config.modelName());
-        putIfNotNull(props, qp + "chat-model.temperature", config.temperature());
-        putIfNotNull(props, qp + "chat-model.top-p", config.topP());
+        putIfNotNull(props, qp + PROP_BASE_URL, config.baseUrl());
+        putIfNotNull(props, qp + PROP_API_KEY, config.apiKey());
+        putIfNotNull(props, qp + PROP_MODEL_NAME, config.modelName());
+        putIfNotNull(props, qp + PROP_TEMPERATURE, config.temperature());
+        putIfNotNull(props, qp + PROP_TOP_P, config.topP());
         putIfNotNull(props, qp + "chat-model.max-output-tokens", config.maxTokens());
         addLoggingProperties(props, qp, config);
 
@@ -219,11 +242,11 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
         Map<String, String> props = new HashMap<>();
         String qp = quarkusPrefix("bedrock");
 
-        putIfNotNull(props, qp + "chat-model.model-id", config.modelName());
-        putIfNotNull(props, qp + "chat-model.temperature", config.temperature());
-        putIfNotNull(props, qp + "chat-model.top-p", config.topP());
-        putIfNotNull(props, qp + "chat-model.top-k", config.topK());
-        putIfNotNull(props, qp + "chat-model.max-tokens", config.maxTokens());
+        putIfNotNull(props, qp + PROP_MODEL_ID, config.modelName());
+        putIfNotNull(props, qp + PROP_TEMPERATURE, config.temperature());
+        putIfNotNull(props, qp + PROP_TOP_P, config.topP());
+        putIfNotNull(props, qp + PROP_TOP_K, config.topK());
+        putIfNotNull(props, qp + PROP_MAX_TOKENS, config.maxTokens());
         addLoggingProperties(props, qp, config);
 
         return props;
@@ -233,12 +256,12 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
         Map<String, String> props = new HashMap<>();
         String qp = quarkusPrefix(provider);
 
-        putIfNotNull(props, qp + "base-url", config.baseUrl());
-        putIfNotNull(props, qp + "api-key", config.apiKey());
-        putIfNotNull(props, qp + "chat-model.model-name", config.modelName());
-        putIfNotNull(props, qp + "chat-model.temperature", config.temperature());
-        putIfNotNull(props, qp + "chat-model.top-p", config.topP());
-        putIfNotNull(props, qp + "chat-model.max-tokens", config.maxTokens());
+        putIfNotNull(props, qp + PROP_BASE_URL, config.baseUrl());
+        putIfNotNull(props, qp + PROP_API_KEY, config.apiKey());
+        putIfNotNull(props, qp + PROP_MODEL_NAME, config.modelName());
+        putIfNotNull(props, qp + PROP_TEMPERATURE, config.temperature());
+        putIfNotNull(props, qp + PROP_TOP_P, config.topP());
+        putIfNotNull(props, qp + PROP_MAX_TOKENS, config.maxTokens());
         addLoggingProperties(props, qp, config);
 
         return props;

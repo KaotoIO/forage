@@ -39,6 +39,7 @@ import io.kaoto.forage.core.util.config.ConfigStore;
 public class ForagePropertyCondition extends SpringBootCondition {
 
     private static final Logger log = LoggerFactory.getLogger(ForagePropertyCondition.class);
+    private static final String PROPERTY_PREFIX = PROPERTY_PREFIX;
 
     @Override
     public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
@@ -96,7 +97,7 @@ public class ForagePropertyCondition extends SpringBootCondition {
 
             if (defaultMatches) {
                 return ConditionOutcome.match(ConditionMessage.forCondition(ConditionalOnForageProperty.class)
-                        .foundExactly("property '" + configModule.name() + "' matches criteria"));
+                        .foundExactly(PROPERTY_PREFIX + configModule.name() + "' matches criteria"));
             }
 
             // Check prefixed configurations
@@ -122,7 +123,7 @@ public class ForagePropertyCondition extends SpringBootCondition {
 
                     if (matches) {
                         return ConditionOutcome.match(ConditionMessage.forCondition(ConditionalOnForageProperty.class)
-                                .foundExactly("property '" + configModule.name() + "' matches criteria for prefix '"
+                                .foundExactly(PROPERTY_PREFIX + configModule.name() + "' matches criteria for prefix '"
                                         + prefix + "'"));
                     }
                 } catch (Exception e) {
@@ -137,11 +138,11 @@ public class ForagePropertyCondition extends SpringBootCondition {
             // No match found in any configuration
             if (matchIfMissing) {
                 return ConditionOutcome.match(ConditionMessage.forCondition(ConditionalOnForageProperty.class)
-                        .foundExactly("property '" + configModule.name() + "' not found and matchIfMissing=true"));
+                        .foundExactly(PROPERTY_PREFIX + configModule.name() + "' not found and matchIfMissing=true"));
             } else {
                 return ConditionOutcome.noMatch(ConditionMessage.forCondition(ConditionalOnForageProperty.class)
-                        .because(
-                                "property '" + configModule.name() + "' does not match criteria in any configuration"));
+                        .because(PROPERTY_PREFIX + configModule.name()
+                                + "' does not match criteria in any configuration"));
             }
 
         } catch (Exception e) {

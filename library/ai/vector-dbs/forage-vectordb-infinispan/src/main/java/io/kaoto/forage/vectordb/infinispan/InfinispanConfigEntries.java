@@ -11,7 +11,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Name of the Infinispan cache",
             "Cache Name",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule DIMENSION = ConfigModule.of(
@@ -20,7 +20,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Vector dimension for embeddings",
             "Dimension",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule DISTANCE = ConfigModule.of(
@@ -29,7 +29,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Distance metric for similarity (3 for cosine)",
             "Distance",
             "3",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule SIMILARITY = ConfigModule.of(
@@ -38,7 +38,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Similarity algorithm",
             "Similarity",
             "COSINE",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule CACHE_CONFIG = ConfigModule.of(
@@ -47,7 +47,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Cache configuration settings",
             "Cache Config",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule PACKAGE_NAME = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Package name for generated classes",
             "Package Name",
             "io.kaoto.forage.vectordb.infinispan.schema",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule FILE_NAME = ConfigModule.of(
@@ -65,7 +65,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Schema file name",
             "File Name",
             "langchain-item.proto",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule LANGCHAIN_ITEM_NAME = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "LangChain item class name",
             "LangChain Item Name",
             "LangChainItem",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule METADATA_ITEM_NAME = ConfigModule.of(
@@ -83,7 +83,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Metadata item class name",
             "Metadata Item Name",
             "MetadataItem",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule REGISTER_SCHEMA = ConfigModule.of(
@@ -110,7 +110,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Infinispan server host address",
             "Host",
             "localhost",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule PORT = ConfigModule.of(
@@ -119,7 +119,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Infinispan server port number",
             "Port",
             "11222",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule USERNAME = ConfigModule.of(
@@ -128,7 +128,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Username for authentication",
             "Username",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.SECURITY);
     public static final ConfigModule PASSWORD = ConfigModule.of(
@@ -137,7 +137,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Password for authentication",
             "Password",
             null,
-            "password",
+            ConfigModule.TYPE_PASSWORD,
             false,
             ConfigTag.SECURITY);
 

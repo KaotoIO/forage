@@ -20,7 +20,7 @@ public final class AzureOpenAiConfigEntries extends ConfigEntries {
             "Azure OpenAI resource endpoint URL (e.g., https://your-resource.openai.azure.com/)",
             "Endpoint",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule DEPLOYMENT_NAME = ConfigModule.of(
@@ -29,7 +29,7 @@ public final class AzureOpenAiConfigEntries extends ConfigEntries {
             "Azure OpenAI deployment name (e.g., gpt-35-turbo, gpt-4)",
             "Deployment Name",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule SERVICE_VERSION = ConfigModule.of(
@@ -38,7 +38,7 @@ public final class AzureOpenAiConfigEntries extends ConfigEntries {
             "Azure OpenAI API service version (e.g., 2024-02-01)",
             "Service Version",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule TEMPERATURE = ConfigModule.of(
@@ -47,7 +47,7 @@ public final class AzureOpenAiConfigEntries extends ConfigEntries {
             "Temperature for response generation (0.0-2.0): lower values are more deterministic, higher values are more creative",
             "Temperature",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule MAX_TOKENS = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class AzureOpenAiConfigEntries extends ConfigEntries {
             "Maximum number of tokens in the model's response",
             "Max Tokens",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule TOP_P = ConfigModule.of(
@@ -65,7 +65,7 @@ public final class AzureOpenAiConfigEntries extends ConfigEntries {
             "Top-p (nucleus sampling) probability threshold (0.0-1.0)",
             "Top P",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule PRESENCE_PENALTY = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class AzureOpenAiConfigEntries extends ConfigEntries {
             "Presence penalty for discouraging new topic introduction (-2.0 to 2.0)",
             "Presence Penalty",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule FREQUENCY_PENALTY = ConfigModule.of(
@@ -83,7 +83,7 @@ public final class AzureOpenAiConfigEntries extends ConfigEntries {
             "Frequency penalty for discouraging token repetition (-2.0 to 2.0)",
             "Frequency Penalty",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule SEED = ConfigModule.of(
@@ -92,7 +92,7 @@ public final class AzureOpenAiConfigEntries extends ConfigEntries {
             "Seed for deterministic response generation (same seed + same input = similar output)",
             "Seed",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule USER = ConfigModule.of(
@@ -101,7 +101,7 @@ public final class AzureOpenAiConfigEntries extends ConfigEntries {
             "User identifier for tracking and monitoring API usage",
             "User ID",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule TIMEOUT = ConfigModule.of(
@@ -110,7 +110,7 @@ public final class AzureOpenAiConfigEntries extends ConfigEntries {
             "Request timeout in seconds",
             "Timeout",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule MAX_RETRIES = ConfigModule.of(
@@ -119,7 +119,7 @@ public final class AzureOpenAiConfigEntries extends ConfigEntries {
             "Maximum number of retry attempts for failed requests",
             "Max Retries",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule LOG_REQUESTS_AND_RESPONSES = ConfigModule.of(

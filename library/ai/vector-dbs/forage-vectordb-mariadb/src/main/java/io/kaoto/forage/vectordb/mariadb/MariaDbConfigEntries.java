@@ -101,7 +101,7 @@ public final class MariaDbConfigEntries extends ConfigEntries {
             "Whether to drop the table before creating it",
             "Drop Table First",
             "false",
-            ConfigModule.TYPE_FALSE,
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
 

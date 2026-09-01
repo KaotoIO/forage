@@ -128,7 +128,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Auto create full text index",
             "Auto Create Full Text",
             "false",
-            ConfigModule.TYPE_FALSE,
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule ENTITY_CREATION_QUERY = ConfigModule.of(
@@ -173,7 +173,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Enable SSL encryption",
             "With Encryption",
             "false",
-            ConfigModule.TYPE_FALSE,
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.SECURITY);
     public static final ConfigModule CONNECTION_TIMEOUT = ConfigModule.of(

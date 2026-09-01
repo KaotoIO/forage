@@ -58,6 +58,7 @@ import org.slf4j.LoggerFactory;
 public final class ConfigStore {
     private static final Logger LOG = LoggerFactory.getLogger(ConfigStore.class);
     private static final String PROPERTIES_SUFFIX = ".properties";
+    private static final String CLASSPATH_ROOT = "/";
 
     private static final ConfigStore INSTANCE = new ConfigStore();
     private final Properties properties = new Properties();
@@ -239,7 +240,7 @@ public final class ConfigStore {
         // 3. Default classloader: root classpath path
         if (is == null) {
             LOG.debug("Loading defaults from the forage component");
-            String rootPath = "/" + instance.name() + PROPERTIES_SUFFIX;
+            String rootPath = CLASSPATH_ROOT + instance.name() + PROPERTIES_SUFFIX;
             ClassLoader cl = classLoader != null ? classLoader : ConfigStore.class.getClassLoader();
             is = cl.getResourceAsStream(rootPath);
         }

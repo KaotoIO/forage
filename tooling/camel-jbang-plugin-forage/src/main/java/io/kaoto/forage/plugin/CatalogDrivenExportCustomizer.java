@@ -22,6 +22,7 @@ import io.kaoto.forage.core.common.RuntimeType;
 public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
     private static final Logger LOG = LoggerFactory.getLogger(CatalogDrivenExportCustomizer.class);
+    private static final String FORAGE_PREFIX = "forage.";
 
     private Map<String, Map<String, List<String>>> scannedProperties;
     private Boolean enabled;
@@ -175,15 +176,15 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
             return null;
         }
         // Try with the factoryTypeKey first (e.g., "forage.jdbc." for jdbc factory)
-        String prefix = "forage." + factoryTypeKey + ".";
+        String prefix = FORAGE_PREFIX + factoryTypeKey + ".";
         if (entryName.startsWith(prefix)) {
             return entryName.substring(prefix.length());
         }
         // Fallback: extract the suffix using the entry's own prefix segment
         // This handles cases where the factoryTypeKey differs from the config entry prefix
         // (e.g., agent factory has key "multi" but bean-name entries use "forage.agent.*")
-        if (entryName.startsWith("forage.")) {
-            String remaining = entryName.substring("forage.".length());
+        if (entryName.startsWith(FORAGE_PREFIX)) {
+            String remaining = entryName.substring(FORAGE_PREFIX.length());
             int dotIndex = remaining.indexOf('.');
             if (dotIndex > 0) {
                 return remaining.substring(dotIndex + 1);
@@ -224,7 +225,7 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
         for (Map.Entry<String, List<String>> entry : factoryProperties.entrySet()) {
             String key = entry.getKey();
-            if (configEntry.endsWith("." + key) || configEntry.equals("forage." + key)) {
+            if (configEntry.endsWith("." + key) || configEntry.equals(FORAGE_PREFIX + key)) {
                 for (String value : entry.getValue()) {
                     if ("true".equalsIgnoreCase(value)) {
                         return true;

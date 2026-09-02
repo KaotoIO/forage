@@ -31,6 +31,9 @@ import picocli.CommandLine;
 public class ConfigWriteCommand extends CamelCommand {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final String KEY_SUCCESS = "success";
+    private static final String APPLICATION_PROPERTIES = "application.properties";
+    private static final String FORAGE_PREFIX = "forage.";
 
     @CommandLine.Option(
             names = {"--input", "-i"},
@@ -149,7 +152,7 @@ public class ConfigWriteCommand extends CamelCommand {
             writePropertiesFile(propertiesFile, factoryConfig.properties(), factoryTypeKey);
 
             Map<String, Object> result = new LinkedHashMap<>();
-            result.put("success", true);
+            result.put(KEY_SUCCESS, true);
             result.put("propertiesFile", propertiesFile.getAbsolutePath());
             result.put("operation", operation);
             result.put(
@@ -167,7 +170,7 @@ public class ConfigWriteCommand extends CamelCommand {
         // Collect and write dependencies to application.properties
         DependencyInfo dependencies = collectDependencies(factoryConfigs);
         if (hasDependencies(dependencies)) {
-            File appPropertiesFile = new File(directory, "application.properties");
+            File appPropertiesFile = new File(directory, APPLICATION_PROPERTIES);
             updateDependencies(appPropertiesFile, dependencies);
 
             // Add dependency info to results
@@ -187,7 +190,7 @@ public class ConfigWriteCommand extends CamelCommand {
                             .writeValueAsString(results.values().iterator().next()));
         } else {
             Map<String, Object> output = new LinkedHashMap<>();
-            output.put("success", true);
+            output.put(KEY_SUCCESS, true);
             output.put("factories", results);
             printer().println(OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(output));
         }
@@ -359,7 +362,7 @@ public class ConfigWriteCommand extends CamelCommand {
      * Input: "jdbc.url", beanName: null -> Output: "forage.jdbc.url"
      */
     private String buildPropertyKey(String beanName, String inputKey) {
-        StringBuilder sb = new StringBuilder("forage.");
+        StringBuilder sb = new StringBuilder(FORAGE_PREFIX);
         if (beanName != null && !beanName.isEmpty()) {
             sb.append(beanName).append(".");
         }
@@ -369,7 +372,7 @@ public class ConfigWriteCommand extends CamelCommand {
 
     private String getPropertiesFileName(String factoryTypeKey) {
         if ("application".equalsIgnoreCase(strategy)) {
-            return "application.properties";
+            return APPLICATION_PROPERTIES;
         }
         return catalog.getPropertiesFileName(factoryTypeKey).orElse(null);
     }
@@ -634,7 +637,7 @@ public class ConfigWriteCommand extends CamelCommand {
                 results.put(
                         propertiesFile.getName(),
                         Map.of(
-                                "success",
+                                KEY_SUCCESS,
                                 true,
                                 "propertiesFile",
                                 propertiesFile.getAbsolutePath(),
@@ -650,7 +653,7 @@ public class ConfigWriteCommand extends CamelCommand {
         }
 
         // After deletion, clean up dependencies that are no longer needed
-        File appPropertiesFile = new File(directory, "application.properties");
+        File appPropertiesFile = new File(directory, APPLICATION_PROPERTIES);
         Map<String, Object> dependencyCleanupResult =
                 cleanupUnusedDependencies(appPropertiesFile, allDeletedTypes, allDeletedFactoryTypeKeys);
         if (!dependencyCleanupResult.isEmpty()) {
@@ -658,7 +661,7 @@ public class ConfigWriteCommand extends CamelCommand {
         }
 
         Map<String, Object> output = new LinkedHashMap<>();
-        output.put("success", true);
+        output.put(KEY_SUCCESS, true);
         output.put("operation", "delete");
         output.put("instanceName", instanceName);
         output.put("results", results);
@@ -670,7 +673,7 @@ public class ConfigWriteCommand extends CamelCommand {
     private Set<File> determineScanableProperties() {
         Set<File> propertiesFilesToScan = new HashSet<>();
         if ("application".equalsIgnoreCase(strategy)) {
-            File appProps = new File(directory, "application.properties");
+            File appProps = new File(directory, APPLICATION_PROPERTIES);
             if (appProps.exists()) {
                 propertiesFilesToScan.add(appProps);
             }
@@ -709,7 +712,7 @@ public class ConfigWriteCommand extends CamelCommand {
 
         // Find keys to remove matching the instance prefix
         // Pattern: forage.{instanceName}.*
-        String prefixToMatch = "forage." + instanceName + ".";
+        String prefixToMatch = FORAGE_PREFIX + instanceName + ".";
 
         for (String line : lines) {
             String trimmed = line.trim();
@@ -818,8 +821,8 @@ public class ConfigWriteCommand extends CamelCommand {
                     String value = line.substring(equalsIndex + 1).trim();
 
                     // Parse forage.{instanceName}.{type}.* pattern
-                    if (key.startsWith("forage.")) {
-                        String afterForage = key.substring("forage.".length());
+                    if (key.startsWith(FORAGE_PREFIX)) {
+                        String afterForage = key.substring(FORAGE_PREFIX.length());
                         // Skip to second segment (after instanceName)
                         int firstDot = afterForage.indexOf('.');
                         if (firstDot > 0) {
@@ -988,7 +991,7 @@ public class ConfigWriteCommand extends CamelCommand {
 
     private int outputError(String message) throws JsonProcessingException {
         Map<String, Object> error = new HashMap<>();
-        error.put("success", false);
+        error.put(KEY_SUCCESS, false);
         error.put("error", message);
         printer().println(OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(error));
         return 1;

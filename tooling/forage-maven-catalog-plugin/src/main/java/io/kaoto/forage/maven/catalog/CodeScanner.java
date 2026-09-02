@@ -48,6 +48,8 @@ import com.github.javaparser.ast.stmt.ReturnStmt;
 
 public class CodeScanner {
     private static final Set<String> SKIP_DIRS = Set.of("target", ".git", "node_modules", ".idea", ".vscode");
+    private static final String ATTR_DESCRIPTION = "description";
+    private static final String ATTR_RUNTIME_DEPS = "runtimeDependencies";
 
     private final Log log;
     private final Map<String, Path> sourceDirectoryCache = new ConcurrentHashMap<>();
@@ -380,7 +382,7 @@ public class CodeScanner {
                     }
                 }
                 case "components" -> data.setComponents(extractStringArrayValue(value, "@ForageFactory 'components'"));
-                case "description" -> {
+                case ATTR_DESCRIPTION -> {
                     if (value instanceof StringLiteralExpr stringLiteral) {
                         data.setDescription(stringLiteral.asString());
                     }
@@ -394,7 +396,7 @@ public class CodeScanner {
                 case "conditionalBeans" -> data.setConditionalBeans(extractConditionalBeanGroupArray(value));
                 case "variant" -> data.setVariant(extractVariantValue(value));
                 case "configClass" -> data.setConfigClassName(extractClassValue(value, cu));
-                case "runtimeDependencies" ->
+                case ATTR_RUNTIME_DEPS ->
                     data.setRuntimeDependencies(extractStringArrayValue(value, "@ForageFactory 'runtimeDependencies'"));
                 default -> {}
             }
@@ -441,7 +443,7 @@ public class CodeScanner {
                         id = stringLiteral.asString();
                     }
                 }
-                case "description" -> {
+                case ATTR_DESCRIPTION -> {
                     if (value instanceof StringLiteralExpr stringLiteral) {
                         description = stringLiteral.asString();
                     }
@@ -452,7 +454,7 @@ public class CodeScanner {
                     }
                 }
                 case "beans" -> beans = extractConditionalBeanArray(value);
-                case "runtimeDependencies" ->
+                case ATTR_RUNTIME_DEPS ->
                     runtimeDeps = extractStringArrayValue(value, "@ConditionalBeanGroup 'runtimeDependencies'");
                 default -> {}
             }
@@ -524,7 +526,7 @@ public class CodeScanner {
                         javaType = stringLiteral.asString();
                     }
                 }
-                case "description" -> {
+                case ATTR_DESCRIPTION -> {
                     if (pairValue instanceof StringLiteralExpr stringLiteral) {
                         String descValue = stringLiteral.asString();
                         if (!descValue.isEmpty()) {
@@ -573,7 +575,7 @@ public class CodeScanner {
                         }
                     }
                     case "components" -> components = extractStringArrayValue(value, "@ForageBean 'components'");
-                    case "description" -> {
+                    case ATTR_DESCRIPTION -> {
                         if (value instanceof StringLiteralExpr stringLiteral) {
                             description = stringLiteral.asString();
                         }
@@ -584,7 +586,7 @@ public class CodeScanner {
                         }
                     }
                     case "configClass" -> configClassName = extractClassValue(value, cu);
-                    case "runtimeDependencies" ->
+                    case ATTR_RUNTIME_DEPS ->
                         runtimeDeps = extractStringArrayValue(value, "@ForageBean 'runtimeDependencies'");
                     case "repositories" -> repositories = extractStringArrayValue(value, "@ForageBean 'repositories'");
                     default -> {}

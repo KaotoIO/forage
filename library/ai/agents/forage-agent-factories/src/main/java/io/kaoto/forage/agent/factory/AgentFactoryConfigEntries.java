@@ -22,7 +22,7 @@ public final class AgentFactoryConfigEntries extends ConfigEntries {
             "Fully qualified class name of the model provider factory",
             "Model Factory Class",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule PROVIDER_FEATURES = ConfigModule.of(
@@ -31,7 +31,7 @@ public final class AgentFactoryConfigEntries extends ConfigEntries {
             "Comma-separated list of agent features to enable (e.g., memory)",
             "Features",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule PROVIDER_FEATURES_MEMORY_FACTORY_CLASS = ConfigModule.of(
@@ -40,7 +40,7 @@ public final class AgentFactoryConfigEntries extends ConfigEntries {
             "Fully qualified class name of the chat memory factory",
             "Memory Factory Class",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule PROVIDER_AGENT_CLASS = ConfigModule.of(
@@ -49,7 +49,7 @@ public final class AgentFactoryConfigEntries extends ConfigEntries {
             "Fully qualified class name of the agent factory implementation",
             "Agent Class",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule GUARDRAILS_INPUT = ConfigModule.of(
@@ -58,7 +58,7 @@ public final class AgentFactoryConfigEntries extends ConfigEntries {
             "Comma-separated list of input guardrail names (@ForageBean values, e.g., pii-detector,keyword-filter)",
             "Input Guardrails",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule GUARDRAILS_OUTPUT = ConfigModule.of(
@@ -67,7 +67,7 @@ public final class AgentFactoryConfigEntries extends ConfigEntries {
             "Comma-separated list of output guardrail names (@ForageBean values, e.g., sensitive-data,output-length)",
             "Output Guardrails",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 

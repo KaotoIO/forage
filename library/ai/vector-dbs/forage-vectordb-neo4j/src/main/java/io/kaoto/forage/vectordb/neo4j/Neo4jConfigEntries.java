@@ -11,7 +11,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Vector index name",
             "Index Name",
             "vector-index",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule METADATA_PREFIX = ConfigModule.of(
@@ -20,7 +20,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Metadata prefix",
             "Metadata Prefix",
             "metadata_",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule EMBEDDING_PROPERTY = ConfigModule.of(
@@ -29,7 +29,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Embedding property name",
             "Embedding Property",
             "embedding",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule ID_PROPERTY = ConfigModule.of(
@@ -38,18 +38,25 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "ID property name",
             "ID Property",
             "id",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule LABEL = ConfigModule.of(
-            Neo4jConfig.class, "neo4j.label", "Node label", "Label", "Document", "string", false, ConfigTag.COMMON);
+            Neo4jConfig.class,
+            "neo4j.label",
+            "Node label",
+            "Label",
+            "Document",
+            ConfigModule.TYPE_STRING,
+            false,
+            ConfigTag.COMMON);
     public static final ConfigModule TEXT_PROPERTY = ConfigModule.of(
             Neo4jConfig.class,
             "forage.neo4j.text.property",
             "Text property name",
             "Text Property",
             "text",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule DATABASE_NAME = ConfigModule.of(
@@ -58,7 +65,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Database name",
             "Database Name",
             "neo4j",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule RETRIEVAL_QUERY = ConfigModule.of(
@@ -67,7 +74,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Custom retrieval query",
             "Retrieval Query",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule DIMENSION = ConfigModule.of(
@@ -76,7 +83,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Vector dimension",
             "Dimension",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule AWAIT_INDEX_TIMEOUT = ConfigModule.of(
@@ -85,7 +92,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Index creation timeout in seconds",
             "Await Index Timeout",
             "60",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule FULL_TEXT_INDEX_NAME = ConfigModule.of(
@@ -94,7 +101,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Full text index name",
             "Full Text Index Name",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule FULL_TEXT_QUERY = ConfigModule.of(
@@ -103,7 +110,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Full text query",
             "Full Text Query",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule FULL_TEXT_RETRIEVAL_QUERY = ConfigModule.of(
@@ -112,7 +119,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Full text retrieval query",
             "Full Text Retrieval Query",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule AUTO_CREATE_FULL_TEXT = ConfigModule.of(
@@ -121,7 +128,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Auto create full text index",
             "Auto Create Full Text",
             "false",
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule ENTITY_CREATION_QUERY = ConfigModule.of(
@@ -130,7 +137,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Custom entity creation query",
             "Entity Creation Query",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule URI = ConfigModule.of(
@@ -139,18 +146,25 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Neo4j server URI",
             "URI",
             "bolt://localhost:7687",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule USER = ConfigModule.of(
-            Neo4jConfig.class, "forage.neo4j.user", "Username", "User", "neo4j", "string", false, ConfigTag.SECURITY);
+            Neo4jConfig.class,
+            "forage.neo4j.user",
+            "Username",
+            "User",
+            "neo4j",
+            ConfigModule.TYPE_STRING,
+            false,
+            ConfigTag.SECURITY);
     public static final ConfigModule PASSWORD = ConfigModule.of(
             Neo4jConfig.class,
             "forage.neo4j.password",
             "Password",
             "Password",
             null,
-            "password",
+            ConfigModule.TYPE_PASSWORD,
             true,
             ConfigTag.SECURITY);
     public static final ConfigModule WITH_ENCRYPTION = ConfigModule.of(
@@ -159,7 +173,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Enable SSL encryption",
             "With Encryption",
             "false",
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.SECURITY);
     public static final ConfigModule CONNECTION_TIMEOUT = ConfigModule.of(
@@ -168,7 +182,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Connection timeout in seconds",
             "Connection Timeout",
             "30",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule MAX_CONNECTION_LIFETIME = ConfigModule.of(
@@ -177,7 +191,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Max connection lifetime in minutes",
             "Max Connection Lifetime",
             "60",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule MAX_CONNECTION_POOL_SIZE = ConfigModule.of(
@@ -186,7 +200,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Max connection pool size",
             "Max Connection Pool Size",
             "100",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule CONNECTION_ACQUISITION_TIMEOUT = ConfigModule.of(
@@ -195,7 +209,7 @@ public final class Neo4jConfigEntries extends ConfigEntries {
             "Connection acquisition timeout in seconds",
             "Connection Acquisition Timeout",
             "60",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
 

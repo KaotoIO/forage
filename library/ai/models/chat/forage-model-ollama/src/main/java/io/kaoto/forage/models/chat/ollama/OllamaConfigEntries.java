@@ -11,7 +11,7 @@ public final class OllamaConfigEntries extends ConfigEntries {
             "The base URL of the Ollama server",
             "Base URL",
             "http://localhost:11434",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule MODEL_NAME = ConfigModule.of(
@@ -20,7 +20,7 @@ public final class OllamaConfigEntries extends ConfigEntries {
             "The Ollama model to use",
             "Model Name",
             "llama3.2",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule TEMPERATURE = ConfigModule.of(
@@ -29,7 +29,7 @@ public final class OllamaConfigEntries extends ConfigEntries {
             "Temperature for response randomness (0.0-2.0)",
             "Temperature",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule TOP_K = ConfigModule.of(
@@ -38,7 +38,7 @@ public final class OllamaConfigEntries extends ConfigEntries {
             "Top-K sampling parameter",
             "Top K",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule TOP_P = ConfigModule.of(
@@ -47,7 +47,7 @@ public final class OllamaConfigEntries extends ConfigEntries {
             "Top-P (nucleus) sampling parameter (0.0-1.0)",
             "Top P",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule MIN_P = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class OllamaConfigEntries extends ConfigEntries {
             "Minimum probability threshold (0.0-1.0)",
             "Min P",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule NUM_CTX = ConfigModule.of(
@@ -65,7 +65,7 @@ public final class OllamaConfigEntries extends ConfigEntries {
             "Context window size",
             "Context Size",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule LOG_REQUESTS = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class OllamaConfigEntries extends ConfigEntries {
             "Enable request logging",
             "Log Requests",
             null,
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule LOG_RESPONSES = ConfigModule.of(
@@ -83,7 +83,7 @@ public final class OllamaConfigEntries extends ConfigEntries {
             "Enable response logging",
             "Log Responses",
             null,
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule TIMEOUT = ConfigModule.of(
@@ -92,7 +92,7 @@ public final class OllamaConfigEntries extends ConfigEntries {
             "Request timeout duration in ISO-8601 format (e.g. PT120S for 120 seconds)",
             "Timeout",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 

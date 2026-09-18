@@ -109,12 +109,13 @@ Spring Boot also accepts the same properties in `application.properties` or
 
 ## Named clients and configuration
 
-The configuration prefix becomes the bean name:
+The configuration prefix becomes the bean name. These examples require servers
+configured for TLS and certificates trusted by the client:
 
 ```properties
-forage.legacy.influxdb.url=http://influxdb1:8086
+forage.legacy.influxdb.url=https://influxdb1:8086
 forage.legacy.influxdb.username=writer
-forage.modern.influxdb2.url=http://influxdb2:8086
+forage.modern.influxdb2.url=https://influxdb2:8086
 ```
 
 Supply credentials through `FORAGE_LEGACY_INFLUXDB_PASSWORD` and

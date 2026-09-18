@@ -20,17 +20,16 @@ import io.kaoto.forage.integration.tests.PropertiesTemplateHelper;
 import static org.awaitility.Awaitility.await;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @CitrusSupport
 @ExtendWith({IntegrationTestSetupExtension.class})
 public class InfluxDBTest implements ForageIntegrationTest {
     private static final String NAME = "forage-influxdb-test";
-    private String url;
-    private String measurement;
+    // Citrus needs per-method test instances, but runBeforeAll initializes these only once.
+    private static String url;
+    private static String measurement;
 
     @Override
     public String runBeforeAll(ForageTestCaseRunner runner, Consumer<AutoCloseable> afterAll) {

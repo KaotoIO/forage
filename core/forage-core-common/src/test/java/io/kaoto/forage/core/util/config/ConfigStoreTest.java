@@ -11,6 +11,47 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ConfigStoreTest {
 
+    @Test
+    void discoversNamesFromSystemPropertiesWithoutInstantiatingNamedConfigs() {
+        String key = "forage.metrics.storetest.url";
+        try {
+            System.setProperty(key, "http://localhost:8086");
+            assertThat(ConfigStore.getInstance()
+                            .readPrefixes(new TestConfig(), ConfigHelper.getNamedPropertyRegexp("storetest")))
+                    .containsExactly("metrics");
+        } finally {
+            System.clearProperty(key);
+        }
+    }
+
+    @Test
+    void discoversNamesFromEnvironmentWithoutInstantiatingNamedConfigs() throws Exception {
+        ProcessBuilder builder = new ProcessBuilder(
+                java.nio.file.Path.of(System.getProperty("java.home"), "bin", "java")
+                        .toString(),
+                "-cp",
+                System.getProperty("java.class.path"),
+                EnvironmentPrefixProbe.class.getName());
+        builder.environment().put("FORAGE_METRICS_STORETEST_URL", "http://localhost:8086");
+        Process process = builder.start();
+        try {
+            assertThat(process.waitFor(20, java.util.concurrent.TimeUnit.SECONDS))
+                    .isTrue();
+            assertThat(process.exitValue()).isZero();
+            assertThat(new String(process.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8))
+                    .contains("metrics");
+        } finally {
+            process.destroyForcibly();
+        }
+    }
+
+    public static class EnvironmentPrefixProbe {
+        public static void main(String[] args) {
+            System.out.println(ConfigStore.getInstance()
+                    .readPrefixes(new TestConfig(), ConfigHelper.getNamedPropertyRegexp("storetest")));
+        }
+    }
+
     private static class TestConfig implements Config {
         @Override
         public String name() {

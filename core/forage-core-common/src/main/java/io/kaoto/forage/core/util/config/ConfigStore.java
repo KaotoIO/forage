@@ -204,6 +204,16 @@ public final class ConfigStore {
 
         Set<String> prefixes = PropertyFileLocator.readPrefixes(merged, regexp);
 
+        // Discover names before a named Config instance exists to load its overrides.
+        // Only keys are needed here; value resolution retains its normal precedence.
+        Properties overrides = new Properties();
+        System.getProperties().stringPropertyNames().forEach(name -> overrides.setProperty(name, ""));
+        System.getenv().keySet().stream()
+                .filter(name -> name.startsWith("FORAGE_"))
+                .map(name -> name.toLowerCase(java.util.Locale.ROOT).replace('_', '.'))
+                .forEach(name -> overrides.setProperty(name, ""));
+        prefixes.addAll(PropertyFileLocator.readPrefixes(overrides, regexp));
+
         // Consult registered resolvers for additional prefix discovery
         for (ConfigResolver resolver : resolvers) {
             prefixes.addAll(resolver.discoverPrefixes(regexp));

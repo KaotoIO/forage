@@ -95,6 +95,15 @@ The `agent` parameter references a named bean configured via properties. In this
 #### Embeddings
 - **embeddings** - Embedding model providers (coming soon)
 
+### InfluxDB Modules
+
+- **forage-influxdb** - InfluxDB 1 clients for Camel, Spring Boot, and Quarkus
+- **forage-influxdb2** - InfluxDB 2 clients for Camel and Spring Boot
+
+Both factories support default and named clients. See the
+[InfluxDB configuration guide](library/influxdb/README.md) for properties,
+runtime dependencies, and route examples (available in `1.6.1-SNAPSHOT`).
+
 ### JDBC Modules
 
 Forage provides JDBC data source factories that simplify database connectivity with pre-configured, pooled data sources for various database systems.

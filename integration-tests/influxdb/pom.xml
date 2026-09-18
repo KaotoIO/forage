@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.kaoto.forage</groupId>
+        <artifactId>integration-tests</artifactId>
+        <version>1.6.1-SNAPSHOT</version>
+    </parent>
+    <artifactId>integration-tests-influxdb</artifactId>
+    <name>Forage :: Library :: InfluxDB :: Integration Tests</name>
+    <dependencies>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>integration-tests-common</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.citrusframework.mvn</groupId>
+                <artifactId>citrus-maven-plugin</artifactId>
+                <version>${citrus.version}</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>

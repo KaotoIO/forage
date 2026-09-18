@@ -17,6 +17,7 @@
         <module>cloud</module>
         <module>common</module>
         <module>cxf</module>
+        <module>influxdb</module>
         <module>jdbc</module>
         <module>jms</module>
         <module>messaging</module>

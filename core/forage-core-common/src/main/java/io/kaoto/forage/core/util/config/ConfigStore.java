@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -202,21 +203,33 @@ public final class ConfigStore {
             }
         }
 
+        // System properties retain exact spelling and can change without a reload.
+        System.getProperties().stringPropertyNames().stream()
+                .filter(name -> name.startsWith("forage."))
+                .forEach(name -> merged.putIfAbsent(name, ""));
         Set<String> prefixes = PropertyFileLocator.readPrefixes(merged, regexp);
-
-        // Discover names before a named Config instance exists to load its overrides.
-        // Only keys are needed here; value resolution retains its normal precedence.
-        Properties overrides = new Properties();
-        System.getProperties().stringPropertyNames().forEach(name -> overrides.setProperty(name, ""));
-        System.getenv().keySet().stream()
-                .filter(name -> name.startsWith("FORAGE_"))
-                .map(name -> name.toLowerCase(java.util.Locale.ROOT).replace('_', '.'))
-                .forEach(name -> overrides.setProperty(name, ""));
-        prefixes.addAll(PropertyFileLocator.readPrefixes(overrides, regexp));
-
-        // Consult registered resolvers for additional prefix discovery
         for (ConfigResolver resolver : resolvers) {
             prefixes.addAll(resolver.discoverPrefixes(regexp));
+        }
+
+        // Environment names cannot recover case or distinguish dots from literal underscores.
+        // Prefer names declared by files, system properties, or runtime resolvers. Only infer
+        // a lowercase dotted name when no matching declaration exists (environment-only config).
+        Set<String> declaredEnvPrefixes = prefixes.stream()
+                .map(prefix -> prefix.replace('.', '_').toUpperCase(Locale.ROOT))
+                .collect(java.util.stream.Collectors.toSet());
+        var pattern = PropertyFileLocator.pattern(regexp);
+        for (String name : System.getenv().keySet()) {
+            if (name.startsWith("FORAGE_")) {
+                var matcher = pattern.matcher(name.toLowerCase(Locale.ROOT).replace('_', '.'));
+                if (matcher.matches()) {
+                    String candidate = matcher.group(1);
+                    if (!declaredEnvPrefixes.contains(
+                            candidate.replace('.', '_').toUpperCase(Locale.ROOT))) {
+                        prefixes.add(candidate);
+                    }
+                }
+            }
         }
 
         return prefixes;

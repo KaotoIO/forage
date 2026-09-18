@@ -1,4 +1,4 @@
-# InfluxDB client factories
+# InfluxDB
 
 Forage creates InfluxDB clients for Camel from properties, environment variables,
 or system properties.
@@ -124,13 +124,13 @@ Bean names share Camel's registry, so use distinct names across all factories.
 When named configurations exist for a version, Forage creates those clients
 instead of an additional unprefixed client.
 
-| Property | Required | Description |
-|----------|----------|-------------|
-| `forage.influxdb.url` | Yes | InfluxDB 1 HTTP(S) URL |
-| `forage.influxdb.username` | With password | InfluxDB 1 username |
-| `forage.influxdb.password` | With username | InfluxDB 1 password |
-| `forage.influxdb2.url` | Yes | InfluxDB 2 HTTP(S) URL |
-| `forage.influxdb2.token` | Yes | InfluxDB 2 authentication token |
+### InfluxDB 1 properties
+
+{{ forage_properties("InfluxDB 1 Client") }}
+
+### InfluxDB 2 properties
+
+{{ forage_properties("InfluxDB 2 Client") }}
 
 The standard precedence is environment variables, system properties, then
 properties files. A module without configuration creates no client. Existing
@@ -155,4 +155,4 @@ because dynamic sends may still use them; removing all routes or stopping the
 context releases them. Spring Boot and Quarkus own client shutdown in their
 respective adapters.
 
-See the [end-to-end test plan](../../tests/plans/influxdb-clients.md).
+See [Write Metrics](../examples/influxdb/write-metrics.md) for a runnable InfluxDB 2 example.

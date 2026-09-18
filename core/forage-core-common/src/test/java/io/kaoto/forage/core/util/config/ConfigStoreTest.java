@@ -1,5 +1,7 @@
 package io.kaoto.forage.core.util.config;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -7,9 +9,14 @@ import java.util.Set;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ConfigStoreTest {
+    @TempDir
+    Path directory;
 
     @Test
     void discoversNamesFromSystemPropertiesWithoutInstantiatingNamedConfigs() {
@@ -45,10 +52,72 @@ class ConfigStoreTest {
         }
     }
 
+    @ParameterizedTest
+    @CsvSource({"file,myDb", "file,my_db", "system,myDb", "system,my_db", "resolver,myDb", "resolver,my_db"})
+    void environmentOverridesPreserveDeclaredNames(String source, String prefix) throws Exception {
+        Files.writeString(
+                directory.resolve("test-config-store.properties"),
+                "forage." + prefix + ".storetest.url=http://localhost:8086\n");
+        ProcessBuilder builder = new ProcessBuilder(
+                Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                "-cp",
+                System.getProperty("java.class.path"),
+                EnvironmentPrefixProbe.class.getName(),
+                source,
+                prefix,
+                directory.toString());
+        builder.environment()
+                .put("FORAGE_" + prefix.toUpperCase(java.util.Locale.ROOT) + "_STORETEST_PASSWORD", "secret");
+        builder.environment().put("FORAGE_METRICS_STORETEST_URL", "http://localhost:8087");
+        builder.redirectErrorStream(true);
+        Process process = builder.start();
+        try {
+            assertThat(process.waitFor(20, java.util.concurrent.TimeUnit.SECONDS))
+                    .isTrue();
+            String output =
+                    new String(process.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            assertThat(process.exitValue()).as(output).isZero();
+            assertThat(output).contains("PREFIXES=[metrics, " + prefix + "]");
+        } finally {
+            process.destroyForcibly();
+        }
+    }
+
+    @Test
+    void discoversSystemPropertyChangesWithoutReload() {
+        ConfigStore store = ConfigStore.getInstance();
+        String key = "forage.live.storetest.url";
+        String regexp = ConfigHelper.getNamedPropertyRegexp("storetest");
+        assertThat(store.readPrefixes(new TestConfig(), regexp)).doesNotContain("live");
+        try {
+            System.setProperty(key, "http://localhost:8086");
+            assertThat(store.readPrefixes(new TestConfig(), regexp)).contains("live");
+        } finally {
+            System.clearProperty(key);
+        }
+        assertThat(store.readPrefixes(new TestConfig(), regexp)).doesNotContain("live");
+    }
+
     public static class EnvironmentPrefixProbe {
         public static void main(String[] args) {
-            System.out.println(ConfigStore.getInstance()
-                    .readPrefixes(new TestConfig(), ConfigHelper.getNamedPropertyRegexp("storetest")));
+            if (args.length > 0) {
+                String prefix = args[1];
+                switch (args[0]) {
+                    case "file" -> System.setProperty("forage.config.dir", args[2]);
+                    case "system" -> System.setProperty("forage." + prefix + ".storetest.url", "http://localhost:8086");
+                    case "resolver" ->
+                        ConfigStore.getInstance().registerResolver(new StubResolver(Collections.emptyMap()) {
+                            @Override
+                            public Set<String> discoverPrefixes(String regexp) {
+                                return Set.of(prefix);
+                            }
+                        });
+                    default -> throw new IllegalArgumentException(args[0]);
+                }
+            }
+            System.out.println("PREFIXES="
+                    + new java.util.TreeSet<>(ConfigStore.getInstance()
+                            .readPrefixes(new TestConfig(), ConfigHelper.getNamedPropertyRegexp("storetest"))));
         }
     }
 

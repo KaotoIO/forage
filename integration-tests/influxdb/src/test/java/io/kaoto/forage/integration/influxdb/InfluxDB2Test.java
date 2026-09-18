@@ -22,9 +22,11 @@ import io.kaoto.forage.integration.tests.RuntimeConditionExtension;
 import static org.awaitility.Awaitility.await;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.assertj.core.api.Assertions.assertThat;
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @CitrusSupport
 @ExtendWith({IntegrationTestSetupExtension.class, RuntimeConditionExtension.class})
 @DisableOnQuarkus(reason = "Camel Quarkus has no InfluxDB 2 extension")

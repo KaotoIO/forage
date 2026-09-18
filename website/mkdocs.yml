@@ -104,6 +104,8 @@ nav:
           - Event Booking: examples/datasource/event-booking.md
           - Aggregation Repository: examples/datasource/aggregation.md
           - Idempotent Consumer: examples/datasource/idempotent.md
+      - InfluxDB:
+          - Write Metrics: examples/influxdb/write-metrics.md
       - JMS:
           - Basic Messaging: examples/jms/single.md
           - Transactional JMS: examples/jms/transactional.md
@@ -126,6 +128,7 @@ nav:
           - Embeddings: modules/ai/embeddings.md
           - Vector Databases: modules/ai/vector-databases.md
           - Chat Memory: modules/ai/chat-memory.md
+      - InfluxDB: modules/influxdb.md
       - JDBC: modules/jdbc.md
       - JMS: modules/jms.md
       - Spring RabbitMQ: modules/spring-rabbitmq.md

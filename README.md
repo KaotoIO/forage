@@ -102,7 +102,7 @@ The `agent` parameter references a named bean configured via properties. In this
 
 Both factories support default and named clients. See the
 [InfluxDB configuration guide](library/influxdb/README.md) for properties,
-runtime dependencies, and route examples (available in `1.6.1-SNAPSHOT`).
+runtime dependencies, and route examples.
 
 ### JDBC Modules
 

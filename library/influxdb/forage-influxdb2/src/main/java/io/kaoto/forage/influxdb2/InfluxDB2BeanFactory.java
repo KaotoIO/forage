@@ -7,6 +7,9 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.camel.CamelContext;
 import org.apache.camel.component.influxdb2.InfluxDb2Component;
+import org.apache.camel.component.influxdb2.InfluxDb2Endpoint;
+import org.apache.camel.spi.CamelEvent;
+import org.apache.camel.support.SimpleEventNotifierSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.kaoto.forage.core.annotations.FactoryType;
@@ -29,8 +32,26 @@ public class InfluxDB2BeanFactory implements BeanFactory {
     private final Map<String, InfluxDBClient> clients = new LinkedHashMap<>();
     private final List<InfluxDBClient> retiredClients = new ArrayList<>();
 
+    private final SimpleEventNotifierSupport routeListener = new SimpleEventNotifierSupport() {
+        @Override
+        public boolean isEnabled(CamelEvent event) {
+            return event instanceof CamelEvent.RouteRemovedEvent;
+        }
+
+        @Override
+        public void notify(CamelEvent event) {
+            synchronized (InfluxDB2BeanFactory.this) {
+                // Route services have shut down; any remaining routes may still hold retired clients.
+                CamelEvent.RouteRemovedEvent removed = (CamelEvent.RouteRemovedEvent) event;
+                if (camelContext.getRoutes().stream().allMatch(route -> route == removed.getRoute())) {
+                    closeRetiredClients();
+                }
+            }
+        }
+    };
+
     @Override
-    public void configure() {
+    public synchronized void configure() {
         InfluxDB2Config config = new InfluxDB2Config();
         Set<String> prefixes =
                 ConfigStore.getInstance().readPrefixes(config, ConfigHelper.getNamedPropertyRegexp("influxdb2"));
@@ -58,11 +79,15 @@ public class InfluxDB2BeanFactory implements BeanFactory {
         }
         pending.forEach((name, client) -> camelContext.getRegistry().bind(name, client));
         clients.putAll(pending);
+        if (!clients.isEmpty()
+                && !camelContext.getManagementStrategy().getEventNotifiers().contains(routeListener)) {
+            camelContext.getManagementStrategy().addEventNotifier(routeListener);
+        }
     }
 
     @Override
-    public void cleanup() {
-        // Routes may still hold these clients during reload. Release them only at shutdown.
+    public synchronized void cleanup() {
+        // Routes, including dynamic sends, may still hold clients until the old routes are removed.
         InfluxDb2Component component =
                 camelContext.hasComponent("influxdb2") instanceof InfluxDb2Component typed ? typed : null;
         clients.forEach((name, client) -> {
@@ -75,17 +100,32 @@ public class InfluxDB2BeanFactory implements BeanFactory {
             retiredClients.add(client);
         });
         clients.clear();
+        if (camelContext.getRoutes().isEmpty()) {
+            closeRetiredClients();
+        }
     }
 
     @Override
-    public void stop() {
+    public synchronized void stop() {
         cleanup();
+        closeRetiredClients();
+        camelContext.getManagementStrategy().removeEventNotifier(routeListener);
+    }
+
+    private void closeRetiredClients() {
         retiredClients.forEach(this::closeClient);
         retiredClients.clear();
     }
 
     private void closeClient(InfluxDBClient client) {
         try {
+            // Prevent new routes from reusing cached endpoints backed by a closed client.
+            for (var endpoint : camelContext.getEndpoints().stream()
+                    .filter(candidate ->
+                            candidate instanceof InfluxDb2Endpoint typed && typed.getInfluxDBClient() == client)
+                    .toList()) {
+                camelContext.removeEndpoint(endpoint);
+            }
             client.close();
         } catch (Exception e) {
             LOG.warn("Failed to close InfluxDB 2 client", e);

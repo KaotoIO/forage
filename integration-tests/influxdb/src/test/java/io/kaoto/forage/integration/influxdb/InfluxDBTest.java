@@ -49,18 +49,17 @@ public class InfluxDBTest implements ForageIntegrationTest {
     @CitrusTest
     void writesPointToDatabase(ForageTestCaseRunner runner) {
         runner.then(camel().jbang().verify().integration(NAME).waitForLogMessage("InfluxDB 1 point sent"));
-        try (HttpClient client = HttpClient.newHttpClient()) {
-            await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
-                HttpRequest request = HttpRequest.newBuilder(
-                                URI.create(url + "/query?db=metrics&q=SELECT%20*%20FROM%20" + measurement))
-                        .timeout(Duration.ofSeconds(5))
-                        .header("Authorization", "Basic d3JpdGVyOnRlc3QtcGFzc3dvcmQ=")
-                        .GET()
-                        .build();
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                assertThat(response.statusCode()).isEqualTo(200);
-                assertThat(response.body()).contains(measurement, "21");
-            });
-        }
+        HttpClient client = HttpClient.newHttpClient();
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            HttpRequest request = HttpRequest.newBuilder(
+                            URI.create(url + "/query?db=metrics&q=SELECT%20*%20FROM%20" + measurement))
+                    .timeout(Duration.ofSeconds(5))
+                    .header("Authorization", "Basic d3JpdGVyOnRlc3QtcGFzc3dvcmQ=")
+                    .GET()
+                    .build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(response.body()).contains(measurement, "21");
+        });
     }
 }

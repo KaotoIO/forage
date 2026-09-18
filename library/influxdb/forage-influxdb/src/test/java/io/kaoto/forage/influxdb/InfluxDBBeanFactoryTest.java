@@ -1,6 +1,8 @@
 package io.kaoto.forage.influxdb;
 
+import java.util.List;
 import java.util.ServiceLoader;
+import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.influxdb.InfluxDbComponent;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.influxdb.InfluxDB;
@@ -69,7 +71,7 @@ class InfluxDBBeanFactoryTest {
     }
 
     @Test
-    void createsDistinctNamedClientsAndKeepsRetiredClientsAliveUntilShutdown() {
+    void createsDistinctNamedClientsAndClosesUnusedClientsDuringCleanup() {
         System.setProperty("forage.alpha.influxdb.url", "http://alpha:8086");
         System.setProperty("forage.beta.influxdb.url", "http://beta:8086");
         InfluxDB alpha = mock(InfluxDB.class);
@@ -89,11 +91,69 @@ class InfluxDBBeanFactoryTest {
             assertThat(context.getRegistry().lookupByName("alpha")).isNull();
             assertThat(context.getRegistry().lookupByName("beta")).isNull();
             assertThat(component.getInfluxDB()).isNull();
-            verify(alpha, never()).close();
-            verify(beta, never()).close();
+            verify(alpha).close();
+            verify(beta).close();
+            factory.cleanup();
             factory.stop();
             verify(alpha).close();
             verify(beta).close();
+        }
+    }
+
+    @Test
+    void releasesEachGenerationAfterAllRoutesAreRemoved() throws Exception {
+        System.setProperty("forage.influxdb.url", "http://localhost:8086");
+        List<InfluxDB> generations = List.of(mock(InfluxDB.class), mock(InfluxDB.class), mock(InfluxDB.class));
+        String endpointUri = "influxdb:influxdb?databaseName=metrics&checkDatabaseExistence=false";
+        try (MockedConstruction<InfluxDBProvider> providers = mockConstruction(
+                InfluxDBProvider.class, (provider, construction) -> when(provider.create(nullable(String.class)))
+                        .thenReturn(generations.get(construction.getCount() - 1)))) {
+            factory.configure();
+            context.start();
+            for (int cycle = 0; cycle < 2; cycle++) {
+                InfluxDB oldClient = generations.get(cycle);
+                context.addRoutes(new RouteBuilder() {
+                    @Override
+                    public void configure() {
+                        from("direct:static").routeId("static").to(endpointUri);
+                        from("direct:dynamic").routeId("dynamic").toD("${header.destination}");
+                    }
+                });
+                var oldEndpoint = context.getEndpoint(endpointUri);
+                try (var producer = context.createProducerTemplate()) {
+                    producer.sendBodyAndHeader(
+                            "direct:dynamic",
+                            org.influxdb.dto.Point.measurement("temperature")
+                                    .addField("value", 21)
+                                    .build(),
+                            "destination",
+                            endpointUri);
+                    factory.cleanup();
+                    factory.cleanup();
+                    factory.configure();
+                    verify(oldClient, never()).close();
+                    context.getRouteController().stopRoute("static");
+                    context.removeRoute("static");
+                    // A surviving dynamic route may still hold a cached producer for the old client.
+                    producer.sendBodyAndHeader(
+                            "direct:dynamic",
+                            org.influxdb.dto.Point.measurement("temperature")
+                                    .addField("value", 21)
+                                    .build(),
+                            "destination",
+                            endpointUri);
+                    verify(oldClient, never()).close();
+                    context.getRouteController().stopRoute("dynamic");
+                    verify(oldClient, never()).close();
+                    context.removeRoute("dynamic");
+                }
+                verify(oldClient).close();
+                verify(generations.get(cycle + 1), never()).close();
+                assertThat(context.getEndpoints()).noneMatch(endpoint -> endpoint == oldEndpoint);
+            }
+            factory.stop();
+            factory.stop();
+            generations.forEach(client -> verify(client).close());
         }
     }
 

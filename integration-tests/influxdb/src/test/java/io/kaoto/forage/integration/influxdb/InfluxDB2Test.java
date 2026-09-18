@@ -52,21 +52,20 @@ public class InfluxDB2Test implements ForageIntegrationTest {
     @CitrusTest
     void writesPointToDatabase(ForageTestCaseRunner runner) {
         runner.then(camel().jbang().verify().integration(NAME).waitForLogMessage("InfluxDB 2 point sent"));
-        try (HttpClient client = HttpClient.newHttpClient()) {
-            await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
-                HttpRequest request = HttpRequest.newBuilder(URI.create(url + "/api/v2/query?org=acme"))
-                        .timeout(Duration.ofSeconds(5))
-                        .header("Authorization", "Token forage-test-token")
-                        .header("Content-Type", "application/vnd.flux")
-                        .header("Accept", "application/csv")
-                        .POST(HttpRequest.BodyPublishers.ofString(
-                                "from(bucket: \"metrics\") |> range(start: -1h) |> filter(fn: (r) => r._measurement == \""
-                                        + measurement + "\")"))
-                        .build();
-                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                assertThat(response.statusCode()).isEqualTo(200);
-                assertThat(response.body()).contains(measurement, "21");
-            });
-        }
+        HttpClient client = HttpClient.newHttpClient();
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            HttpRequest request = HttpRequest.newBuilder(URI.create(url + "/api/v2/query?org=acme"))
+                    .timeout(Duration.ofSeconds(5))
+                    .header("Authorization", "Token forage-test-token")
+                    .header("Content-Type", "application/vnd.flux")
+                    .header("Accept", "application/csv")
+                    .POST(HttpRequest.BodyPublishers.ofString(
+                            "from(bucket: \"metrics\") |> range(start: -1h) |> filter(fn: (r) => r._measurement == \""
+                                    + measurement + "\")"))
+                    .build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            assertThat(response.statusCode()).isEqualTo(200);
+            assertThat(response.body()).contains(measurement, "21");
+        });
     }
 }

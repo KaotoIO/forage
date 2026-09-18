@@ -1,18 +1,26 @@
 package io.kaoto.forage.influxdb2;
 
+import java.util.List;
 import java.util.ServiceLoader;
+import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.influxdb2.InfluxDb2Component;
 import org.apache.camel.impl.DefaultCamelContext;
 import io.kaoto.forage.core.common.BeanFactory;
 import io.kaoto.forage.core.util.config.ConfigStore;
+import com.influxdb.client.BucketsQuery;
 import com.influxdb.client.InfluxDBClient;
+import com.influxdb.client.OrganizationsQuery;
+import com.influxdb.client.domain.Bucket;
+import com.influxdb.client.domain.Organization;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockConstruction;
 import static org.mockito.Mockito.never;
@@ -69,7 +77,7 @@ class InfluxDB2BeanFactoryTest {
     }
 
     @Test
-    void createsDistinctNamedClientsAndKeepsRetiredClientsAliveUntilShutdown() {
+    void createsDistinctNamedClientsAndClosesUnusedClientsDuringCleanup() {
         System.setProperty("forage.alpha.influxdb2.url", "http://alpha:8086");
         System.setProperty("forage.beta.influxdb2.url", "http://beta:8086");
         InfluxDBClient alpha = mock(InfluxDBClient.class);
@@ -89,11 +97,79 @@ class InfluxDB2BeanFactoryTest {
             assertThat(context.getRegistry().lookupByName("alpha")).isNull();
             assertThat(context.getRegistry().lookupByName("beta")).isNull();
             assertThat(component.getInfluxDBClient()).isNull();
-            verify(alpha, never()).close();
-            verify(beta, never()).close();
+            verify(alpha).close();
+            verify(beta).close();
+            factory.cleanup();
             factory.stop();
             verify(alpha).close();
             verify(beta).close();
+        }
+    }
+
+    @Test
+    void releasesEachGenerationAfterAllRoutesAreRemoved() throws Exception {
+        System.setProperty("forage.influxdb2.url", "http://localhost:8086");
+        List<InfluxDBClient> generations = List.of(
+                mock(InfluxDBClient.class, RETURNS_DEEP_STUBS),
+                mock(InfluxDBClient.class, RETURNS_DEEP_STUBS),
+                mock(InfluxDBClient.class, RETURNS_DEEP_STUBS));
+        Organization organization = mock(Organization.class);
+        when(organization.getId()).thenReturn("org-id");
+        when(organization.getName()).thenReturn("acme");
+        for (InfluxDBClient client : generations) {
+            when(client.getOrganizationsApi().findOrganizations(any(OrganizationsQuery.class)))
+                    .thenReturn(List.of(organization));
+            when(client.getBucketsApi().findBuckets(any(BucketsQuery.class)))
+                    .thenReturn(List.of(new Bucket().name("metrics")));
+        }
+        String endpointUri = "influxdb2:influxdb2?org=acme&bucket=metrics&autoCreateOrg=false&autoCreateBucket=false";
+        try (MockedConstruction<InfluxDB2Provider> providers = mockConstruction(
+                InfluxDB2Provider.class, (provider, construction) -> when(provider.create(nullable(String.class)))
+                        .thenReturn(generations.get(construction.getCount() - 1)))) {
+            factory.configure();
+            context.start();
+            for (int cycle = 0; cycle < 2; cycle++) {
+                InfluxDBClient oldClient = generations.get(cycle);
+                context.addRoutes(new RouteBuilder() {
+                    @Override
+                    public void configure() {
+                        from("direct:static").routeId("static").to(endpointUri);
+                        from("direct:dynamic").routeId("dynamic").toD("${header.destination}");
+                    }
+                });
+                var oldEndpoint = context.getEndpoint(endpointUri);
+                try (var producer = context.createProducerTemplate()) {
+                    producer.sendBodyAndHeader(
+                            "direct:dynamic",
+                            com.influxdb.client.write.Point.measurement("temperature")
+                                    .addField("value", 21),
+                            "destination",
+                            endpointUri);
+                    factory.cleanup();
+                    factory.cleanup();
+                    factory.configure();
+                    verify(oldClient, never()).close();
+                    context.getRouteController().stopRoute("static");
+                    context.removeRoute("static");
+                    // A surviving dynamic route may still hold a cached producer for the old client.
+                    producer.sendBodyAndHeader(
+                            "direct:dynamic",
+                            com.influxdb.client.write.Point.measurement("temperature")
+                                    .addField("value", 21),
+                            "destination",
+                            endpointUri);
+                    verify(oldClient, never()).close();
+                    context.getRouteController().stopRoute("dynamic");
+                    verify(oldClient, never()).close();
+                    context.removeRoute("dynamic");
+                }
+                verify(oldClient).close();
+                verify(generations.get(cycle + 1), never()).close();
+                assertThat(context.getEndpoints()).noneMatch(endpoint -> endpoint == oldEndpoint);
+            }
+            factory.stop();
+            factory.stop();
+            generations.forEach(client -> verify(client).close());
         }
     }
 

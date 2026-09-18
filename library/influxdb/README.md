@@ -13,6 +13,10 @@ All artifacts use group ID `io.kaoto.forage` and the same version as Forage.
 Camel Quarkus 3.39.0 provides an InfluxDB 1 extension, but no InfluxDB 2
 extension. This change does not add v2 Quarkus support.
 
+HTTP endpoints remain supported for local development. HTTP does not encrypt
+InfluxDB 1 credentials or InfluxDB 2 tokens; use HTTPS for non-loopback deployments
+and whenever credentials leave a trusted local or development network.
+
 ## InfluxDB 1
 
 Create `forage-influxdb.properties`:
@@ -133,9 +137,13 @@ The standard precedence is environment variables, system properties, then
 properties files. A module without configuration creates no client. Existing
 beans with the configured name and expected type are preserved.
 
-Forage closes the clients it creates at shutdown. On plain Camel reload, old
-clients remain alive until shutdown because existing endpoints may still use
-them; newly created endpoints can resolve replacement clients. Spring Boot and
-Quarkus own client shutdown in their respective adapters.
+Forage closes the clients it creates at shutdown. On a full plain Camel route
+reload (the default), old clients remain usable until all old routes have been
+stopped and removed, then Forage closes them and evicts their cached endpoints.
+Clients created without any routes are released immediately during cleanup.
+Partial reloads conservatively retain old clients while any routes remain,
+because dynamic sends may still use them; removing all routes or stopping the
+context releases them. Spring Boot and Quarkus own client shutdown in their
+respective adapters.
 
 See the [end-to-end test plan](../../tests/plans/influxdb-clients.md).

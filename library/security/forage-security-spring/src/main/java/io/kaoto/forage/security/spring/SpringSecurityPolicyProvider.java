@@ -43,6 +43,11 @@ public class SpringSecurityPolicyProvider implements SecurityPolicyProvider {
     }
 
     @Override
+    public String beanName() {
+        return "springSecurityPolicy";
+    }
+
+    @Override
     public AuthorizationPolicy create(String id) {
         LOG.debug("Creating Spring Security authorization policy with id: {}", id);
 

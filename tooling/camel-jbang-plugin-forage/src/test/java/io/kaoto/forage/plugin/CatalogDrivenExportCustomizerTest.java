@@ -138,6 +138,17 @@ class CatalogDrivenExportCustomizerTest {
     }
 
     @Test
+    void testShiro_mainRuntime() throws Exception {
+        CatalogDrivenExportCustomizer customizer =
+                createCustomizer("forage.shiro.ini.resource.path=classpath:shiro.ini\n"
+                        + "forage.shiro.passphrase=Rm9yYWdlRGVtb0tleSEhIQ==\n");
+
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.main);
+        assertThat(deps).anyMatch(d -> d.contains("forage-core-security:"));
+        assertThat(deps).anyMatch(d -> d.contains("forage-security-shiro:"));
+    }
+
+    @Test
     void testMultipleFactories() throws Exception {
         CatalogDrivenExportCustomizer customizer =
                 createCustomizer("forage.jdbc.db.kind=mysql\nforage.jdbc.url=jdbc:mysql://localhost/test\n"

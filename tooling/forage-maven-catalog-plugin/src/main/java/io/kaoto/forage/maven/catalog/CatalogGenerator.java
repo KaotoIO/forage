@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
@@ -395,8 +396,39 @@ public class CatalogGenerator {
         for (ForageFactory factory : data.factoryMap.values()) {
             List<ConfigEntry> factoryConfigs = findConfigsForFactory(
                     factory, data.configsByPrefix, classToArtifactId, data.factoryTypeToConfigClassName);
+            addBeanConfigEntries(factoryConfigs, factory);
             if (!factoryConfigs.isEmpty()) {
                 factory.setConfigEntries(factoryConfigs);
+            }
+        }
+    }
+
+    /**
+     * A provider bean can own configuration independently from its factory. Include those entries
+     * on the factory as well so property scanning can resolve the factory and its runtime
+     * dependencies. This is used by factories such as Security Policy, whose providers each have
+     * a technology-specific configuration class.
+     */
+    private void addBeanConfigEntries(List<ConfigEntry> factoryConfigs, ForageFactory factory) {
+        Set<String> names = factoryConfigs.stream().map(ConfigEntry::getName).collect(Collectors.toSet());
+        List<FeatureBeans> features = factory.getBeansByFeature();
+        if (features == null) {
+            return;
+        }
+
+        for (FeatureBeans feature : features) {
+            if (feature.getBeans() == null) {
+                continue;
+            }
+            for (ForageBean bean : feature.getBeans()) {
+                if (bean.getConfigEntries() == null) {
+                    continue;
+                }
+                for (ConfigEntry entry : bean.getConfigEntries()) {
+                    if (names.add(entry.getName())) {
+                        factoryConfigs.add(entry);
+                    }
+                }
             }
         }
     }

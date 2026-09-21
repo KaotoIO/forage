@@ -95,6 +95,12 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
                 }
             });
 
+            // Provider-backed factories (for example Security Policy) select their
+            // implementation through technology-specific property prefixes rather than a
+            // generic bean-name property. Add each provider artifact whose configuration is
+            // present in the scanned properties.
+            addConfiguredBeanDependencies(catalog, factoryTypeKey, factoryProperties, variantName, dependencies);
+
             // 4. Check conditional beans for runtime dependencies
             List<ConditionalBeanGroup> conditionalGroups = catalog.getConditionalBeans(factoryTypeKey);
             for (ConditionalBeanGroup group : conditionalGroups) {
@@ -112,6 +118,42 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
         dependencies.forEach(dep -> LOG.debug("  Dependency: {}", dep));
 
         return dependencies;
+    }
+
+    private static void addConfiguredBeanDependencies(
+            ForageCatalogReader catalog,
+            String factoryTypeKey,
+            Map<String, List<String>> factoryProperties,
+            String variantName,
+            Set<String> dependencies) {
+        for (io.kaoto.forage.catalog.model.ForageBean bean : catalog.getAllBeansForFactory(factoryTypeKey)) {
+            if (!isConfigured(bean, factoryProperties)) {
+                continue;
+            }
+            if (bean.getGav() != null && !bean.getGav().isBlank()) {
+                dependencies.add(toMvnGav(bean.getGav()));
+            }
+            if (bean.getRuntimeDependencies() != null) {
+                List<String> beanDependencies = bean.getRuntimeDependencies().get(variantName);
+                if (beanDependencies != null) {
+                    beanDependencies.stream()
+                            .map(CatalogDrivenExportCustomizer::toMvnGav)
+                            .forEach(dependencies::add);
+                }
+            }
+        }
+    }
+
+    private static boolean isConfigured(
+            io.kaoto.forage.catalog.model.ForageBean bean, Map<String, List<String>> factoryProperties) {
+        if (bean.getConfigEntries() == null) {
+            return false;
+        }
+        return bean.getConfigEntries().stream()
+                .map(ConfigEntry::getName)
+                .filter(name -> name.startsWith("forage."))
+                .map(name -> name.substring("forage.".length()))
+                .anyMatch(factoryProperties::containsKey);
     }
 
     /**

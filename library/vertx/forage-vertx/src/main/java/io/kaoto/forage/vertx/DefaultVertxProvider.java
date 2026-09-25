@@ -85,8 +85,11 @@ public class DefaultVertxProvider implements VertxProvider {
                         .toCompletionStage()
                         .toCompletableFuture()
                         .get(30, TimeUnit.SECONDS);
-            } catch (TimeoutException | InterruptedException | ExecutionException ie) {
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
                 throw new RuntimeException(ie);
+            } catch (TimeoutException | ExecutionException e) {
+                throw new RuntimeException(e);
             }
         }
         return Vertx.vertx(options);

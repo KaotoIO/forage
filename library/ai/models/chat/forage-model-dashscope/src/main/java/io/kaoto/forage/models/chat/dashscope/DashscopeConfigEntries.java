@@ -38,7 +38,7 @@ public final class DashscopeConfigEntries extends ConfigEntries {
             "Maximum number of tokens in the model's response",
             "Max Tokens",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule TOP_P = ConfigModule.of(
@@ -47,7 +47,7 @@ public final class DashscopeConfigEntries extends ConfigEntries {
             "Top-p (nucleus sampling) probability threshold (0.0-1.0)",
             "Top P",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule TOP_K = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class DashscopeConfigEntries extends ConfigEntries {
             "Top-k sampling parameter: limits the model to consider only the top-k most probable tokens",
             "Top K",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule REPETITION_PENALTY = ConfigModule.of(
@@ -65,7 +65,7 @@ public final class DashscopeConfigEntries extends ConfigEntries {
             "Repetition penalty for discouraging token repetition (0.0-2.0)",
             "Repetition Penalty",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule SEED = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class DashscopeConfigEntries extends ConfigEntries {
             "Seed for deterministic response generation (same seed + same input = similar output)",
             "Seed",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule ENABLE_SEARCH = ConfigModule.of(
@@ -92,7 +92,7 @@ public final class DashscopeConfigEntries extends ConfigEntries {
             "Request timeout in seconds",
             "Timeout",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule MAX_RETRIES = ConfigModule.of(
@@ -101,7 +101,7 @@ public final class DashscopeConfigEntries extends ConfigEntries {
             "Maximum number of retry attempts for failed requests",
             "Max Retries",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule LOG_REQUESTS_AND_RESPONSES = ConfigModule.of(

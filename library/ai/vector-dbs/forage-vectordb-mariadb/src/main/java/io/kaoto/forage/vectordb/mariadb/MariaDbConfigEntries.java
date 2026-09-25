@@ -11,7 +11,7 @@ public final class MariaDbConfigEntries extends ConfigEntries {
             "MariaDB JDBC URL (e.g., jdbc:mariadb://localhost:3306/vectordb)",
             "URL",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule USER = ConfigModule.of(
@@ -20,7 +20,7 @@ public final class MariaDbConfigEntries extends ConfigEntries {
             "Database username for authentication",
             "User",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             true,
             ConfigTag.SECURITY);
     public static final ConfigModule PASSWORD = ConfigModule.of(
@@ -29,7 +29,7 @@ public final class MariaDbConfigEntries extends ConfigEntries {
             "Database password for authentication",
             "Password",
             null,
-            "password",
+            ConfigModule.TYPE_PASSWORD,
             false,
             ConfigTag.SECURITY);
     public static final ConfigModule TABLE = ConfigModule.of(
@@ -38,7 +38,7 @@ public final class MariaDbConfigEntries extends ConfigEntries {
             "Name of the table to store embeddings",
             "Table",
             "embeddings",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule ID_FIELD_NAME = ConfigModule.of(
@@ -47,7 +47,7 @@ public final class MariaDbConfigEntries extends ConfigEntries {
             "Name of the ID field in the embeddings table",
             "ID Field Name",
             "id",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule EMBEDDING_FIELD_NAME = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class MariaDbConfigEntries extends ConfigEntries {
             "Name of the embedding vector field",
             "Embedding Field Name",
             "embedding",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule CONTENT_FIELD_NAME = ConfigModule.of(
@@ -65,7 +65,7 @@ public final class MariaDbConfigEntries extends ConfigEntries {
             "Name of the content text field",
             "Content Field Name",
             "content",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule DISTANCE_TYPE = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class MariaDbConfigEntries extends ConfigEntries {
             "Distance calculation method: COSINE or EUCLIDEAN",
             "Distance Type",
             "COSINE",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule DIMENSION = ConfigModule.of(
@@ -83,7 +83,7 @@ public final class MariaDbConfigEntries extends ConfigEntries {
             "Vector dimension size",
             "Dimension",
             "384",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule CREATE_TABLE = ConfigModule.of(
@@ -92,7 +92,7 @@ public final class MariaDbConfigEntries extends ConfigEntries {
             "Whether to create the table if it doesn't exist",
             "Create Table",
             "true",
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule DROP_TABLE_FIRST = ConfigModule.of(
@@ -101,7 +101,7 @@ public final class MariaDbConfigEntries extends ConfigEntries {
             "Whether to drop the table before creating it",
             "Drop Table First",
             "false",
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
 

@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -19,7 +18,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Unit tests for ConfigWriteCommand.
  */
-@Disabled // TODIO temporary disablement
 class ConfigWriteCommandTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();

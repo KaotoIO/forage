@@ -51,10 +51,14 @@ class ForageJdbcMessageIdRepositoryTest {
         }
 
         @Override
-        public void setLogWriter(PrintWriter out) throws SQLException {}
+        public void setLogWriter(PrintWriter out) throws SQLException {
+            // No-op stub — not needed for this unit test
+        }
 
         @Override
-        public void setLoginTimeout(int seconds) throws SQLException {}
+        public void setLoginTimeout(int seconds) throws SQLException {
+            // No-op stub — not needed for this unit test
+        }
 
         @Override
         public int getLoginTimeout() throws SQLException {

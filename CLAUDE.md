@@ -14,18 +14,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Branching and Versioning Strategy
 
-Forage uses **major.minor.micro** versioning (`1.4.0`, `1.4.1`, `1.5.0`, etc.).
+Forage uses **major.minor.micro** versioning (`1.4.0`, `1.4.1`, `1.6.0`, etc.), tracked
+micro-to-micro against Apache Camel on the current-LTS line (`1.6.0` ↔ Camel `4.22.0`,
+`1.6.1` ↔ Camel `4.22.1`, etc.).
 
-| Branch | Tracks | Version | Description |
-|--------|--------|---------|-------------|
-| `main` | Apache Camel LTS | `1.4.x` | Follows the latest Camel LTS release (currently 4.18.x). Micro bumps (`1.4.0` → `1.4.1` → ...) for each release. |
-| `camel-latest` | Latest Apache Camel | `1.5.x` | Follows the latest Camel release (currently 4.20.x) with corresponding Spring Boot and Quarkus versions. |
+| Branch | Tracks | Version | Status |
+|--------|--------|---------|--------|
+| `main` | Current Camel LTS | `1.6.x` | Follows the current Camel LTS release (currently 4.22.x). Active, primary branch — micro bumps (`1.6.0` → `1.6.1` → ...) for each release. |
+| `camel-4.18.x` | Previous Camel LTS | `1.4.x` | Maintenance branch for the previous LTS line (Camel 4.18.x), branched from `main` when Camel 4.22 became LTS. Micro bumps (`1.4.1` → `1.4.2` → ...) as needed. |
+| `camel-latest` | Latest (non-LTS) Camel | `1.7.x` | Active development on Camel 4.23.0-SNAPSHOT, restarted from `main`. Release 1.7.0 after Camel 4.23.0 is available. |
+
+The 1.7 line uses Camel Quarkus 3.40.0-SNAPSHOT. Check its released platform BOM
+against Camel 4.23 before releasing: the Quarkus 3.40.0.CR1 platform BOM still
+manages Camel 4.22.0 and Camel Quarkus 3.39.0 for exported applications.
+
+When a new Camel LTS lands, the current `main` line becomes the new `camel-N.M.x`
+maintenance branch (via a fresh branch off `main`, not a rename), `main` is upgraded
+in place to track the new LTS, and `camel-latest` is re-evaluated against whatever
+Camel considers "latest" at that point.
 
 ### Backporting
 
-When making changes (features, bug fixes, etc.), **always investigate whether the change needs backporting** to the other branch:
-- A fix on `main` may also apply to `camel-latest` and vice versa.
-- After completing work on one branch, check if the same change is relevant to the other branch and create a backport PR if needed.
+When making changes (features, bug fixes, etc.), **always investigate whether the change needs backporting** to the other active branch(es):
+- A fix on `main` may also apply to `camel-4.18.x` and `camel-latest`, and vice versa.
+- After completing work on one branch, check if the same change is relevant to the other branch(es) and create a backport PR if needed.
 - Use `/oss-backport-pr` to automate backporting when applicable.
 
 ## Build Commands

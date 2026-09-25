@@ -33,6 +33,7 @@ import io.kaoto.forage.plugin.ForagePropertyScanner.PropertyOccurrence;
 public final class ForagePropertyValidator {
 
     private static final Logger LOG = LoggerFactory.getLogger(ForagePropertyValidator.class);
+    private static final String FORAGE_PREFIX = "forage.";
 
     /**
      * Set when a Forage command ({@code camel forage run}/{@code camel forage export}) has already
@@ -202,7 +203,7 @@ public final class ForagePropertyValidator {
             ForageCatalogReader.FactoryMetadata metadata, ForageCatalogReader catalog, String factoryTypeKey) {
 
         Set<String> validNames = new HashSet<>();
-        String factoryPrefix = "forage." + factoryTypeKey + ".";
+        String factoryPrefix = FORAGE_PREFIX + factoryTypeKey + ".";
 
         // Add factory-level config entries
         if (metadata.configEntries() != null) {
@@ -220,11 +221,11 @@ public final class ForagePropertyValidator {
             if (bean.getConfigEntries() != null) {
                 for (ConfigEntry entry : bean.getConfigEntries()) {
                     String name = entry.getName();
-                    if (name != null && name.startsWith("forage.")) {
+                    if (name != null && name.startsWith(FORAGE_PREFIX)) {
                         // Extract property suffix
                         String beanPrefix = extractBeanPrefix(name);
                         if (beanPrefix != null) {
-                            String suffix = name.substring(("forage." + beanPrefix + ".").length());
+                            String suffix = name.substring((FORAGE_PREFIX + beanPrefix + ".").length());
                             // Use fully qualified keys (prefix + suffix) to prevent collisions
                             validNames.add(beanPrefix + "." + suffix);
                         }
@@ -275,7 +276,7 @@ public final class ForagePropertyValidator {
             ForageCatalogReader catalog,
             String factoryTypeKey) {
 
-        String factoryPrefix = "forage." + factoryTypeKey + ".";
+        String factoryPrefix = FORAGE_PREFIX + factoryTypeKey + ".";
 
         // Check factory-level entries
         if (metadata.configEntries() != null) {
@@ -296,10 +297,10 @@ public final class ForagePropertyValidator {
             if (bean.getConfigEntries() != null) {
                 for (ConfigEntry entry : bean.getConfigEntries()) {
                     String name = entry.getName();
-                    if (name != null && name.startsWith("forage.")) {
+                    if (name != null && name.startsWith(FORAGE_PREFIX)) {
                         String beanPrefix = extractBeanPrefix(name);
                         if (beanPrefix != null) {
-                            String suffix = name.substring(("forage." + beanPrefix + ".").length());
+                            String suffix = name.substring((FORAGE_PREFIX + beanPrefix + ".").length());
                             if (propertyName.endsWith(suffix)) {
                                 return entry;
                             }
@@ -371,11 +372,11 @@ public final class ForagePropertyValidator {
      * E.g., "forage.openai.api.key" -> "openai"
      */
     private static String extractBeanPrefix(String configName) {
-        if (configName == null || !configName.startsWith("forage.")) {
+        if (configName == null || !configName.startsWith(FORAGE_PREFIX)) {
             return null;
         }
 
-        String remaining = configName.substring("forage.".length());
+        String remaining = configName.substring(FORAGE_PREFIX.length());
         int dotIndex = remaining.indexOf('.');
         if (dotIndex > 0) {
             return remaining.substring(0, dotIndex);
@@ -389,11 +390,11 @@ public final class ForagePropertyValidator {
      * E.g., "forage.unknown.property" -> "unknown"
      */
     private static String extractFactoryNameFromProperty(String propertyName) {
-        if (propertyName == null || !propertyName.startsWith("forage.")) {
+        if (propertyName == null || !propertyName.startsWith(FORAGE_PREFIX)) {
             return null;
         }
 
-        String remaining = propertyName.substring("forage.".length());
+        String remaining = propertyName.substring(FORAGE_PREFIX.length());
         int dotIndex = remaining.indexOf('.');
         if (dotIndex > 0) {
             return remaining.substring(0, dotIndex);

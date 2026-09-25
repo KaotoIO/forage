@@ -87,6 +87,9 @@ import static io.kaoto.forage.memory.chat.redis.RedisConfigEntries.TIMEOUT;
  */
 public class RedisConfig extends AbstractConfig {
 
+    private static final String BOOLEAN_FALSE = "false";
+    private static final String BOOLEAN_TRUE = "true";
+
     /**
      * Creates a new Redis configuration instance and registers configuration entries
      * with the central configuration store.
@@ -238,7 +241,7 @@ public class RedisConfig extends AbstractConfig {
     public boolean poolTestOnBorrow() {
         return get(POOL_TEST_ON_BORROW)
                 .map(value -> {
-                    if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
+                    if (BOOLEAN_TRUE.equalsIgnoreCase(value) || BOOLEAN_FALSE.equalsIgnoreCase(value)) {
                         return Boolean.parseBoolean(value);
                     }
                     throw new IllegalArgumentException(
@@ -256,7 +259,7 @@ public class RedisConfig extends AbstractConfig {
     public boolean poolTestOnReturn() {
         return get(POOL_TEST_ON_RETURN)
                 .map(value -> {
-                    if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
+                    if (BOOLEAN_TRUE.equalsIgnoreCase(value) || BOOLEAN_FALSE.equalsIgnoreCase(value)) {
                         return Boolean.parseBoolean(value);
                     }
                     throw new IllegalArgumentException(
@@ -274,7 +277,7 @@ public class RedisConfig extends AbstractConfig {
     public boolean poolTestWhileIdle() {
         return get(POOL_TEST_WHILE_IDLE)
                 .map(value -> {
-                    if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
+                    if (BOOLEAN_TRUE.equalsIgnoreCase(value) || BOOLEAN_FALSE.equalsIgnoreCase(value)) {
                         return Boolean.parseBoolean(value);
                     }
                     throw new IllegalArgumentException(

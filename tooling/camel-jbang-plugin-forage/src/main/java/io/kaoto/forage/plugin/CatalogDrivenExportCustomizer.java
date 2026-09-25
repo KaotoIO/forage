@@ -22,6 +22,7 @@ import io.kaoto.forage.core.common.RuntimeType;
 public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
     private static final Logger LOG = LoggerFactory.getLogger(CatalogDrivenExportCustomizer.class);
+    private static final String FORAGE_PREFIX = "forage.";
 
     private Map<String, Map<String, List<String>>> scannedProperties;
     private Boolean enabled;
@@ -94,6 +95,12 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
                 }
             });
 
+            // Provider-backed factories (for example Security Policy) select their
+            // implementation through technology-specific property prefixes rather than a
+            // generic bean-name property. Add each provider artifact whose configuration is
+            // present in the scanned properties.
+            addConfiguredBeanDependencies(catalog, factoryTypeKey, factoryProperties, variantName, dependencies);
+
             // 4. Check conditional beans for runtime dependencies
             List<ConditionalBeanGroup> conditionalGroups = catalog.getConditionalBeans(factoryTypeKey);
             for (ConditionalBeanGroup group : conditionalGroups) {
@@ -111,6 +118,42 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
         dependencies.forEach(dep -> LOG.debug("  Dependency: {}", dep));
 
         return dependencies;
+    }
+
+    private static void addConfiguredBeanDependencies(
+            ForageCatalogReader catalog,
+            String factoryTypeKey,
+            Map<String, List<String>> factoryProperties,
+            String variantName,
+            Set<String> dependencies) {
+        for (io.kaoto.forage.catalog.model.ForageBean bean : catalog.getAllBeansForFactory(factoryTypeKey)) {
+            if (!isConfigured(bean, factoryProperties)) {
+                continue;
+            }
+            if (bean.getGav() != null && !bean.getGav().isBlank()) {
+                dependencies.add(toMvnGav(bean.getGav()));
+            }
+            if (bean.getRuntimeDependencies() != null) {
+                List<String> beanDependencies = bean.getRuntimeDependencies().get(variantName);
+                if (beanDependencies != null) {
+                    beanDependencies.stream()
+                            .map(CatalogDrivenExportCustomizer::toMvnGav)
+                            .forEach(dependencies::add);
+                }
+            }
+        }
+    }
+
+    private static boolean isConfigured(
+            io.kaoto.forage.catalog.model.ForageBean bean, Map<String, List<String>> factoryProperties) {
+        if (bean.getConfigEntries() == null) {
+            return false;
+        }
+        return bean.getConfigEntries().stream()
+                .map(ConfigEntry::getName)
+                .filter(name -> name.startsWith("forage."))
+                .map(name -> name.substring("forage.".length()))
+                .anyMatch(factoryProperties::containsKey);
     }
 
     /**
@@ -175,15 +218,15 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
             return null;
         }
         // Try with the factoryTypeKey first (e.g., "forage.jdbc." for jdbc factory)
-        String prefix = "forage." + factoryTypeKey + ".";
+        String prefix = FORAGE_PREFIX + factoryTypeKey + ".";
         if (entryName.startsWith(prefix)) {
             return entryName.substring(prefix.length());
         }
         // Fallback: extract the suffix using the entry's own prefix segment
         // This handles cases where the factoryTypeKey differs from the config entry prefix
         // (e.g., agent factory has key "multi" but bean-name entries use "forage.agent.*")
-        if (entryName.startsWith("forage.")) {
-            String remaining = entryName.substring("forage.".length());
+        if (entryName.startsWith(FORAGE_PREFIX)) {
+            String remaining = entryName.substring(FORAGE_PREFIX.length());
             int dotIndex = remaining.indexOf('.');
             if (dotIndex > 0) {
                 return remaining.substring(dotIndex + 1);
@@ -224,7 +267,7 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
         for (Map.Entry<String, List<String>> entry : factoryProperties.entrySet()) {
             String key = entry.getKey();
-            if (configEntry.endsWith("." + key) || configEntry.equals("forage." + key)) {
+            if (configEntry.endsWith("." + key) || configEntry.equals(FORAGE_PREFIX + key)) {
                 for (String value : entry.getValue()) {
                     if ("true".equalsIgnoreCase(value)) {
                         return true;

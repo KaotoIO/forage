@@ -23,7 +23,7 @@ public final class MultiAgentConfigEntries extends ConfigEntries {
             "Comma-separated list of named agent prefixes for multi-agent setup",
             "Agent Names",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule MULTI_AGENT_ID_SOURCE = ConfigModule.of(
@@ -32,7 +32,7 @@ public final class MultiAgentConfigEntries extends ConfigEntries {
             "Source for extracting agent ID (route-id, header, property, variable)",
             "ID Source",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule MULTI_AGENT_ID_SOURCE_HEADER = ConfigModule.of(
@@ -41,7 +41,7 @@ public final class MultiAgentConfigEntries extends ConfigEntries {
             "Exchange header name to extract agent ID from",
             "ID Source Header",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule MULTI_AGENT_ID_SOURCE_PROPERTY = ConfigModule.of(
@@ -50,7 +50,7 @@ public final class MultiAgentConfigEntries extends ConfigEntries {
             "Exchange property name to extract agent ID from",
             "ID Source Property",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule MULTI_AGENT_ID_SOURCE_VARIABLE = ConfigModule.of(
@@ -59,7 +59,7 @@ public final class MultiAgentConfigEntries extends ConfigEntries {
             "Exchange variable name to extract agent ID from",
             "ID Source Variable",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
 

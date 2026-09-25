@@ -48,6 +48,7 @@ import dev.langchain4j.store.memory.chat.ChatMemoryStore;
 public class PersistentInfinispanStore implements ChatMemoryStore {
 
     private static final Logger LOG = LoggerFactory.getLogger(PersistentInfinispanStore.class);
+    private static final String MEMORY_ID_NOT_NULL = "Memory ID cannot be null";
     private static final String EMPTY_MESSAGES_JSON = "[]";
 
     private final RemoteCache<String, String> cache;
@@ -75,7 +76,7 @@ public class PersistentInfinispanStore implements ChatMemoryStore {
      */
     @Override
     public void deleteMessages(Object memoryId) {
-        Objects.requireNonNull(memoryId, "Memory ID cannot be null");
+        Objects.requireNonNull(memoryId, MEMORY_ID_NOT_NULL);
 
         String key = memoryId.toString();
         try {
@@ -104,7 +105,7 @@ public class PersistentInfinispanStore implements ChatMemoryStore {
      */
     @Override
     public List<ChatMessage> getMessages(Object memoryId) {
-        Objects.requireNonNull(memoryId, "Memory ID cannot be null");
+        Objects.requireNonNull(memoryId, MEMORY_ID_NOT_NULL);
 
         String key = memoryId.toString();
         try {
@@ -145,7 +146,7 @@ public class PersistentInfinispanStore implements ChatMemoryStore {
      */
     @Override
     public void updateMessages(Object memoryId, List<ChatMessage> messages) {
-        Objects.requireNonNull(memoryId, "Memory ID cannot be null");
+        Objects.requireNonNull(memoryId, MEMORY_ID_NOT_NULL);
         Objects.requireNonNull(messages, "Messages list cannot be null");
 
         String key = memoryId.toString();

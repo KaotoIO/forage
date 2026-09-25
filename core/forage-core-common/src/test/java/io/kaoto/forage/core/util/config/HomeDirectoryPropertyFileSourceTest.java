@@ -70,8 +70,9 @@ class HomeDirectoryPropertyFileSourceTest {
 
     @Test
     @DisplayName("Rejects path traversal attempts that escape the home directory")
-    void rejectsPathTraversal(@TempDir Path tempDir) throws Exception {
+    void rejectsPathTraversal(@TempDir Path tempDir) {
         HomeDirectoryPropertyFileSource source = new HomeDirectoryPropertyFileSource(tempDir::toString);
         assertThat(source.locate("../../etc/passwd")).isNull();
+        assertThat(source.locate("/etc/passwd")).isNull();
     }
 }

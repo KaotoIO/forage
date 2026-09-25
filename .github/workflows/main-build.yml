@@ -10,7 +10,7 @@ name: Build Main
 
 on:
   push:
-    branches: [ "camel-latest" ]
+    branches: [ "main" ]
 
 env:
   PROJECTS: ${{ github.workspace }}

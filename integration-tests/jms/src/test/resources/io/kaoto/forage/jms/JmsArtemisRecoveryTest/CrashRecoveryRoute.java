@@ -88,16 +88,25 @@ public class CrashRecoveryRoute extends RouteBuilder {
         }
 
         @Override
-        public void rollback(Xid xid) {}
+        public void rollback(Xid xid) {
+            // XA rollback is a no-op for this crash-test resource: the JVM halts on commit,
+            // so rollback is never called in the normal test flow.
+        }
 
         @Override
-        public void start(Xid xid, int flags) {}
+        public void start(Xid xid, int flags) {
+            // XA start requires no state tracking for this crash-test-only resource.
+        }
 
         @Override
-        public void end(Xid xid, int flags) {}
+        public void end(Xid xid, int flags) {
+            // XA end requires no state tracking for this crash-test-only resource.
+        }
 
         @Override
-        public void forget(Xid xid) {}
+        public void forget(Xid xid) {
+            // Heuristic forget is not applicable for this crash-test-only resource.
+        }
 
         @Override
         public Xid[] recover(int flag) {

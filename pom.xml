@@ -4,50 +4,51 @@
 
     <groupId>io.kaoto.forage</groupId>
     <artifactId>forage</artifactId>
-    <version>1.5.1-SNAPSHOT</version>
+    <version>1.7.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Forage</name>
     <url>https://github.com/KaotoIO/forage</url>
     <description>A plugin extension for Apache Camel that provides opinionated bean factories</description>
 
     <properties>
-        <camel.version>4.20.0</camel.version>
-        <langchain4j.version>1.13.0</langchain4j.version>
-        <langchain4j-beta.version>1.13.0-beta23</langchain4j-beta.version>
-        <langchain4j-community.version>1.13.0-beta23</langchain4j-community.version>
+        <camel.version>4.23.0-SNAPSHOT</camel.version>
+        <langchain4j.version>1.20.0</langchain4j.version>
+        <langchain4j-beta.version>1.20.0-beta30</langchain4j-beta.version>
+        <langchain4j-community.version>1.20.0-beta30</langchain4j-community.version>
 
-        <agroal.version>3.2</agroal.version>
+        <agroal.version>3.2.1</agroal.version>
+        <artemis.version>2.57.0</artemis.version>
         <assertj-core.version>3.27.7</assertj-core.version>
         <aws-sdk.version>2.44.4</aws-sdk.version>
-        <azure.identity.version>1.18.2</azure.identity.version>
+        <azure.identity.version>1.18.4</azure.identity.version>
         <azure.messaging.eventhubs.version>5.21.4</azure.messaging.eventhubs.version>
-        <camel-quarkus.version>3.36.0</camel-quarkus.version>
-        <cxf.version>4.2.0</cxf.version>
-        <quarkiverse-cxf.version>3.36.0</quarkiverse-cxf.version>
-        <wiremock.version>3.13.0</wiremock.version>
-        <commons-io.version>2.21.0</commons-io.version>
+        <camel-quarkus.version>3.40.0-SNAPSHOT</camel-quarkus.version>
+        <cxf.version>4.2.3</cxf.version>
+        <quarkiverse-cxf.version>3.40.0</quarkiverse-cxf.version>
+        <wiremock.version>3.13.2</wiremock.version>
+        <commons-io.version>2.22.0</commons-io.version>
         <citrus.version>4.10.1</citrus.version>
-        <groovy.version>5.0.5</groovy.version>
+        <groovy.version>5.1.2</groovy.version>
         <ibmmq-client.version>9.4.5.0</ibmmq-client.version>
 
         <javaparser.version>3.28.0</javaparser.version>
         <jsonschema-maven-plugin.version>4.38.0</jsonschema-maven-plugin.version>
         <junit-jupiter-suite.version>6.0.3</junit-jupiter-suite.version>
         <junit-jupiter.version>6.0.3</junit-jupiter.version>
-        <log4j.version>2.25.3</log4j.version>
+        <log4j.version>2.26.1</log4j.version>
         <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
         <central-publishing-maven-plugin.version>0.10.0</central-publishing-maven-plugin.version>
         <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
 
         <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
-        <maven-plugin-annotations.version>3.15.1</maven-plugin-annotations.version>
+        <maven-plugin-annotations.version>3.15.2</maven-plugin-annotations.version>
         <maven-plugin-api.version>3.9.15</maven-plugin-api.version>
-        <maven-plugin-plugin.version>3.15.2</maven-plugin-plugin.version>
+        <maven-plugin-plugin.version>3.16.0</maven-plugin-plugin.version>
         <maven-plugin-testing-harness.version>3.5.1</maven-plugin-testing-harness.version>
-        <build-helper-maven-plugin.version>3.6.1</build-helper-maven-plugin.version>
+        <build-helper-maven-plugin.version>3.6.2</build-helper-maven-plugin.version>
         <commons-text.version>1.15.0</commons-text.version>
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
-        <maven-resources-plugin.version>3.4.0</maven-resources-plugin.version>
+        <maven-resources-plugin.version>3.5.0</maven-resources-plugin.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <maven.version>3.9.16</maven.version>
@@ -55,28 +56,28 @@
         <jboss-transaction-spi.version>8.0.0.Final</jboss-transaction-spi.version>
         <microprofile.version>3.1.1</microprofile.version>
         <mysql.version>9.5.0</mysql.version>
-        <narayana.version>7.3.3.Final</narayana.version>
-        <pooled-jms.version>3.2.2</pooled-jms.version>
+        <narayana.version>7.3.4.Final</narayana.version>
+        <pooled-jms.version>3.2.5</pooled-jms.version>
         <postgresql.version>42.7.10</postgresql.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <quarkus.version>3.36.1</quarkus.version>
+        <quarkus.version>3.40.0.CR1</quarkus.version>
         <quarkus-artemis-jms.version>3.14.3</quarkus-artemis-jms.version>
         <quarkus-pooled-jms.version>2.12.0</quarkus-pooled-jms.version>
-        <slf4j.version>2.0.17</slf4j.version>
+        <slf4j.version>2.0.18</slf4j.version>
         <smallrye.version>3.16.0</smallrye.version>
-        <spotless.version>3.4.0</spotless.version>
+        <spotless.version>3.10.0</spotless.version>
         <palantir-format.version>2.71.0</palantir-format.version>
         <camel-spring-boot.version>${camel.version}</camel-spring-boot.version>
-        <spring-boot.version>4.0.5</spring-boot.version>
-        <spring.version>7.0.7</spring.version>
-        <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
+        <spring-boot.version>4.1.1</spring-boot.version>
+        <spring.version>7.0.9</spring.version>
+        <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
         <testcontainers.version>2.0.5</testcontainers.version>
-        <vertx.version>4.5.26</vertx.version>
+        <vertx.version>4.5.34</vertx.version>
 
         <!-- Test container image properties -->
         <postgres.container.image>mirror.gcr.io/postgres:17.5-alpine</postgres.container.image>
         <mysql.container.image>mirror.gcr.io/mysql:8.4</mysql.container.image>
-        <activemq.artemis.container.image>mirror.gcr.io/apache/activemq-artemis:2.44.0</activemq.artemis.container.image>
+        <activemq.artemis.container.image>mirror.gcr.io/apache/artemis:${artemis.version}</activemq.artemis.container.image>
         <ibmmq.container.image>icr.io/ibm-messaging/mq:9.4.3.0-r1</ibmmq.container.image>
     </properties>
 
@@ -113,6 +114,21 @@
                 <version>${camel.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.artemis</groupId>
+                <artifactId>artemis-core-client</artifactId>
+                <version>${artemis.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.artemis</groupId>
+                <artifactId>artemis-commons</artifactId>
+                <version>${artemis.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.artemis</groupId>
+                <artifactId>artemis-selector</artifactId>
+                <version>${artemis.version}</version>
             </dependency>
             <dependency>
                 <groupId>dev.langchain4j</groupId>

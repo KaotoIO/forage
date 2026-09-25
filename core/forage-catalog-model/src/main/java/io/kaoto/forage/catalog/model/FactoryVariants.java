@@ -19,7 +19,9 @@ public class FactoryVariants {
     @JsonProperty("quarkus")
     private FactoryVariant quarkus;
 
-    public FactoryVariants() {}
+    public FactoryVariants() {
+        // Required by Jackson for deserialization
+    }
 
     public FactoryVariant getBase() {
         return base;

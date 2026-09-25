@@ -27,7 +27,9 @@ public class ForageCatalog {
     @JsonProperty("factories")
     private List<ForageFactory> factories;
 
-    public ForageCatalog() {}
+    public ForageCatalog() {
+        // Required by Jackson for deserialization
+    }
 
     public String getVersion() {
         return version;

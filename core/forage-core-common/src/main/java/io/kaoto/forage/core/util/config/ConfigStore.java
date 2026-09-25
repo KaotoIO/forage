@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -57,6 +58,8 @@ import org.slf4j.LoggerFactory;
  */
 public final class ConfigStore {
     private static final Logger LOG = LoggerFactory.getLogger(ConfigStore.class);
+    private static final String PROPERTIES_SUFFIX = ".properties";
+    private static final String CLASSPATH_ROOT = "/";
 
     private static final ConfigStore INSTANCE = new ConfigStore();
     private final Properties properties = new Properties();
@@ -202,11 +205,33 @@ public final class ConfigStore {
             }
         }
 
+        // System properties retain exact spelling and can change without a reload.
+        System.getProperties().stringPropertyNames().stream()
+                .filter(name -> name.startsWith("forage."))
+                .forEach(name -> merged.putIfAbsent(name, ""));
         Set<String> prefixes = PropertyFileLocator.readPrefixes(merged, regexp);
-
-        // Consult registered resolvers for additional prefix discovery
         for (ConfigResolver resolver : resolvers) {
             prefixes.addAll(resolver.discoverPrefixes(regexp));
+        }
+
+        // Environment names cannot recover case or distinguish dots from literal underscores.
+        // Prefer names declared by files, system properties, or runtime resolvers. Only infer
+        // a lowercase dotted name when no matching declaration exists (environment-only config).
+        Set<String> declaredEnvPrefixes = prefixes.stream()
+                .map(prefix -> prefix.replace('.', '_').toUpperCase(Locale.ROOT))
+                .collect(java.util.stream.Collectors.toSet());
+        var pattern = PropertyFileLocator.pattern(regexp);
+        for (String name : System.getenv().keySet()) {
+            if (name.startsWith("FORAGE_")) {
+                var matcher = pattern.matcher(name.toLowerCase(Locale.ROOT).replace('_', '.'));
+                if (matcher.matches()) {
+                    String candidate = matcher.group(1);
+                    if (!declaredEnvPrefixes.contains(
+                            candidate.replace('.', '_').toUpperCase(Locale.ROOT))) {
+                        prefixes.add(candidate);
+                    }
+                }
+            }
         }
 
         return prefixes;
@@ -238,7 +263,7 @@ public final class ConfigStore {
         // 3. Default classloader: root classpath path
         if (is == null) {
             LOG.debug("Loading defaults from the forage component");
-            String rootPath = "/" + instance.name() + ".properties";
+            String rootPath = CLASSPATH_ROOT + instance.name() + PROPERTIES_SUFFIX;
             ClassLoader cl = classLoader != null ? classLoader : ConfigStore.class.getClassLoader();
             is = cl.getResourceAsStream(rootPath);
         }
@@ -247,11 +272,11 @@ public final class ConfigStore {
     }
 
     private static <T extends Config> String asClasspathPath(T instance) {
-        return instance.getClass().getPackageName().replace(".", "/") + "/" + instance.name() + ".properties";
+        return instance.getClass().getPackageName().replace(".", "/") + "/" + instance.name() + PROPERTIES_SUFFIX;
     }
 
     private static <T extends Config> String asProperties(T instance) {
-        return "./" + instance.name() + ".properties";
+        return "./" + instance.name() + PROPERTIES_SUFFIX;
     }
 
     /**

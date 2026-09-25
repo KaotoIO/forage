@@ -3,8 +3,11 @@ package io.kaoto.forage.integration.tests;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -22,6 +25,15 @@ public final class PropertiesTemplateHelper {
 
     private PropertiesTemplateHelper() {
         // Utility class
+    }
+
+    private static FileAttribute<?>[] ownerOnlyPermissions() {
+        if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
+            return new FileAttribute<?>[] {
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"))
+            };
+        }
+        return new FileAttribute<?>[0];
     }
 
     /**
@@ -51,8 +63,10 @@ public final class PropertiesTemplateHelper {
             String templateFileName = templateResource.getFile().getName();
             String propertiesFileName = templateFileName.replace(".template", "");
 
-            // Write to temp directory with proper name
-            Path tempDir = Files.createTempDirectory("forage-test-");
+            // Write to temp directory with proper name. Restrict permissions to the owner
+            // only, since the generated properties files can carry testcontainer credentials
+            // and the default temp directory is otherwise world-readable.
+            Path tempDir = Files.createTempDirectory("forage-test-", ownerOnlyPermissions());
             Path tempPropertiesFile = tempDir.resolve(propertiesFileName);
             Files.writeString(tempPropertiesFile, propertiesContent, StandardCharsets.UTF_8);
 

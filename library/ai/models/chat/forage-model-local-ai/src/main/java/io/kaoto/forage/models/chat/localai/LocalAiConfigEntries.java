@@ -20,7 +20,7 @@ public final class LocalAiConfigEntries extends ConfigEntries {
             "The LocalAI server endpoint URL",
             "Base URL",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule MODEL_NAME = ConfigModule.of(
@@ -29,7 +29,7 @@ public final class LocalAiConfigEntries extends ConfigEntries {
             "The model to use (must be available on LocalAI server)",
             "Model Name",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule TEMPERATURE = ConfigModule.of(
@@ -38,7 +38,7 @@ public final class LocalAiConfigEntries extends ConfigEntries {
             "Temperature for response generation (0.0-2.0)",
             "Temperature",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule MAX_TOKENS = ConfigModule.of(
@@ -47,7 +47,7 @@ public final class LocalAiConfigEntries extends ConfigEntries {
             "Maximum number of tokens for model responses",
             "Max Tokens",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule TOP_P = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class LocalAiConfigEntries extends ConfigEntries {
             "Top-p (nucleus sampling) probability threshold (0.0-1.0)",
             "Top P",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule PRESENCE_PENALTY = ConfigModule.of(
@@ -65,7 +65,7 @@ public final class LocalAiConfigEntries extends ConfigEntries {
             "Presence penalty for discouraging new topic introduction (-2.0 to 2.0)",
             "Presence Penalty",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule FREQUENCY_PENALTY = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class LocalAiConfigEntries extends ConfigEntries {
             "Frequency penalty for discouraging token repetition (-2.0 to 2.0)",
             "Frequency Penalty",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule SEED = ConfigModule.of(
@@ -83,7 +83,7 @@ public final class LocalAiConfigEntries extends ConfigEntries {
             "Seed for deterministic response generation",
             "Seed",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule USER = ConfigModule.of(
@@ -92,7 +92,7 @@ public final class LocalAiConfigEntries extends ConfigEntries {
             "User identifier for tracking and monitoring",
             "User",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule TIMEOUT = ConfigModule.of(
@@ -101,7 +101,7 @@ public final class LocalAiConfigEntries extends ConfigEntries {
             "Request timeout in seconds",
             "Timeout",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule MAX_RETRIES = ConfigModule.of(
@@ -110,7 +110,7 @@ public final class LocalAiConfigEntries extends ConfigEntries {
             "Maximum number of retry attempts for failed requests",
             "Max Retries",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule LOG_REQUESTS_AND_RESPONSES = ConfigModule.of(

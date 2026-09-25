@@ -19,7 +19,9 @@ public class MessageWindowChatMemoryBeanProvider implements ChatMemoryBeanProvid
 
     private volatile Integer maxMessagesOverride;
 
-    public MessageWindowChatMemoryBeanProvider() {}
+    public MessageWindowChatMemoryBeanProvider() {
+        // Required for ServiceLoader-based instantiation
+    }
 
     @Override
     public void withMaxMessages(int maxMessages) {

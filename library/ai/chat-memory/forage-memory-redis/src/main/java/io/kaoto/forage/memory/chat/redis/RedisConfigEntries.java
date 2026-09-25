@@ -20,7 +20,7 @@ public final class RedisConfigEntries extends ConfigEntries {
             "Redis server port number",
             "Port",
             "6379",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule PASSWORD = ConfigModule.of(
@@ -29,7 +29,7 @@ public final class RedisConfigEntries extends ConfigEntries {
             "Redis authentication password (optional)",
             "Password",
             null,
-            "password",
+            ConfigModule.TYPE_PASSWORD,
             false,
             ConfigTag.SECURITY);
     public static final ConfigModule DATABASE = ConfigModule.of(
@@ -38,7 +38,7 @@ public final class RedisConfigEntries extends ConfigEntries {
             "Redis database number to connect to",
             "Database",
             "0",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule TIMEOUT = ConfigModule.of(
@@ -47,7 +47,7 @@ public final class RedisConfigEntries extends ConfigEntries {
             "Connection timeout in milliseconds",
             "Timeout",
             "2000",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule POOL_MAX_TOTAL = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class RedisConfigEntries extends ConfigEntries {
             "Maximum number of connections in the pool",
             "Pool Max Total",
             "10",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule POOL_MAX_IDLE = ConfigModule.of(
@@ -65,7 +65,7 @@ public final class RedisConfigEntries extends ConfigEntries {
             "Maximum number of idle connections in the pool",
             "Pool Max Idle",
             "5",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule POOL_MIN_IDLE = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class RedisConfigEntries extends ConfigEntries {
             "Minimum number of idle connections in the pool",
             "Pool Min Idle",
             "1",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule POOL_TEST_ON_BORROW = ConfigModule.of(
@@ -83,7 +83,7 @@ public final class RedisConfigEntries extends ConfigEntries {
             "Test connections when borrowing from pool",
             "Test On Borrow",
             "true",
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule POOL_TEST_ON_RETURN = ConfigModule.of(
@@ -92,7 +92,7 @@ public final class RedisConfigEntries extends ConfigEntries {
             "Test connections when returning to pool",
             "Test On Return",
             "true",
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule POOL_TEST_WHILE_IDLE = ConfigModule.of(
@@ -101,7 +101,7 @@ public final class RedisConfigEntries extends ConfigEntries {
             "Test idle connections periodically",
             "Test While Idle",
             "true",
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule POOL_MAX_WAIT_MILLIS = ConfigModule.of(
@@ -110,7 +110,7 @@ public final class RedisConfigEntries extends ConfigEntries {
             "Maximum time to wait for a connection from the pool in milliseconds",
             "Pool Max Wait",
             "2000",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
 

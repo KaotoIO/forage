@@ -42,6 +42,8 @@ public class ConfigReadCommand extends CamelCommand {
     // Properties that indicate the bean kind/type
     private static final Set<String> KIND_PROPERTIES = Set.of("db.kind", "kind");
 
+    private static final String FORAGE_PROPERTIES_PREFIX = "forage.";
+
     @CommandLine.Option(
             names = {"--dir", "-d"},
             description = "Directory to scan for properties files. Defaults to current directory.")
@@ -418,11 +420,12 @@ public class ConfigReadCommand extends CamelCommand {
             // Check if the config entry that enables this conditional bean is set to true
             String configEntry = condBeanGroup.getConfigEntry();
             if (configEntry != null) {
-                // The configEntry is like "jdbc.transaction.enabled" but instance.properties
-                // has keys without the factory prefix (e.g., "transaction.enabled")
-                // Strip the factory type prefix if present
+                // The configEntry is like "forage.jdbc.transaction.enabled" but
+                // instance.properties has keys without the forage prefix and factory
+                // prefix (e.g., "transaction.enabled")
+                // Strip "forage." and the factory type prefix if present
                 String propertyKey = configEntry;
-                String factoryPrefix = instance.factoryType + ".";
+                String factoryPrefix = FORAGE_PROPERTIES_PREFIX + instance.factoryType + ".";
                 if (configEntry.startsWith(factoryPrefix)) {
                     propertyKey = configEntry.substring(factoryPrefix.length());
                 }

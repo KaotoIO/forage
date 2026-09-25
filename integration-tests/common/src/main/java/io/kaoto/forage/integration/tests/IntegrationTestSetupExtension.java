@@ -1,8 +1,11 @@
 package io.kaoto.forage.integration.tests;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
@@ -43,6 +46,8 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterAllCallback, ParameterResolver {
 
     private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestSetupExtension.class);
+    private static final String CAMEL_BUILDER_KEY = "camel";
+    private static final String CAMEL_COMMAND = resolveExecutable(CAMEL_BUILDER_KEY);
 
     public static final String RUNTIME_PROPERTY = "INTEGRATION_TEST_RUNTIME";
 
@@ -61,8 +66,8 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
         if (!runBeforeAll) {
             runBeforeAll = true;
             if (PLUGIN_INSTALLED.compareAndSet(false, true)) {
-                CamelActionBuilder camel =
-                        (CamelActionBuilder) TestActionBuilder.lookup("camel").get();
+                CamelActionBuilder camel = (CamelActionBuilder)
+                        TestActionBuilder.lookup(CAMEL_BUILDER_KEY).get();
                 internalBeforeAll(context, camel);
             }
             runBeforeAll(context);
@@ -150,6 +155,14 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
                             try {
                                 handle.onExit().get(10, TimeUnit.SECONDS);
                                 LOG.info("Camel integration '{}' (pid: {}) stopped", integrationName, pid);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                LOG.warn(
+                                        "Interrupted while waiting for Camel integration '{}' (pid: {}) to stop, forcing kill",
+                                        integrationName,
+                                        pid);
+                                handle.descendants().forEach(ProcessHandle::destroyForcibly);
+                                handle.destroyForcibly();
                             } catch (Exception e) {
                                 LOG.warn(
                                         "Camel integration '{}' (pid: {}) did not stop gracefully, forcing kill",
@@ -230,7 +243,7 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
 
     private String getInstalledCamelVersion() {
         try {
-            ProcessBuilder pb = new ProcessBuilder("camel", "version");
+            ProcessBuilder pb = new ProcessBuilder(List.of(CAMEL_COMMAND, "version"));
             pb.redirectErrorStream(true);
             Process process;
             try {
@@ -255,6 +268,10 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
             }
             LOG.warn("Could not parse Camel CLI version from output: {}", output);
             return "BROKEN";
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOG.warn("Interrupted while checking Camel CLI version");
+            return null;
         } catch (Exception e) {
             LOG.warn("Failed to check Camel CLI version: {}", e.getMessage());
             return null;
@@ -285,6 +302,12 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
             }
         } catch (IllegalStateException e) {
             throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "Interrupted while installing Camel CLI. Run manually: jbang app install --force -Dcamel.jbang.version="
+                            + version + " camel@apache/camel",
+                    e);
         } catch (Exception e) {
             throw new IllegalStateException(
                     "Failed to install Camel CLI. Run manually: jbang app install --force -Dcamel.jbang.version="
@@ -310,7 +333,7 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
      */
     private void deleteForagePlugin() {
         try {
-            ProcessBuilder pb = new ProcessBuilder("camel", "plugin", "delete", "forage");
+            ProcessBuilder pb = new ProcessBuilder(List.of(CAMEL_COMMAND, "plugin", "delete", "forage"));
             pb.redirectErrorStream(true);
             Process process = pb.start();
             String output;
@@ -328,6 +351,9 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
             } else {
                 LOG.debug("No existing forage plugin to delete (exit code {})", exitCode);
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOG.debug("Interrupted while deleting forage plugin");
         } catch (Exception e) {
             LOG.debug("Could not delete forage plugin (may not exist): {}", e.getMessage());
         }
@@ -341,5 +367,23 @@ public class IntegrationTestSetupExtension implements BeforeEachCallback, AfterA
     @Override
     public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
         return CitrusExtensionHelper.getTestRunner(extensionContext);
+    }
+
+    /**
+     * Resolves a command name to its absolute path by searching the directories listed in the
+     * {@code PATH} environment variable. Returns the absolute path if found, or the bare command
+     * name as a fallback (preserving existing behaviour when the executable is not yet installed).
+     */
+    private static String resolveExecutable(String command) {
+        String pathEnv = System.getenv("PATH");
+        if (pathEnv != null) {
+            for (String dir : pathEnv.split(File.pathSeparator)) {
+                Path candidate = Path.of(dir, command);
+                if (Files.isExecutable(candidate)) {
+                    return candidate.toAbsolutePath().toString();
+                }
+            }
+        }
+        return command;
     }
 }

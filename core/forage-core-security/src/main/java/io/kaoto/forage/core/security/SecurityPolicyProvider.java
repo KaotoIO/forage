@@ -48,6 +48,19 @@ public interface SecurityPolicyProvider extends BeanProvider<AuthorizationPolicy
     String name();
 
     /**
+     * Returns the registry name of the provider's default policy bean.
+     *
+     * <p>Providers whose technology name is not a suitable Camel bean name may override this
+     * method. For example, a provider named {@code spring-security} can expose the conventional
+     * bean name {@code springSecurityPolicy}.
+     *
+     * @return the registry name for the default policy bean
+     */
+    default String beanName() {
+        return name() + "Policy";
+    }
+
+    /**
      * Creates an AuthorizationPolicy with the given configuration ID.
      *
      * <p>The ID is used to load provider-specific configuration from

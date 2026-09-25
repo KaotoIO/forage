@@ -24,7 +24,9 @@ public class ForageConfigurationCatalog {
     @JsonProperty("modules")
     private List<ConfigurationModule> modules;
 
-    public ForageConfigurationCatalog() {}
+    public ForageConfigurationCatalog() {
+        // Required by Jackson for deserialization
+    }
 
     public String getVersion() {
         return version;

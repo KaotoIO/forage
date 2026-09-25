@@ -11,7 +11,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Comma-separated list of Infinispan server addresses in format 'host1:port1,host2:port2'",
             "Server List",
             "localhost:11222",
-            "string",
+            ConfigModule.TYPE_STRING,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule CACHE_NAME = ConfigModule.of(
@@ -20,7 +20,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Name of the cache for storing chat messages",
             "Cache Name",
             "chat-memory",
-            "string",
+            ConfigModule.TYPE_STRING,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule USERNAME = ConfigModule.of(
@@ -29,7 +29,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Username for authentication (optional)",
             "Username",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.SECURITY);
     public static final ConfigModule PASSWORD = ConfigModule.of(
@@ -38,7 +38,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Password for authentication (optional)",
             "Password",
             null,
-            "password",
+            ConfigModule.TYPE_PASSWORD,
             false,
             ConfigTag.SECURITY);
     public static final ConfigModule REALM = ConfigModule.of(
@@ -47,7 +47,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Security realm for authentication",
             "Realm",
             "default",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.SECURITY);
     public static final ConfigModule SASL_MECHANISM = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "SASL mechanism for authentication",
             "SASL Mechanism",
             "DIGEST-MD5",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.SECURITY);
     public static final ConfigModule CONNECTION_TIMEOUT = ConfigModule.of(
@@ -65,7 +65,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Connection timeout in milliseconds",
             "Connection Timeout",
             "60000",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule SOCKET_TIMEOUT = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Socket timeout in milliseconds",
             "Socket Timeout",
             "60000",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule MAX_RETRIES = ConfigModule.of(
@@ -83,7 +83,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Maximum number of connection retries",
             "Max Retries",
             "3",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule POOL_MAX_ACTIVE = ConfigModule.of(
@@ -92,7 +92,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Maximum number of active connections per server",
             "Pool Max Active",
             "20",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule POOL_MIN_IDLE = ConfigModule.of(
@@ -101,7 +101,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Minimum number of idle connections per server",
             "Pool Min Idle",
             "1",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule POOL_MAX_WAIT = ConfigModule.of(
@@ -110,7 +110,7 @@ public final class InfinispanConfigEntries extends ConfigEntries {
             "Maximum time to wait for a connection in milliseconds",
             "Pool Max Wait",
             "3000",
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
 

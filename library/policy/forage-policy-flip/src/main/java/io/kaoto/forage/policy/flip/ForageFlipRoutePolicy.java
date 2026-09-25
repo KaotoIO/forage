@@ -102,6 +102,9 @@ public class ForageFlipRoutePolicy extends RoutePolicySupport {
                         Thread.sleep(1000); // Wait for startup to complete
                         controller.stopRoute(route.getId());
                         LOG.info("Route '{}' stopped (initially inactive)", route.getId());
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        LOG.warn("Interrupted while stopping initially inactive route '{}'", route.getId());
                     } catch (Exception e) {
                         LOG.warn("Failed to stop initially inactive route '{}': {}", route.getId(), e.getMessage());
                     }

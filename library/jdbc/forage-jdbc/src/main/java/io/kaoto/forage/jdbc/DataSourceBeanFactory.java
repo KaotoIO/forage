@@ -200,7 +200,7 @@ public class DataSourceBeanFactory implements BeanFactory {
             }
         } else {
             try {
-                if (camelContext.getRegistry().lookupByNameAndType("dataSource", DataSource.class) == null) {
+                if (camelContext.getRegistry().lookupByNameAndType(DEFAULT_DATASOURCE, DataSource.class) == null) {
                     final List<ServiceLoader.Provider<DataSourceProvider>> providers =
                             findProviders(DataSourceProvider.class);
                     if (providers.size() == 1) {

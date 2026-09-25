@@ -55,7 +55,6 @@ public class ForageJdbcProcessor {
         DataSourceFactoryConfig defaultConfig = DESCRIPTOR.createConfig(null);
         Set<String> namedPrefixes = ConfigStore.getInstance()
                 .readPrefixes(defaultConfig, ConfigHelper.getNamedPropertyRegexp(DESCRIPTOR.modulePrefix()));
-
         if (namedPrefixes.isEmpty()) {
             namedPrefixes = ForageQuarkusConfigSourceAdapter.getDiscoveredPrefixes(DESCRIPTOR.modulePrefix());
         }

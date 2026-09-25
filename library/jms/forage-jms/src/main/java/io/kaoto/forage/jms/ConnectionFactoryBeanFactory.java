@@ -216,13 +216,7 @@ public class ConnectionFactoryBeanFactory implements BeanFactory {
                             findProviders(ConnectionFactoryProvider.class);
                     if (providers.size() == 1) {
                         ConnectionFactory connectionFactory = doCreateConnectionFactory(providers.get(0), null);
-                        if (connectionFactory != null) {
-                            camelContext.getRegistry().bind(DEFAULT_CONNECTION_FACTORY, connectionFactory);
-                        } else {
-                            LOG.warn(
-                                    "Skipping binding for '{}' because ConnectionFactory creation returned null",
-                                    DEFAULT_CONNECTION_FACTORY);
-                        }
+                        camelContext.getRegistry().bind(DEFAULT_CONNECTION_FACTORY, connectionFactory);
                     } else {
                         throw new IllegalArgumentException(
                                 "No ConnectionFactory implementation is present in the classpath");

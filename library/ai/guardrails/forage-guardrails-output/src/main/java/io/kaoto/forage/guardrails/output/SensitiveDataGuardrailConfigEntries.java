@@ -15,7 +15,7 @@ public final class SensitiveDataGuardrailConfigEntries extends ConfigEntries {
             "Comma-separated list of sensitive data types to detect: API_KEY, AWS_KEY, SECRET, PRIVATE_KEY, CREDIT_CARD, SSN, JWT, CONNECTION_STRING, GITHUB_TOKEN",
             "Detect Types",
             "API_KEY,AWS_KEY,SECRET,PRIVATE_KEY,CREDIT_CARD,SSN,JWT,CONNECTION_STRING,GITHUB_TOKEN",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 
@@ -25,7 +25,7 @@ public final class SensitiveDataGuardrailConfigEntries extends ConfigEntries {
             "Action to take when sensitive data is detected: BLOCK, REDACT, WARN",
             "Action",
             "BLOCK",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 
@@ -35,7 +35,7 @@ public final class SensitiveDataGuardrailConfigEntries extends ConfigEntries {
             "Text to use for redaction when action is REDACT",
             "Redaction Text",
             "[REDACTED]",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
 

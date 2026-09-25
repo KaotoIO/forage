@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.kaoto.forage</groupId>
         <artifactId>forage</artifactId>
-        <version>1.5.1-SNAPSHOT</version>
+        <version>1.7.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>forage-catalog</artifactId>
@@ -14,6 +14,43 @@
     <description>Generated catalog of all Forage components</description>
 
     <dependencies>
+        <!-- InfluxDB client factories and runtime variants -->
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-influxdb</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-influxdb2</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-influxdb-starter</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-influxdb2-starter</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-quarkus-influxdb-deployment</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.camel.quarkus</groupId>
+                    <artifactId>camel-quarkus-core-deployment</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <!-- Catalog model - required for JSON schema generation -->
         <dependency>
             <groupId>io.kaoto.forage</groupId>

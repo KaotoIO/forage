@@ -7,6 +7,7 @@ import static io.kaoto.forage.models.chat.bedrock.BedrockConfigEntries.MAX_TOKEN
 import static io.kaoto.forage.models.chat.bedrock.BedrockConfigEntries.MODEL_ID;
 import static io.kaoto.forage.models.chat.bedrock.BedrockConfigEntries.REGION;
 import static io.kaoto.forage.models.chat.bedrock.BedrockConfigEntries.SECRET_ACCESS_KEY;
+import static io.kaoto.forage.models.chat.bedrock.BedrockConfigEntries.SESSION_TOKEN;
 import static io.kaoto.forage.models.chat.bedrock.BedrockConfigEntries.TEMPERATURE;
 import static io.kaoto.forage.models.chat.bedrock.BedrockConfigEntries.TOP_P;
 
@@ -149,6 +150,18 @@ public class BedrockConfig extends AbstractConfig {
      */
     public String secretAccessKey() {
         return get(SECRET_ACCESS_KEY).orElse(null);
+    }
+
+    /**
+     * Returns the AWS session token for temporary STS credentials.
+     *
+     * <p>Used together with {@link #accessKeyId()} and {@link #secretAccessKey()} when
+     * authenticating with temporary credentials from an assumed IAM role.
+     *
+     * @return the AWS session token, or null if not configured
+     */
+    public String sessionToken() {
+        return get(SESSION_TOKEN).orElse(null);
     }
 
     /**

@@ -30,19 +30,19 @@ Add the desired modules to your project. For example, to use the default agent f
 <dependency>
     <groupId>io.kaoto.forage</groupId>
     <artifactId>forage-model-open-ai</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.6.0</version>
 </dependency>
 <!--This component provides support for the message window chat memory -->
 <dependency>
     <groupId>io.kaoto.forage</groupId>
     <artifactId>forage-memory-message-window</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.6.0</version>
 </dependency>
 <!--This component adds the composable agent implementation (pulls in agent factories transitively) -->
 <dependency>
     <groupId>io.kaoto.forage</groupId>
     <artifactId>forage-agent</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.6.0</version>
 </dependency>
 ```
 
@@ -95,6 +95,15 @@ The `agent` parameter references a named bean configured via properties. In this
 #### Embeddings
 - **embeddings** - Embedding model providers (coming soon)
 
+### InfluxDB Modules
+
+- **forage-influxdb** - InfluxDB 1 clients for Camel, Spring Boot, and Quarkus
+- **forage-influxdb2** - InfluxDB 2 clients for Camel and Spring Boot
+
+Both factories support default and named clients. See the
+[InfluxDB configuration guide](library/influxdb/README.md) for properties,
+runtime dependencies, and route examples.
+
 ### JDBC Modules
 
 Forage provides JDBC data source factories that simplify database connectivity with pre-configured, pooled data sources for various database systems.
@@ -145,12 +154,12 @@ camel infra run postgres
 <dependency>
     <groupId>io.kaoto.forage</groupId>
     <artifactId>forage-jdbc</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.6.0</version>
 </dependency>
 <dependency>
     <groupId>io.kaoto.forage</groupId>
     <artifactId>forage-jdbc-postgresql</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.6.0</version>
 </dependency>
 ```
 
@@ -283,8 +292,8 @@ public class MyRoutes extends RouteBuilder {
 ## Requirements
 
 - Java 17+
-- Apache Camel 4.14.0+
-- LangChain4j 1.2.0+
+- Apache Camel 4.22.0+
+- LangChain4j 1.13.0+
 
 ## Contributing
 
@@ -293,6 +302,15 @@ This project follows standard Maven conventions. To build:
 ```bash
 mvn clean install
 ```
+
+### AI-assisted contributions
+
+Contributors using AI coding assistants (such as [Claude Code](https://github.com/anthropics/claude-code) or similar tools) can take advantage of the project rules in the `.oss-ai-helper-rules/` directory and the `CLAUDE.md` file at the repository root.
+
+These files provide AI agents with project-specific context such as build commands, code style restrictions, branching conventions, issue tracker details, and contribution guidelines.
+They are maintained as part of the repository so that AI-assisted contributions follow the same standards as manual ones.
+
+The `.oss-ai-helper-rules/` files are designed for use with the [OSS Helper](https://github.com/Open-Harness-Engineering/ai-agents-oss-helper) toolset, which provides ready-made skills for common contribution tasks (fixing issues, creating PRs, running CI checks, and more).
 
 ### Integrating Apache Camel Components
 

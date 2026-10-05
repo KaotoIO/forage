@@ -15,6 +15,7 @@ import io.kaoto.forage.jms.common.PooledConnectionFactory;
 import io.kaoto.forage.jms.common.SslContextHelper;
 import com.ibm.mq.jakarta.jms.MQConnectionFactory;
 import com.ibm.mq.jakarta.jms.MQXAConnectionFactory;
+import com.ibm.msg.client.jakarta.jms.JmsConstants;
 import com.ibm.msg.client.jakarta.wmq.common.CommonConstants;
 
 @ForageBean(
@@ -83,10 +84,10 @@ public class IbmMqJms extends PooledConnectionFactory {
         connectionFactory.setTransportType(CommonConstants.WMQ_CM_CLIENT);
 
         if (config.username() != null) {
-            connectionFactory.setStringProperty(CommonConstants.USERID, config.username());
+            connectionFactory.setStringProperty(JmsConstants.USERID, config.username());
         }
         if (config.password() != null) {
-            connectionFactory.setStringProperty(CommonConstants.PASSWORD, config.password());
+            connectionFactory.setStringProperty(JmsConstants.PASSWORD, config.password());
         }
         if (config.clientId() != null) {
             connectionFactory.setClientID(config.clientId());

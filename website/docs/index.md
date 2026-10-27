@@ -86,8 +86,16 @@ Forage publishes release streams so you can match your Apache Camel version:
 |--------|--------|-------------|-------------|
 | **LTS** | {{ forage_version }} | {{ camel_lts_version }} | Tracks the current Camel LTS line — recommended for production |
 | **Previous LTS** | {{ forage_previous_lts_version }} | {{ camel_previous_lts_version }} | Maintenance releases for the previous Camel LTS line |
+| **Latest** | {{ forage_latest_version }} | {{ camel_latest_version }} | Tracks the newest (non-LTS) Camel release |
 
 Pick the stream that matches the Camel version you use, then follow the [Getting Started](getting-started/index.md) guide.
+
+!!! note "Installing the plugin for your Camel version"
+    `camel plugin add forage` without a version installs the newest Forage release, which belongs to the **Latest** stream. On a Camel LTS CLI, install the matching stream explicitly, for example `camel plugin add forage --gav io.kaoto.forage:camel-jbang-plugin-forage:{{ forage_version }}`. Since Forage 1.7.0, the plugin prints a warning when the Camel CLI is outside the range it supports.
+
+<!-- Remove this note once camel-latest moves to a Camel Quarkus release built on its Camel version. -->
+!!! note "Quarkus on the Latest stream"
+    Camel Quarkus has no release built on Camel {{ camel_latest_version }} yet, so Quarkus applications exported with Forage {{ forage_latest_version }} use Camel Quarkus 3.40.x, which is built on Camel 4.22.x.
 
 ## Getting Started
 

@@ -23,6 +23,12 @@ Forage extends Camel JBang with the `forage` plugin. Install it once, using the 
     camel plugin add forage --gav io.kaoto.forage:camel-jbang-plugin-forage:{{ forage_previous_lts_version }}
     ```
 
+=== "Camel Latest ({{ camel_latest_version }})"
+
+    ```bash
+    camel plugin add forage --gav io.kaoto.forage:camel-jbang-plugin-forage:{{ forage_latest_version }}
+    ```
+
 Verify the installation:
 
 ```bash

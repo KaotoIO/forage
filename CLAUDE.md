@@ -22,7 +22,7 @@ micro-to-micro against Apache Camel on the current-LTS line (`1.6.0` ↔ Camel `
 |--------|--------|---------|--------|
 | `main` | Current Camel LTS | `1.6.x` | Follows the current Camel LTS release (currently 4.22.x). Active, primary branch — micro bumps (`1.6.0` → `1.6.1` → ...) for each release. |
 | `camel-4.18.x` | Previous Camel LTS | `1.4.x` | Maintenance branch for the previous LTS line (Camel 4.18.x), branched from `main` when Camel 4.22 became LTS. Micro bumps (`1.4.1` → `1.4.2` → ...) as needed. |
-| `camel-latest` | Latest (non-LTS) Camel | `1.5.x` | **Dormant.** Frozen at Camel 4.20.x / Forage 1.5.x until Apache Camel ships its next post-LTS "latest" release (expected around 4.23), at which point it's rebased from `main` and resumes releases. |
+| `camel-latest` | Latest (non-LTS) Camel | `1.7.x` | Follows the latest non-LTS Camel release (currently 4.23.x), rebased from `main` when Camel 4.23 shipped. The Quarkus runtime stays on the newest released Camel Quarkus (3.40.x, Camel 4.22.x) until Camel Quarkus ships a release built on 4.23. |
 
 When a new Camel LTS lands, the current `main` line becomes the new `camel-N.M.x`
 maintenance branch (via a fresh branch off `main`, not a rename), `main` is upgraded
@@ -32,7 +32,7 @@ Camel considers "latest" at that point.
 ### Backporting
 
 When making changes (features, bug fixes, etc.), **always investigate whether the change needs backporting** to the other active branch(es):
-- A fix on `main` may also apply to `camel-4.18.x` (and to `camel-latest` once it's active again), and vice versa.
+- A fix on `main` may also apply to `camel-4.18.x` and `camel-latest`, and vice versa.
 - After completing work on one branch, check if the same change is relevant to the other branch(es) and create a backport PR if needed.
 - Use `/oss-backport-pr` to automate backporting when applicable.
 

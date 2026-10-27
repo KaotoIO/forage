@@ -4,7 +4,7 @@
     <parent>
         <groupId>io.kaoto.forage</groupId>
         <artifactId>influxdb-spring-boot</artifactId>
-        <version>1.7.0</version>
+        <version>1.7.1-SNAPSHOT</version>
     </parent>
     <artifactId>forage-influxdb-starter</artifactId>
     <name>Forage :: Library :: InfluxDB :: V1 Spring Boot Starter</name>

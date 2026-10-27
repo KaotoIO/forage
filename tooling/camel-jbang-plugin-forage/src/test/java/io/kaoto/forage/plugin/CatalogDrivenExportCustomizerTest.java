@@ -49,7 +49,7 @@ class CatalogDrivenExportCustomizerTest {
         System.setProperty("user.dir", tempDir.getAbsolutePath());
         CatalogDrivenExportCustomizer customizer = new CatalogDrivenExportCustomizer();
         assertThat(customizer.isEnabled()).isFalse();
-        assertThat(customizer.resolveRuntimeDependencies(RuntimeType.main)).isEmpty();
+        assertThat(customizer.resolveRuntimeDependencies(RuntimeType.MAIN)).isEmpty();
     }
 
     @Test
@@ -58,7 +58,7 @@ class CatalogDrivenExportCustomizerTest {
                 createCustomizer("forage.jdbc.db.kind=postgresql\nforage.jdbc.url=jdbc:postgresql://localhost/test\n");
         assertThat(customizer.isEnabled()).isTrue();
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.main);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
         // Should include the base JDBC GAV and the postgresql bean GAV
         assertThat(deps).anyMatch(d -> d.contains("forage-jdbc:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-jdbc-postgresql:"));
@@ -69,7 +69,7 @@ class CatalogDrivenExportCustomizerTest {
         CatalogDrivenExportCustomizer customizer =
                 createCustomizer("forage.jdbc.db.kind=postgresql\nforage.jdbc.url=jdbc:postgresql://localhost/test\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.quarkus);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS);
         // Should include quarkus variant GAV
         assertThat(deps).anyMatch(d -> d.contains("forage-quarkus-jdbc"));
         // Should include camel-quarkus-sql (additional dependency)
@@ -84,7 +84,7 @@ class CatalogDrivenExportCustomizerTest {
                 createCustomizer("forage.jdbc.db.kind=postgresql\nforage.jdbc.url=jdbc:postgresql://localhost/test\n"
                         + "forage.jdbc.transaction.enabled=true\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.quarkus);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS);
         // Should include narayana-jta for quarkus transactions
         assertThat(deps).anyMatch(d -> d.contains("quarkus-narayana-jta"));
     }
@@ -94,7 +94,7 @@ class CatalogDrivenExportCustomizerTest {
         CatalogDrivenExportCustomizer customizer =
                 createCustomizer("forage.jms.kind=artemis\nforage.jms.broker.url=tcp://localhost:61616\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.main);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
         // Should include base JMS GAV and artemis bean GAV
         assertThat(deps).anyMatch(d -> d.contains("forage-jms:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-jms-artemis:"));
@@ -105,7 +105,7 @@ class CatalogDrivenExportCustomizerTest {
         CatalogDrivenExportCustomizer customizer =
                 createCustomizer("forage.jms.kind=artemis\nforage.jms.broker.url=tcp://localhost:61616\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.quarkus);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS);
         // Should include quarkus JMS variant GAV
         assertThat(deps).anyMatch(d -> d.contains("forage-quarkus-jms"));
         // Should include camel-quarkus-jms (additional dependency)
@@ -120,7 +120,7 @@ class CatalogDrivenExportCustomizerTest {
                 createCustomizer("forage.jms.kind=artemis\nforage.jms.broker.url=tcp://localhost:61616\n"
                         + "forage.jms.transaction.enabled=true\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.quarkus);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS);
         // Should include narayana-jta and pooled-jms for JMS quarkus transactions
         assertThat(deps).anyMatch(d -> d.contains("quarkus-narayana-jta"));
         assertThat(deps).anyMatch(d -> d.contains("quarkus-pooled-jms"));
@@ -132,9 +132,20 @@ class CatalogDrivenExportCustomizerTest {
                 createCustomizer("forage.jms.kind=artemis\nforage.jms.broker.url=tcp://localhost:61616\n"
                         + "forage.jms.pool.enabled=true\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.quarkus);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS);
         // Should include quarkus-pooled-jms for JMS pool
         assertThat(deps).anyMatch(d -> d.contains("quarkus-pooled-jms"));
+    }
+
+    @Test
+    void testShiro_mainRuntime() throws Exception {
+        CatalogDrivenExportCustomizer customizer =
+                createCustomizer("forage.shiro.ini.resource.path=classpath:shiro.ini\n"
+                        + "forage.shiro.passphrase=Rm9yYWdlRGVtb0tleSEhIQ==\n");
+
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
+        assertThat(deps).anyMatch(d -> d.contains("forage-core-security:"));
+        assertThat(deps).anyMatch(d -> d.contains("forage-security-shiro:"));
     }
 
     @Test
@@ -143,7 +154,7 @@ class CatalogDrivenExportCustomizerTest {
                 createCustomizer("forage.jdbc.db.kind=mysql\nforage.jdbc.url=jdbc:mysql://localhost/test\n"
                         + "forage.jms.kind=artemis\nforage.jms.broker.url=tcp://localhost:61616\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.main);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
         // Should include both JDBC and JMS dependencies
         assertThat(deps).anyMatch(d -> d.contains("forage-jdbc:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-jdbc-mysql:"));
@@ -157,7 +168,7 @@ class CatalogDrivenExportCustomizerTest {
                 "forage.ds1.jdbc.db.kind=postgresql\nforage.ds1.jdbc.url=jdbc:postgresql://localhost/test\n");
         assertThat(customizer.isEnabled()).isTrue();
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.main);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
         assertThat(deps).anyMatch(d -> d.contains("forage-jdbc:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-jdbc-postgresql:"));
     }
@@ -170,7 +181,7 @@ class CatalogDrivenExportCustomizerTest {
                         + "forage.ds2.jdbc.db.kind=postgresql\nforage.ds2.jdbc.url=jdbc:postgresql://localhost/test\n");
         assertThat(customizer.isEnabled()).isTrue();
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.springBoot);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.SPRING_BOOT);
         // Should include BOTH db kind dependencies
         assertThat(deps).anyMatch(d -> d.contains("forage-jdbc-mysql:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-jdbc-postgresql:"));

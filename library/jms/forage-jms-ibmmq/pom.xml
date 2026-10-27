@@ -4,14 +4,14 @@
     <parent>
         <groupId>io.kaoto.forage</groupId>
         <artifactId>jms</artifactId>
-        <version>1.5.1-SNAPSHOT</version>
+        <version>1.7.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>forage-jms-ibmmq</artifactId>
     <name>Forage :: Library :: JMS :: IBM MQ</name>
 
     <properties>
-        <ibmmq.version>9.4.5.0</ibmmq.version>
+        <ibmmq.version>10.0.1.0</ibmmq.version>
     </properties>
 
     <dependencies>

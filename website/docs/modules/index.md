@@ -12,6 +12,7 @@ Forage provides ready-to-use bean factories for a wide range of Apache Camel com
 
 ## Data
 
+- [InfluxDB](influxdb.md) — InfluxDB 1 and 2 clients for time-series data
 - [JDBC](jdbc.md) — Datasource providers with connection pooling
 - [JMS](jms.md) — Connection factories for message brokers
 - [Spring RabbitMQ](spring-rabbitmq.md) — CachingConnectionFactory for AMQP messaging

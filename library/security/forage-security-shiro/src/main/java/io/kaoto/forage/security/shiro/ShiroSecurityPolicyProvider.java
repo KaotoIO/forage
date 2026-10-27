@@ -35,6 +35,7 @@ import io.kaoto.forage.core.security.SecurityPolicyProvider;
  */
 @ForageBean(
         value = "shiro",
+        defaultBeanName = "shiroPolicy",
         components = {"camel-shiro"},
         feature = "Security Policy",
         description = "Apache Shiro security authorization policy")

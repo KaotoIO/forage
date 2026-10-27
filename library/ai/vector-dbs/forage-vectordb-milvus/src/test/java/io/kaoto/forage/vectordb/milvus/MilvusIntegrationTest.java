@@ -34,8 +34,8 @@ import static org.assertj.core.api.Fail.fail;
 public class MilvusIntegrationTest {
     private static final Logger LOG = LoggerFactory.getLogger(MilvusIntegrationTest.class);
 
-    private static final int dimension = 4;
-    private static final String collectionName = "test_collection";
+    private static final int DIMENSION = 4;
+    private static final String COLLECTION_NAME = "test_collection";
 
     @Container
     private static final MilvusContainer milvusContainer =
@@ -66,8 +66,8 @@ public class MilvusIntegrationTest {
         System.setProperty("milvus.host", host);
         System.setProperty("milvus.port", Integer.toString(grpcPort));
         System.setProperty("milvus.uri", uri);
-        System.setProperty("milvus.collection.name", collectionName);
-        System.setProperty("milvus.dimension", Integer.toString(dimension));
+        System.setProperty("milvus.collection.name", COLLECTION_NAME);
+        System.setProperty("milvus.dimension", Integer.toString(DIMENSION));
         System.setProperty("milvus.metric.type", MetricType.COSINE.name());
         System.setProperty("milvus.auto.flush.on.insert", "true");
         System.setProperty("milvus.retrieve.embeddings.on.search", "false");
@@ -76,7 +76,7 @@ public class MilvusIntegrationTest {
         System.setProperty("milvus.password", "test-password");
 
         LOG.info("Milvus container configured - Host: {}, GRPC Port: {}", host, grpcPort);
-        LOG.info("Milvus collection configured: {}", collectionName);
+        LOG.info("Milvus collection configured: {}", COLLECTION_NAME);
     }
 
     @AfterAll

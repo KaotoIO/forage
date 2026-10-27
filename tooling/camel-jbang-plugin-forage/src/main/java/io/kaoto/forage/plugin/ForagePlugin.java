@@ -30,6 +30,8 @@ public class ForagePlugin implements Plugin {
 
     @Override
     public void customize(CommandLine commandLine, CamelJBangMain main) {
+        // customize() runs for `camel forage ...`; `camel run` and `camel export` only use the customizer/exporter
+        CamelCompatibility.warnIfIncompatible();
         commandLine.addSubcommand(
                 "forage",
                 new CommandLine(new ForageCommand(main))
@@ -55,6 +57,7 @@ public class ForagePlugin implements Plugin {
         return Optional.of(new PluginExporter() {
             @Override
             public Set<String> getDependencies(org.apache.camel.dsl.jbang.core.common.RuntimeType runtimeType) {
+                CamelCompatibility.warnIfIncompatible();
                 // gather dependencies across all (enabled) export customizers for the specific runtime
                 return ExportHelper.getAllCustomizers()
                         .filter(ExportCustomizer::isEnabled)
@@ -70,11 +73,14 @@ public class ForagePlugin implements Plugin {
             }
 
             @Override
-            public void addSourceFiles(Path buildDir, String packageName, Printer printer) {}
+            public void addSourceFiles(Path buildDir, String packageName, Printer printer) {
+                // This exporter contributes only runtime dependencies, not source files.
+            }
         });
     }
 
     private void beforeRun(KameletMain main, List<String> files) {
+        CamelCompatibility.warnIfIncompatible();
         resolveConfigDir(files);
         propagateProfile(main);
         addCatalogDrivenRepos(main);

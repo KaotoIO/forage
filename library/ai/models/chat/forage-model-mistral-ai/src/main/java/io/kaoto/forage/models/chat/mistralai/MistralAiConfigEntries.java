@@ -38,7 +38,7 @@ public final class MistralAiConfigEntries extends ConfigEntries {
             "Maximum number of tokens for model responses",
             "Max Tokens",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule TOP_P = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class MistralAiConfigEntries extends ConfigEntries {
             "Random seed for reproducible results",
             "Random Seed",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule TIMEOUT = ConfigModule.of(
@@ -65,7 +65,7 @@ public final class MistralAiConfigEntries extends ConfigEntries {
             "Request timeout in seconds",
             "Timeout",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule MAX_RETRIES = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class MistralAiConfigEntries extends ConfigEntries {
             "Maximum number of retry attempts",
             "Max Retries",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule LOG_REQUESTS_AND_RESPONSES = ConfigModule.of(

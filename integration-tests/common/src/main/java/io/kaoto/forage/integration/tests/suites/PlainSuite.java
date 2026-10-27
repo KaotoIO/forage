@@ -24,6 +24,6 @@ public class PlainSuite {
 
     @BeforeSuite
     public static void beforeSuite() {
-        TestSuiteHelper.beforeSuite(RuntimeType.main, LOG);
+        TestSuiteHelper.beforeSuite(RuntimeType.MAIN, LOG);
     }
 }

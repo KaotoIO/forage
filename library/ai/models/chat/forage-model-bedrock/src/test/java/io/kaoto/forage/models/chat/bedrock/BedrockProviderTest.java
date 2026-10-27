@@ -18,6 +18,9 @@ class BedrockProviderTest {
     void cleanup() {
         System.clearProperty("forage.bedrock.model.id");
         System.clearProperty("forage.bedrock.region");
+        System.clearProperty("forage.bedrock.access.key.id");
+        System.clearProperty("forage.bedrock.secret.access.key");
+        System.clearProperty("forage.bedrock.session.token");
         System.clearProperty("forage.bedrock.temperature");
         System.clearProperty("forage.bedrock.max.tokens");
         System.clearProperty("forage.bedrock.top.p");
@@ -155,6 +158,20 @@ class BedrockProviderTest {
         void shouldApplyTopPConfiguration() {
             System.setProperty("forage.bedrock.model.id", "anthropic.claude-3-haiku-20240307-v1:0");
             System.setProperty("forage.bedrock.top.p", "0.9");
+
+            BedrockProvider provider = new BedrockProvider();
+            ChatModel model = provider.create();
+
+            assertThat(model).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Should apply STS session token credentials")
+        void shouldApplySessionTokenCredentials() {
+            System.setProperty("forage.bedrock.model.id", "anthropic.claude-3-haiku-20240307-v1:0");
+            System.setProperty("forage.bedrock.access.key.id", "test-access-key");
+            System.setProperty("forage.bedrock.secret.access.key", "test-secret-key");
+            System.setProperty("forage.bedrock.session.token", "test-session-token");
 
             BedrockProvider provider = new BedrockProvider();
             ChatModel model = provider.create();

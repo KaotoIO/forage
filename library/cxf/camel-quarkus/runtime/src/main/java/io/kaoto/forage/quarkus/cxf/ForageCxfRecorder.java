@@ -51,7 +51,7 @@ public class ForageCxfRecorder {
             String cxfServletPath = ConfigProvider.getConfig()
                     .getOptionalValue("quarkus.cxf.path", String.class)
                     .orElse(DEFAULT_CXF_SERVLET_PATH);
-            forageCxfEndpoint.setServletContainerCxfPath(cxfServletPath, RuntimeType.quarkus);
+            forageCxfEndpoint.setServletContainerCxfPath(cxfServletPath, RuntimeType.QUARKUS);
         }
         return new RuntimeValue<>(endpoint);
     }

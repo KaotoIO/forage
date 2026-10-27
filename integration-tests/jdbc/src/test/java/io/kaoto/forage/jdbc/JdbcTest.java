@@ -47,7 +47,7 @@ public class JdbcTest implements ForageIntegrationTest {
             content = content.replace("${path}", INPUT_FOLDER.toAbsolutePath().toString());
 
             Files.writeString(
-                    resource.getFile().toPath().getParent().resolve(INTEGRATION_NAME.toLowerCase() + ".camel.yaml"),
+                    resource.file().toPath().getParent().resolve(INTEGRATION_NAME.toLowerCase() + ".camel.yaml"),
                     content);
         }
     }
@@ -64,7 +64,7 @@ public class JdbcTest implements ForageIntegrationTest {
                 afterAll);
 
         // running jbang forage run with dynamically modified properties
-        runner.when(camel().jbang()
+        runner.when(camel().cli()
                 .custom("forage", "run")
                 .processName(INTEGRATION_NAME)
                 .addResource(dynamicProperties)
@@ -82,7 +82,7 @@ public class JdbcTest implements ForageIntegrationTest {
     public void single(ForageTestCaseRunner runner) {
 
         // validation of logged message
-        runner.then(camel().jbang()
+        runner.then(camel().cli()
                 .verify()
                 .integration(INTEGRATION_NAME)
                 .waitForLogMessage("from jdbc default ds - [{id=1, content=postgres 1}, {id=2, content=postgres 2}]"));
@@ -108,10 +108,8 @@ public class JdbcTest implements ForageIntegrationTest {
                         .header("eventId", "1"));
 
         // validation of logged message
-        runner.then(camel().jbang()
-                .verify()
-                .integration(INTEGRATION_NAME)
-                .waitForLogMessage("Batch complete with 3 event"));
+        runner.then(
+                camel().cli().verify().integration(INTEGRATION_NAME).waitForLogMessage("Batch complete with 3 event"));
     }
 
     @Test
@@ -130,7 +128,7 @@ public class JdbcTest implements ForageIntegrationTest {
         Files.move(fileA, INPUT_FOLDER.resolve(fileName));
 
         // validation of logged message
-        runner.then(camel().jbang()
+        runner.then(camel().cli()
                 .verify()
                 .integration(INTEGRATION_NAME)
                 .waitForLogMessage("Processed file: " + fileName + " with content: A"));
@@ -144,7 +142,7 @@ public class JdbcTest implements ForageIntegrationTest {
         String error = null;
         try {
             // failure is expected
-            runner.then(camel().jbang()
+            runner.then(camel().cli()
                     .verify()
                     .integration(INTEGRATION_NAME)
                     .maxAttempts(3)

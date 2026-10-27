@@ -11,7 +11,7 @@ public final class WatsonxAiConfigEntries extends ConfigEntries {
             "IBM Cloud API key for authentication",
             "API Key",
             null,
-            "password",
+            ConfigModule.TYPE_PASSWORD,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule URL = ConfigModule.of(
@@ -20,7 +20,7 @@ public final class WatsonxAiConfigEntries extends ConfigEntries {
             "The Watsonx.ai service URL (e.g., https://us-south.ml.cloud.ibm.com)",
             "Service URL",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule PROJECT_ID = ConfigModule.of(
@@ -29,7 +29,7 @@ public final class WatsonxAiConfigEntries extends ConfigEntries {
             "The Watsonx.ai project ID",
             "Project ID",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             true,
             ConfigTag.COMMON);
     public static final ConfigModule MODEL_NAME = ConfigModule.of(
@@ -38,7 +38,7 @@ public final class WatsonxAiConfigEntries extends ConfigEntries {
             "The foundation model to use",
             "Model Name",
             "llama-3-405b-instruct",
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule TEMPERATURE = ConfigModule.of(
@@ -47,7 +47,7 @@ public final class WatsonxAiConfigEntries extends ConfigEntries {
             "Temperature for response generation (0.0-2.0)",
             "Temperature",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule MAX_NEW_TOKENS = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class WatsonxAiConfigEntries extends ConfigEntries {
             "Maximum number of new tokens in response",
             "Max New Tokens",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule TOP_P = ConfigModule.of(
@@ -65,7 +65,7 @@ public final class WatsonxAiConfigEntries extends ConfigEntries {
             "Top-p (nucleus sampling) parameter (0.0-1.0)",
             "Top P",
             null,
-            "double",
+            ConfigModule.TYPE_DOUBLE,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule RANDOM_SEED = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class WatsonxAiConfigEntries extends ConfigEntries {
             "Random seed for reproducible results",
             "Random Seed",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule STOP_SEQUENCES = ConfigModule.of(
@@ -83,7 +83,7 @@ public final class WatsonxAiConfigEntries extends ConfigEntries {
             "Stop sequences for response generation (comma-separated)",
             "Stop Sequences",
             null,
-            "string",
+            ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule LOG_REQUESTS_AND_RESPONSES = ConfigModule.of(
@@ -92,7 +92,7 @@ public final class WatsonxAiConfigEntries extends ConfigEntries {
             "Enable request and response logging",
             "Log Requests/Responses",
             null,
-            "boolean",
+            ConfigModule.TYPE_BOOLEAN,
             false,
             ConfigTag.ADVANCED);
 

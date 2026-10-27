@@ -70,7 +70,7 @@ Two routes send different questions to different agents. A shared tool is scoped
                 expression: "1"
             name: CamelLangChain4jAgentMemoryId
         - setBody:
-            simple: give the details of user 123
+            simple: look up user 123 in the user database and return their details
         - to:
             uri: langchain4j-agent:google
             parameters:
@@ -101,10 +101,12 @@ Two routes send different questions to different agents. A shared tool is scoped
 - route:
     id: user-db-tool
     from:
-      uri: langchain4j-tools:userDb
+      uri: ai-tool:userDb
       parameters:
-        description: Query user database
+        description: Query user database by user ID
         parameter.userId: string
+        parameter.userId.description: The user ID to look up
+        parameter.userId.required: true
         tags: users                                        # (4)
       steps:
         - setBody:
@@ -125,7 +127,7 @@ Two routes send different questions to different agents. A shared tool is scoped
 camel run *
 ```
 
-Both routes fire once. The Gemini agent receives "give the details of user 123", calls the `userDb` tool, and returns user details. The Ollama agent receives "What is the timezone in Brasilia?" and answers from its training data -- it has no tools available.
+Both routes fire once. The Gemini agent receives the user lookup prompt, calls the `userDb` tool, and returns user details. The Ollama agent receives "What is the timezone in Brasilia?" and answers from its training data -- it has no tools available.
 
 ## Key Takeaways
 

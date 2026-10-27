@@ -24,6 +24,6 @@ public class QuarkusSuite {
 
     @BeforeSuite
     public static void beforeSuite() {
-        TestSuiteHelper.beforeSuite(RuntimeType.quarkus, LOG);
+        TestSuiteHelper.beforeSuite(RuntimeType.QUARKUS, LOG);
     }
 }

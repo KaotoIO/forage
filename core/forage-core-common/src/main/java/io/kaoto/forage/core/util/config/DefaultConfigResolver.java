@@ -27,9 +27,9 @@ public class DefaultConfigResolver implements ConfigResolver {
     public Optional<String> resolve(String propertyName) {
         Optional<String> result =
                 switch (ConfigHelper.getRuntime()) {
-                    case springBoot -> ConfigHelper.getSpringBootProperty(propertyName);
-                    case quarkus -> ConfigHelper.getQuarkusProperty(propertyName);
-                    case main -> ConfigHelper.getCamelMainProperty(propertyName);
+                    case SPRING_BOOT -> ConfigHelper.getSpringBootProperty(propertyName);
+                    case QUARKUS -> ConfigHelper.getQuarkusProperty(propertyName);
+                    case MAIN -> ConfigHelper.getCamelMainProperty(propertyName);
                 };
         if (result.isPresent()) {
             LOG.debug("Resolved '{}' from runtime config", propertyName);

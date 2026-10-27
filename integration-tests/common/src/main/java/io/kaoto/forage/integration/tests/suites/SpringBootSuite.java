@@ -24,6 +24,6 @@ public class SpringBootSuite {
 
     @BeforeSuite
     public static void beforeSuite() {
-        TestSuiteHelper.beforeSuite(RuntimeType.springBoot, LOG);
+        TestSuiteHelper.beforeSuite(RuntimeType.SPRING_BOOT, LOG);
     }
 }

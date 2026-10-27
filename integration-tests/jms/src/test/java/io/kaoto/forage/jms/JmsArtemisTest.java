@@ -36,7 +36,7 @@ public class JmsArtemisTest implements ForageIntegrationTest {
                 classResource("forage-connectionfactory.properties.template"), replacements, afterAll);
 
         // consumer application (the system under test): XA transactions enabled
-        runner.when(camel().jbang()
+        runner.when(camel().cli()
                 .custom("forage", "run")
                 .processName(INTEGRATION_NAME)
                 .addResource(consumerProperties)
@@ -61,20 +61,20 @@ public class JmsArtemisTest implements ForageIntegrationTest {
     public void artemisTransactional(ForageTestCaseRunner runner) {
 
         // the successful message commits through to the output queue
-        runner.then(camel().jbang()
+        runner.then(camel().cli()
                 .verify()
                 .integration(INTEGRATION_NAME)
                 .waitForLogMessage("Successfully processed message: Transactional message"));
 
         // the failing messages are dead-lettered to DLQ within the XA transaction
-        runner.then(camel().jbang()
+        runner.then(camel().cli()
                 .verify()
                 .integration(INTEGRATION_NAME)
                 .waitForLogMessage("Message sent to DLQ after max redeliveries"));
 
         // an XA rollback returns the message to the broker: the broker redelivers it with
         // JMSRedelivered=true; with broken XA enlistment the message would be lost (#427)
-        runner.then(camel().jbang()
+        runner.then(camel().cli()
                 .verify()
                 .integration(INTEGRATION_NAME)
                 .waitForLogMessage("Message redelivered after XA rollback"));

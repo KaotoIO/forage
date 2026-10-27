@@ -1,0 +1,2 @@
+forage.influxdb2.url=http://localhost:8086
+forage.influxdb2.token=forage-test-token

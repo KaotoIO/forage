@@ -1,11 +1,11 @@
 package io.kaoto.forage.integration.tests;
 
-import org.citrusframework.DefaultTestCaseRunner;
 import org.citrusframework.GherkinTestActionRunner;
 import org.citrusframework.TestAction;
 import org.citrusframework.TestActionBuilder;
 import org.citrusframework.TestCase;
-import org.citrusframework.actions.camel.CamelIntegrationRunCustomizedActionBuilder;
+import org.citrusframework.api.actions.camel.CamelIntegrationRunCustomizedActionBuilder;
+import org.citrusframework.base.DefaultTestCaseRunner;
 import org.citrusframework.context.TestContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

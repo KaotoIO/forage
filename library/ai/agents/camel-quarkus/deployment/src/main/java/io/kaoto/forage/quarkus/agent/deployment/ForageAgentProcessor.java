@@ -49,7 +49,6 @@ public class ForageAgentProcessor {
         AgentConfig defaultConfig = DESCRIPTOR.createConfig(null);
         Set<String> prefixes = ConfigStore.getInstance()
                 .readPrefixes(defaultConfig, ConfigHelper.getNamedPropertyRegexp(DESCRIPTOR.modulePrefix()));
-
         if (prefixes.isEmpty()) {
             prefixes = ForageQuarkusConfigSourceAdapter.getDiscoveredPrefixes(DESCRIPTOR.modulePrefix());
         }

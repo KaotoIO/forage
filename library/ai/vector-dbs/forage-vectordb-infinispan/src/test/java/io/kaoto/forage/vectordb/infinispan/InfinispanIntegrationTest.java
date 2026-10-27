@@ -23,8 +23,8 @@ import static org.assertj.core.api.Fail.fail;
 public class InfinispanIntegrationTest {
     private static final Logger LOG = LoggerFactory.getLogger(InfinispanIntegrationTest.class);
 
-    private static final String cacheName = "test_cache";
-    private static final int dimension = 4;
+    private static final String CACHE_NAME = "test_cache";
+    private static final int DIMENSION = 4;
     private static final String PROPERTIES_FILE_NAME = "forage-vectordb-infinispan.properties";
 
     @Container
@@ -56,8 +56,8 @@ public class InfinispanIntegrationTest {
         LOG.info("Infinispan container configured - Host: {}, Port: {}", host, port);
 
         // Configure connection properties for the test
-        System.setProperty("infinispan.cache.name", cacheName);
-        System.setProperty("infinispan.dimension", String.valueOf(dimension));
+        System.setProperty("infinispan.cache.name", CACHE_NAME);
+        System.setProperty("infinispan.dimension", String.valueOf(DIMENSION));
         System.setProperty("infinispan.distance", "3");
         System.setProperty("infinispan.similarity", "COSINE");
         System.setProperty("infinispan.register.schema", "true");
@@ -67,7 +67,7 @@ public class InfinispanIntegrationTest {
         System.setProperty("infinispan.username", "admin");
         System.setProperty("infinispan.password", "admin");
 
-        LOG.info("Infinispan configuration completed for cache: {}", cacheName);
+        LOG.info("Infinispan configuration completed for cache: {}", CACHE_NAME);
     }
 
     public static void clearProperties() {

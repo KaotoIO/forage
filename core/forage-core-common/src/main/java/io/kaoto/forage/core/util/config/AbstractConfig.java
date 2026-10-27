@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 public abstract class AbstractConfig implements Config {
 
     private static final Logger LOG = LoggerFactory.getLogger(AbstractConfig.class);
+    private static final String FORAGE_PREFIX = "forage.";
 
     private final String prefix;
     private final Class<? extends ConfigEntries> entriesClass;
@@ -51,15 +52,15 @@ public abstract class AbstractConfig implements Config {
     private void warnUnknownKey(Map<ConfigModule, ConfigEntry> modules, String name) {
         // Subclasses with dynamic modules (e.g., route policies) keep their own registry,
         // so an empty map here means we cannot tell known keys from typos
-        if (modules.isEmpty() || !name.startsWith("forage.")) {
+        if (modules.isEmpty() || !name.startsWith(FORAGE_PREFIX)) {
             return;
         }
 
         // A key like forage.ds1.jdbc.url is a named variant of forage.jdbc.url and may
         // belong to a prefixed instance that has not been constructed yet — not a typo.
-        int dot = name.indexOf('.', "forage.".length());
+        int dot = name.indexOf('.', FORAGE_PREFIX.length());
         if (dot > 0) {
-            String stripped = "forage." + name.substring(dot + 1);
+            String stripped = FORAGE_PREFIX + name.substring(dot + 1);
             if (modules.keySet().stream().anyMatch(m -> m.match(stripped))) {
                 return;
             }

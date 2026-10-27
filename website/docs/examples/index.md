@@ -2,7 +2,7 @@
 
 Working examples demonstrating Forage capabilities across datasources, messaging, transactions, and AI.
 
-All examples are self-contained and can be run with Camel JBang or exported to Spring Boot / Quarkus.
+All examples can be run with Camel JBang. Export support for Spring Boot and Quarkus is described on each module page.
 
 ## Datasource
 
@@ -13,6 +13,12 @@ All examples are self-contained and can be run with Camel JBang or exported to S
 | [Event Booking](datasource/event-booking.md) | Transactional booking system with ACID guarantees and rollback |
 | [Aggregation Repository](datasource/aggregation.md) | IoT event batching with JDBC-backed aggregation |
 | [Idempotent Consumer](datasource/idempotent.md) | Duplicate prevention with JDBC idempotent repository |
+
+## InfluxDB
+
+| Example | Description |
+|---|---|
+| [Write Metrics](influxdb/write-metrics.md) | Write a temperature point to InfluxDB 2 and query it with Flux |
 
 ## JMS
 

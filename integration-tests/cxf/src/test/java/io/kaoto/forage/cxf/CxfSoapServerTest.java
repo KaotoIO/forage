@@ -30,14 +30,14 @@ public class CxfSoapServerTest implements ForageIntegrationTest {
     @Test
     @CitrusTest()
     public void soapServerCall(ForageTestCaseRunner runner) {
-        runner.then(camel().jbang()
+        runner.then(camel().cli()
                 .verify()
                 .integration(INTEGRATION_NAME)
                 .maxAttempts(8)
                 .delayBetweenAttempts(5000)
                 .waitForLogMessage("Server received request"));
 
-        runner.then(camel().jbang()
+        runner.then(camel().cli()
                 .verify()
                 .integration(INTEGRATION_NAME)
                 .maxAttempts(8)

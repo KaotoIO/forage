@@ -27,7 +27,7 @@ import static org.assertj.core.api.Fail.fail;
 public class ChromaIntegrationTest {
     private static final Logger LOG = LoggerFactory.getLogger(ChromaIntegrationTest.class);
 
-    private static final String collectionName = "test_collection";
+    private static final String COLLECTION_NAME = "test_collection";
     private static final String PROPERTIES_FILE_NAME = "forage-vectordb-chroma.properties";
 
     @Container
@@ -59,12 +59,12 @@ public class ChromaIntegrationTest {
         LOG.info("Chroma container configured - Endpoint: {}", endpoint);
 
         System.setProperty("chroma.url", endpoint);
-        System.setProperty("chroma.collection.name", collectionName);
+        System.setProperty("chroma.collection.name", COLLECTION_NAME);
         System.setProperty("chroma.timeout", "30");
         System.setProperty("chroma.log.requests", "true");
         System.setProperty("chroma.log.responses", "true");
 
-        LOG.info("Chroma configuration completed for collection: {}", collectionName);
+        LOG.info("Chroma configuration completed for collection: {}", COLLECTION_NAME);
     }
 
     @AfterAll

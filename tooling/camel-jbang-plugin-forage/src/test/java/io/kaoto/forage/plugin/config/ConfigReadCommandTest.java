@@ -365,6 +365,7 @@ class ConfigReadCommandTest {
                 forage.multi.agent.names=first,second
                 forage.google.api.key=secret
                 forage.memory.message-window.max.messages=10
+                forage.keycloak.server.url=http://localhost:8180
                 """;
 
         File propsFile = new File(tempDir, "application.properties");
@@ -406,7 +407,7 @@ class ConfigReadCommandTest {
         assertThat(beansByName).doesNotContainKeys("multi", "memory");
 
         // forage.google.* is the Gemini chat model, not the web search factory
-        assertThat(kinds).contains("google-gemini", "message-window");
+        assertThat(kinds).contains("google-gemini", "message-window", "keycloak");
         assertThat(javaTypes).doesNotContain("dev.langchain4j.web.search.WebSearchEngine");
     }
 
@@ -416,6 +417,9 @@ class ConfigReadCommandTest {
                 """
                 forage.tls.keystore.path=/tmp/keystore.p12
                 forage.rabbitmq.host=localhost
+                forage.influxdb.url=http://localhost:8086
+                forage.influxdb2.url=http://localhost:8087
+                forage.shiro.ini.resource.path=classpath:shiro.ini
                 forage.jdbc.db.kind=h2
                 """;
 
@@ -440,7 +444,10 @@ class ConfigReadCommandTest {
                 .containsEntry("org.apache.camel.support.jsse.SSLContextParameters", "sslContextParameters")
                 .containsEntry(
                         "org.springframework.amqp.rabbit.connection.ConnectionFactory", "rabbitConnectionFactory")
-                .containsEntry("javax.sql.DataSource", "dataSource");
+                .containsEntry("org.influxdb.InfluxDB", "influxdb")
+                .containsEntry("com.influxdb.client.InfluxDBClient", "influxdb2")
+                .containsEntry("javax.sql.DataSource", "dataSource")
+                .containsValue("shiroPolicy");
     }
 
     @Test

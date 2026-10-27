@@ -78,7 +78,7 @@ public class SpringRabbitMQHealthMetricsTest implements ForageIntegrationTest {
                 afterAll);
 
         // Start Spring Boot application with actuator and metrics
-        runner.when(camel().jbang()
+        runner.when(camel().cli()
                 .custom("forage", "run")
                 .processName(INTEGRATION_NAME)
                 .addResource(dynamicProperties)
@@ -99,7 +99,7 @@ public class SpringRabbitMQHealthMetricsTest implements ForageIntegrationTest {
     @CitrusTest()
     public void springBootStartsWithHealthAndMetricsEnabled(ForageTestCaseRunner runner) {
         // Verify messages are being processed (which confirms RabbitMQ connection is healthy)
-        runner.then(camel().jbang()
+        runner.then(camel().cli()
                 .verify()
                 .integration(INTEGRATION_NAME)
                 .waitForLogMessage("Received: Health/Metrics Test Message"));

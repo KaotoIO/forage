@@ -128,7 +128,7 @@ public class CxfSoapTest implements ForageIntegrationTest {
                 afterAll);
 
         // running jbang forage run with dynamically modified properties
-        runner.when(camel().jbang()
+        runner.when(camel().cli()
                 .custom("forage", "run")
                 .processName(INTEGRATION_NAME)
                 .addResource(dynamicProperties)
@@ -141,6 +141,6 @@ public class CxfSoapTest implements ForageIntegrationTest {
     @Test
     @CitrusTest()
     public void soapClientCall(ForageTestCaseRunner runner) {
-        runner.then(camel().jbang().verify().integration(INTEGRATION_NAME).waitForLogMessage("Hello Forage from CXF"));
+        runner.then(camel().cli().verify().integration(INTEGRATION_NAME).waitForLogMessage("Hello Forage from CXF"));
     }
 }

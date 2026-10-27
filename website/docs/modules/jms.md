@@ -35,6 +35,7 @@ forage.primaryBroker.jms.url=tcp://broker1:61616
 forage.backupBroker.jms.kind=artemis
 forage.backupBroker.jms.url=tcp://broker2:61617
 ```
+
 ### Per-Broker Components
 
 Each named broker prefix registers its own `JmsComponent` in the Camel context, so routes can

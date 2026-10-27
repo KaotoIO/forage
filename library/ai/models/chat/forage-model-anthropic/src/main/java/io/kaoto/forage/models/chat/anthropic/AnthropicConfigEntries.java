@@ -38,7 +38,7 @@ public final class AnthropicConfigEntries extends ConfigEntries {
             "Maximum number of tokens in the model's response",
             "Max Tokens",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.COMMON);
     public static final ConfigModule TOP_P = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class AnthropicConfigEntries extends ConfigEntries {
             "Top-k sampling parameter: limits the model to consider only the top-k most probable tokens",
             "Top K",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule STOP_SEQUENCES = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class AnthropicConfigEntries extends ConfigEntries {
             "Request timeout in seconds",
             "Timeout",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule MAX_RETRIES = ConfigModule.of(
@@ -83,7 +83,7 @@ public final class AnthropicConfigEntries extends ConfigEntries {
             "Maximum number of retry attempts for failed requests",
             "Max Retries",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule LOG_REQUESTS_AND_RESPONSES = ConfigModule.of(

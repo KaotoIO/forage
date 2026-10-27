@@ -30,9 +30,9 @@ import static org.assertj.core.api.Fail.fail;
 public class QdrantIntegrationTest {
     private static final Logger LOG = LoggerFactory.getLogger(QdrantIntegrationTest.class);
 
-    private static final Collections.Distance distance = Collections.Distance.Cosine;
-    private static final int dimension = 4;
-    private static final String collectionName = "test_collection";
+    private static final Collections.Distance DISTANCE = Collections.Distance.Cosine;
+    private static final int DIMENSION = 4;
+    private static final String COLLECTION_NAME = "test_collection";
     private static final String PROPERTIES_FILE_NAME = "forage-vectordb-qdrant.properties";
 
     @Container
@@ -66,7 +66,7 @@ public class QdrantIntegrationTest {
 
         System.setProperty("qdrant.host", host);
         System.setProperty("qdrant.port", Integer.toString(grpcPort));
-        System.setProperty("qdrant.collection.name", collectionName);
+        System.setProperty("qdrant.collection.name", COLLECTION_NAME);
         System.setProperty("qdrant.use.tls", "false");
 
         // Create the collection
@@ -74,14 +74,14 @@ public class QdrantIntegrationTest {
                 QdrantGrpcClient.newBuilder(host, grpcPort, false).build());
 
         client.createCollectionAsync(
-                        collectionName,
+                        COLLECTION_NAME,
                         Collections.VectorParams.newBuilder()
-                                .setDistance(distance)
+                                .setDistance(DISTANCE)
                                 .setSize(4)
                                 .build())
                 .get();
 
-        LOG.info("Qdrant collection created {}", collectionName);
+        LOG.info("Qdrant collection created {}", COLLECTION_NAME);
     }
 
     @AfterAll

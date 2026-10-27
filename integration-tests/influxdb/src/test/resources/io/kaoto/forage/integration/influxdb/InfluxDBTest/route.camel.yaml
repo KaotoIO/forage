@@ -1,0 +1,20 @@
+- route:
+    id: influxdb-write
+    from:
+      uri: timer:write
+      parameters:
+        repeatCount: 1
+        delay: 1000
+      steps:
+        - setBody:
+            constant: '{"camelInfluxDB.MeasurementName":"{{measurement}}","value":21}'
+        - unmarshal:
+            json:
+              library: Jackson
+        - to:
+            uri: influxdb:influxdb
+            parameters:
+              databaseName: metrics
+              retentionPolicy: autogen
+        - log:
+            message: "InfluxDB 1 point sent"

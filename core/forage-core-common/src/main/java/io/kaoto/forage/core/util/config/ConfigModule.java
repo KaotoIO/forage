@@ -42,6 +42,13 @@ import java.util.Objects;
  */
 public class ConfigModule {
 
+    public static final String TYPE_STRING = "string";
+    public static final String TYPE_INTEGER = "integer";
+    public static final String TYPE_DOUBLE = "double";
+    public static final String TYPE_BOOLEAN = "boolean";
+    public static final String TYPE_FALSE = "false";
+    public static final String TYPE_PASSWORD = "password";
+
     private final Class<? extends Config> config;
     private final String name;
     private final String prefix;

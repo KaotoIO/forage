@@ -78,14 +78,14 @@ public class JmsArtemisRecoveryTest implements ForageIntegrationTest {
         // same one.
         PropertiesTemplateHelper.copyIntoSameDirectory(properties, classResource("CrashRecoveryRoute.java"), afterAll);
         Resource route = Resources.create(properties
-                .getFile()
+                .file()
                 .toPath()
                 .getParent()
                 .resolve("CrashRecoveryRoute.java")
                 .toFile());
 
         // First run: prepares the XA transaction and halts the JVM before the JMS branch commits.
-        runner.when(camel().jbang()
+        runner.when(camel().cli()
                 .custom("forage", "run")
                 .processName(CRASH_RUN)
                 .addResource(properties)
@@ -119,7 +119,7 @@ public class JmsArtemisRecoveryTest implements ForageIntegrationTest {
 
         // Second run: same properties, same object store. The recovery manager must replay the
         // transaction log and commit the in-doubt JMS branch through the registered helper.
-        runner.when(camel().jbang()
+        runner.when(camel().cli()
                 .custom("forage", "run")
                 .processName(RESTART_RUN)
                 .addResource(properties)
@@ -134,7 +134,7 @@ public class JmsArtemisRecoveryTest implements ForageIntegrationTest {
     public void inDoubtBranchIsCommittedByRecovery(ForageTestCaseRunner runner) {
         // logged by the route's consumer once the recovery manager commits the in-doubt branch
         // (recovery scan period is 5s, so this resolves within the first scans)
-        runner.then(camel().jbang()
+        runner.then(camel().cli()
                 .verify()
                 .integration(RESTART_RUN)
                 .waitForLogMessage("Recovered message received: XA crash recovery test message"));

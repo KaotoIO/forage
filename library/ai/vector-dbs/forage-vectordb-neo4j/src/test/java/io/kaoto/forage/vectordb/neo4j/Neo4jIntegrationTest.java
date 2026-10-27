@@ -33,9 +33,9 @@ import static org.assertj.core.api.Fail.fail;
 public class Neo4jIntegrationTest {
     private static final Logger LOG = LoggerFactory.getLogger(Neo4jIntegrationTest.class);
 
-    private static final int dimension = 4;
-    private static final String indexName = "test_vector_index";
-    private static final String label = "TestDocument";
+    private static final int DIMENSION = 4;
+    private static final String INDEX_NAME = "test_vector_index";
+    private static final String LABEL = "TestDocument";
 
     @Container
     private static final Neo4jContainer<?> neo4jContainer = new Neo4jContainer<>("neo4j:5.15")
@@ -65,18 +65,18 @@ public class Neo4jIntegrationTest {
         System.setProperty("neo4j.user", "neo4j");
         System.setProperty("neo4j.password", password);
         System.setProperty("neo4j.database.name", "neo4j");
-        System.setProperty("neo4j.index.name", indexName);
-        System.setProperty("neo4j.label", label);
+        System.setProperty("neo4j.index.name", INDEX_NAME);
+        System.setProperty("neo4j.label", LABEL);
         System.setProperty("neo4j.embedding.property", "embedding");
         System.setProperty("neo4j.text.property", "text");
         System.setProperty("neo4j.id.property", "id");
         System.setProperty("neo4j.metadata.prefix", "meta_");
-        System.setProperty("neo4j.dimension", Integer.toString(dimension));
+        System.setProperty("neo4j.dimension", Integer.toString(DIMENSION));
         System.setProperty("neo4j.with.encryption", "false");
         System.setProperty("neo4j.await.index.timeout", "120");
 
         LOG.info("Neo4j container configured - Bolt URL: {}", boltUrl);
-        LOG.info("Neo4j index configured: {}", indexName);
+        LOG.info("Neo4j index configured: {}", INDEX_NAME);
     }
 
     @AfterAll

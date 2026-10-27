@@ -51,7 +51,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [ jdbc, jms, messaging, cxf ]
+        module: [ jdbc, jms, messaging, cxf, influxdb ]
         runtime: [ main, quarkus, spring-boot ]
     env:
       INTEGRATION_TEST_RUNTIME: ${{ matrix.runtime }}
@@ -70,6 +70,15 @@ jobs:
           path: ${{ runner.temp }}
       - name: Install built SNAPSHOT artifacts into local repository
         run: mkdir -p ~/.m2/repository && tar -xzf ${{ runner.temp }}/forage-m2.tgz -C ~/.m2/repository
+      # WORKAROUND for CAMEL-25921, see the env block above. MAVEN_ARGS does not cover every
+      # writer: the shared local repository still ends up with "central-<url hash>" entries,
+      # and a BOM tracked only that way (e.g. after a version bump) makes Camel JBang drop the
+      # Forage plugin's dependencies. Rewrite them to the legacy ID-only form.
+      - name: Normalize local repository tracking for Camel JBang
+        run: |
+          mvn -v | head -1
+          find ~/.m2/repository -name _remote.repositories -exec sed -i -E 's/>central-[0-9a-f]{40}=/>central=/' {} +
+          echo "Remaining hashed tracking entries: $(grep -rhoE '>[a-z.-]+-[0-9a-f]{40}=' ~/.m2/repository --include=_remote.repositories | wc -l)"
       - name: Run integration tests (${{ matrix.module }} / ${{ matrix.runtime }})
         run: mvn -B --no-transfer-progress '-Dsurefire.rerunFailingTestsCount=2' '-Dci.env.name=github.com' verify failsafe:verify --file integration-tests/${{ matrix.module }}
       - name: Upload test reports

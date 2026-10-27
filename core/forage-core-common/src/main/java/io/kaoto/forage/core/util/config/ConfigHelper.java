@@ -90,11 +90,11 @@ public final class ConfigHelper {
     public static RuntimeType getRuntime() {
         if (runtime == null) {
             if (isRuntimeSpringBoot()) {
-                runtime = RuntimeType.springBoot;
+                runtime = RuntimeType.SPRING_BOOT;
             } else if (isRuntimeQuarkus()) {
-                runtime = RuntimeType.quarkus;
+                runtime = RuntimeType.QUARKUS;
             } else {
-                runtime = RuntimeType.main;
+                runtime = RuntimeType.MAIN;
             }
         }
         return runtime;
@@ -220,9 +220,9 @@ public final class ConfigHelper {
     @Deprecated(since = "1.1", forRemoval = true)
     public static Properties getApplicationProperties() {
         return switch (getRuntime()) {
-            case springBoot -> getSpringBootConfig();
-            case main -> getCamelMainConfig();
-            case quarkus -> getQuarkusApplicationProperties();
+            case SPRING_BOOT -> getSpringBootConfig();
+            case MAIN -> getCamelMainConfig();
+            case QUARKUS -> getQuarkusApplicationProperties();
         };
     }
 

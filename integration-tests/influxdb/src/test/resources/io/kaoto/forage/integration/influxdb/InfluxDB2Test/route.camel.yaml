@@ -1,0 +1,22 @@
+- route:
+    id: influxdb2-write
+    from:
+      uri: timer:write
+      parameters:
+        repeatCount: 1
+        delay: 1000
+      steps:
+        - setBody:
+            constant: '{"CamelInfluxDB2MeasurementName":"{{measurement}}","value":21}'
+        - unmarshal:
+            json:
+              library: Jackson
+        - to:
+            uri: influxdb2:influxdb2
+            parameters:
+              org: acme
+              bucket: metrics
+              autoCreateOrg: false
+              autoCreateBucket: false
+        - log:
+            message: "InfluxDB 2 point sent"

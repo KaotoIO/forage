@@ -3,8 +3,11 @@ package io.kaoto.forage.integration.tests;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -22,6 +25,15 @@ public final class PropertiesTemplateHelper {
 
     private PropertiesTemplateHelper() {
         // Utility class
+    }
+
+    private static FileAttribute<?>[] ownerOnlyPermissions() {
+        if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
+            return new FileAttribute<?>[] {
+                PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------"))
+            };
+        }
+        return new FileAttribute<?>[0];
     }
 
     /**
@@ -48,11 +60,13 @@ public final class PropertiesTemplateHelper {
             }
 
             // Extract filename from template (remove .template suffix)
-            String templateFileName = templateResource.getFile().getName();
+            String templateFileName = templateResource.file().getName();
             String propertiesFileName = templateFileName.replace(".template", "");
 
-            // Write to temp directory with proper name
-            Path tempDir = Files.createTempDirectory("forage-test-");
+            // Write to temp directory with proper name. Restrict permissions to the owner
+            // only, since the generated properties files can carry testcontainer credentials
+            // and the default temp directory is otherwise world-readable.
+            Path tempDir = Files.createTempDirectory("forage-test-", ownerOnlyPermissions());
             Path tempPropertiesFile = tempDir.resolve(propertiesFileName);
             Files.writeString(tempPropertiesFile, propertiesContent, StandardCharsets.UTF_8);
 
@@ -73,7 +87,7 @@ public final class PropertiesTemplateHelper {
 
         } catch (IOException e) {
             throw new UncheckedIOException(
-                    "Failed to prepare properties from template: " + templateResource.getLocation(), e);
+                    "Failed to prepare properties from template: " + templateResource.location(), e);
         }
     }
 
@@ -108,16 +122,14 @@ public final class PropertiesTemplateHelper {
      */
     public static void copyIntoSameDirectory(Resource anchor, Resource resource, Consumer<AutoCloseable> afterAll) {
         try {
-            Path targetFile = anchor.getFile()
-                    .toPath()
-                    .getParent()
-                    .resolve(resource.getFile().getName());
+            Path targetFile =
+                    anchor.file().toPath().getParent().resolve(resource.file().getName());
             try (var inputStream = resource.getInputStream()) {
                 Files.copy(inputStream, targetFile);
             }
             afterAll.accept(() -> Files.deleteIfExists(targetFile));
         } catch (IOException e) {
-            throw new UncheckedIOException("Failed to copy resource next to " + anchor.getLocation(), e);
+            throw new UncheckedIOException("Failed to copy resource next to " + anchor.location(), e);
         }
     }
 }

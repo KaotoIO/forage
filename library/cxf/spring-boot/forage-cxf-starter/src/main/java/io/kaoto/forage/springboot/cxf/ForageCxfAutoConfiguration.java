@@ -41,7 +41,7 @@ public class ForageCxfAutoConfiguration {
         String cxfPath = environment.getProperty("cxf.path", DEFAULT_CXF_SERVLET_PATH);
         return new ForageSpringBootModuleAdapter<>(new CxfModuleDescriptor(), environment).withBeanCustomizer(bean -> {
             if (bean instanceof ForageCxfEndpoint endpoint) {
-                endpoint.setServletContainerCxfPath(cxfPath, RuntimeType.springBoot);
+                endpoint.setServletContainerCxfPath(cxfPath, RuntimeType.SPRING_BOOT);
             }
             return bean;
         });
@@ -65,7 +65,7 @@ public class ForageCxfAutoConfiguration {
                 log.info("Creating default CXF endpoint using provider: {}", providerClassName);
                 Object endpoint = provider.get().create(null);
                 if (endpoint instanceof ForageCxfEndpoint forageCxfEndpoint) {
-                    forageCxfEndpoint.setServletContainerCxfPath(cxfPath, RuntimeType.springBoot);
+                    forageCxfEndpoint.setServletContainerCxfPath(cxfPath, RuntimeType.SPRING_BOOT);
                 }
                 log.info("Registered default CXF endpoint bean");
                 return endpoint;

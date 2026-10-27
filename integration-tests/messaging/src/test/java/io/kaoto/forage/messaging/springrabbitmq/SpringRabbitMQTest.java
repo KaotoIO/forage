@@ -35,7 +35,7 @@ public class SpringRabbitMQTest implements ForageIntegrationTest {
                 afterAll);
 
         // running jbang forage run with dynamically modified properties
-        runner.when(camel().jbang()
+        runner.when(camel().cli()
                 .custom("forage", "run")
                 .processName(INTEGRATION_NAME)
                 .addResource(dynamicProperties)
@@ -54,7 +54,7 @@ public class SpringRabbitMQTest implements ForageIntegrationTest {
     public void springRabbitMQMessaging(ForageTestCaseRunner runner) {
 
         // validation of logged message from consumer
-        runner.then(camel().jbang()
+        runner.then(camel().cli()
                 .verify()
                 .integration(INTEGRATION_NAME)
                 .waitForLogMessage("Received: Hello Camel from producer-route"));

@@ -38,7 +38,7 @@ public final class GoogleConfigEntries extends ConfigEntries {
             "Request timeout in seconds",
             "Timeout",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule LOG_REQUESTS = ConfigModule.of(
@@ -56,7 +56,7 @@ public final class GoogleConfigEntries extends ConfigEntries {
             "Maximum number of output tokens",
             "Max Output Tokens",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
     public static final ConfigModule TOP_P = ConfigModule.of(
@@ -74,7 +74,7 @@ public final class GoogleConfigEntries extends ConfigEntries {
             "Top-k sampling parameter",
             "Top K",
             null,
-            "integer",
+            ConfigModule.TYPE_INTEGER,
             false,
             ConfigTag.ADVANCED);
 

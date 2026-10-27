@@ -202,9 +202,17 @@ Unknown command: forage
 
 Install or reinstall the plugin:
 
-```bash
-camel plugin add forage --gav io.kaoto.forage:camel-jbang-plugin-forage:{{ forage_version }}
-```
+=== "Camel LTS ({{ camel_lts_version }})"
+
+    ```bash
+    camel plugin add forage --gav io.kaoto.forage:camel-jbang-plugin-forage:{{ forage_version }}
+    ```
+
+=== "Camel Previous LTS ({{ camel_previous_lts_version }})"
+
+    ```bash
+    camel plugin add forage --gav io.kaoto.forage:camel-jbang-plugin-forage:{{ forage_previous_lts_version }}
+    ```
 
 Verify installation:
 

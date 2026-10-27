@@ -61,10 +61,14 @@ class DataSourceBeanFactoryTransactionTest {
             }
 
             @Override
-            public void setLogWriter(PrintWriter out) {}
+            public void setLogWriter(PrintWriter out) {
+                // No-op stub — not needed for this unit test
+            }
 
             @Override
-            public void setLoginTimeout(int seconds) {}
+            public void setLoginTimeout(int seconds) {
+                // No-op stub — not needed for this unit test
+            }
 
             @Override
             public int getLoginTimeout() {

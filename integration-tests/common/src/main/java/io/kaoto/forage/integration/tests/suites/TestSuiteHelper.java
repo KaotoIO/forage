@@ -12,15 +12,15 @@ class TestSuiteHelper {
 
     public static void afterSuite() {
         System.clearProperty(IntegrationTestSetupExtension.RUNTIME_PROPERTY);
-        System.clearProperty("citrus.camel.jbang.version");
+        System.clearProperty("citrus.camel.cli.version");
     }
 
     public static void beforeSuite(RuntimeType runtime, Logger log) {
-        if (runtime != RuntimeType.main) {
+        if (runtime != RuntimeType.MAIN) {
             System.setProperty(IntegrationTestSetupExtension.RUNTIME_PROPERTY, runtime.runtime());
         } else {
             System.clearProperty(IntegrationTestSetupExtension.RUNTIME_PROPERTY);
         }
-        System.setProperty("citrus.camel.jbang.version", ExportHelper.getCamelVersion());
+        System.setProperty("citrus.camel.cli.version", ExportHelper.getCamelVersion());
     }
 }

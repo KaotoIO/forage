@@ -36,7 +36,7 @@ public class MultiTest implements ForageIntegrationTest {
                 afterAll);
 
         // running jbang forage run with dynamically modified properties
-        runner.when(camel().jbang()
+        runner.when(camel().cli()
                 .custom("forage", "run")
                 .processName("route")
                 .addResource(dynamicProperties)
@@ -52,7 +52,7 @@ public class MultiTest implements ForageIntegrationTest {
     @CitrusTest()
     public void postgresql(ForageTestCaseRunner runner) {
         // validation of logged message
-        runner.then(camel().jbang()
+        runner.then(camel().cli()
                 .verify()
                 .integration("route")
                 .waitForLogMessage("from jdbc postgresql - [{id=1, content=postgres 1}, {id=2, content=postgres 2}]"));
@@ -62,7 +62,7 @@ public class MultiTest implements ForageIntegrationTest {
     @CitrusTest()
     public void mysql(ForageTestCaseRunner runner) {
         // validation of logged message
-        runner.then(camel().jbang()
+        runner.then(camel().cli()
                 .verify()
                 .integration("route")
                 .waitForLogMessage("from sql mysql - [{id=1, content=mysql 1}, {id=2, content=mysql 2}]"));

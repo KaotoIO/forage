@@ -31,6 +31,7 @@ import io.kaoto.forage.core.security.SecurityPolicyProvider;
  */
 @ForageBean(
         value = "spring-security",
+        defaultBeanName = "springSecurityPolicy",
         components = {"camel-spring-security"},
         feature = "Security Policy",
         description = "Spring Security authorization policy")
@@ -40,6 +41,11 @@ public class SpringSecurityPolicyProvider implements SecurityPolicyProvider {
     @Override
     public String name() {
         return "spring-security";
+    }
+
+    @Override
+    public String beanName() {
+        return "springSecurityPolicy";
     }
 
     @Override

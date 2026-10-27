@@ -59,7 +59,9 @@ public class RedisMemoryBeanProvider implements ChatMemoryBeanProvider, MaxMessa
     private volatile JedisPool defaultPool;
     private volatile PersistentRedisStore defaultStore;
 
-    public RedisMemoryBeanProvider() {}
+    public RedisMemoryBeanProvider() {
+        // Required for ServiceLoader-based instantiation
+    }
 
     @Override
     public void withMaxMessages(int maxMessages) {

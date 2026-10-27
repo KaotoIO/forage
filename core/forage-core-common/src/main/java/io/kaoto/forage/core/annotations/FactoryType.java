@@ -6,6 +6,12 @@ import java.util.Optional;
  * Enumeration of supported factory types that create different kinds of beans.
  */
 public enum FactoryType {
+    /** Factory that creates InfluxDB 1 clients. */
+    INFLUXDB_CLIENT("org.influxdb.InfluxDB", "forage-influxdb"),
+
+    /** Factory that creates InfluxDB 2 clients. */
+    INFLUXDB2_CLIENT("com.influxdb.client.InfluxDBClient", "forage-influxdb2"),
+
     /** Factory that creates Agent beans */
     AGENT("org.apache.camel.component.langchain4j.agent.api.Agent", "forage-agent-factories"),
 
@@ -26,7 +32,10 @@ public enum FactoryType {
             "org.springframework.amqp.rabbit.connection.ConnectionFactory", "forage-spring-rabbitmq"),
 
     /** Factory that creates SSLContextParameters beans for TLS */
-    SSL_CONTEXT_PARAMETERS("org.apache.camel.support.jsse.SSLContextParameters", "forage-security-tls");
+    SSL_CONTEXT_PARAMETERS("org.apache.camel.support.jsse.SSLContextParameters", "forage-security-tls"),
+
+    /** Factory that creates Camel authorization policy beans */
+    SECURITY_POLICY("org.apache.camel.spi.AuthorizationPolicy", "forage-core-security");
 
     private final String displayName;
 

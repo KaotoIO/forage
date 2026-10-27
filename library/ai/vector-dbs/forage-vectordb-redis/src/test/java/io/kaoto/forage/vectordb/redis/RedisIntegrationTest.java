@@ -34,9 +34,9 @@ import static org.assertj.core.api.Fail.fail;
 public class RedisIntegrationTest {
     private static final Logger LOG = LoggerFactory.getLogger(RedisIntegrationTest.class);
 
-    private static final int dimension = 4;
-    private static final String indexName = "test_index";
-    private static final String prefix = "test:";
+    private static final int DIMENSION = 4;
+    private static final String INDEX_NAME = "test_index";
+    private static final String PREFIX = "test:";
 
     @Container
     private static final GenericContainer<?> redisContainer = new GenericContainer<>(
@@ -65,14 +65,14 @@ public class RedisIntegrationTest {
         // Set system properties with the dynamic container values
         System.setProperty("redis.host", host);
         System.setProperty("redis.port", Integer.toString(port));
-        System.setProperty("redis.dimension", Integer.toString(dimension));
-        System.setProperty("redis.index.name", indexName);
-        System.setProperty("redis.prefix", prefix);
+        System.setProperty("redis.dimension", Integer.toString(DIMENSION));
+        System.setProperty("redis.index.name", INDEX_NAME);
+        System.setProperty("redis.prefix", PREFIX);
         System.setProperty("redis.distance.metric", "COSINE");
         System.setProperty("redis.metadata.fields", "category,source");
 
         LOG.info("Redis container configured - Host: {}, Port: {}", host, port);
-        LOG.info("Redis index configured: {}", indexName);
+        LOG.info("Redis index configured: {}", INDEX_NAME);
     }
 
     @AfterAll

@@ -10,7 +10,7 @@ import io.kaoto.forage.core.common.ExportCustomizer;
 public final class ExportHelper {
 
     public enum ResourceType {
-        versions("versions.properties");
+        VERSIONS("versions.properties");
 
         private final String fileName;
 
@@ -34,7 +34,7 @@ public final class ExportHelper {
      */
     public static String getQuarkusVersion() {
         return getString(
-                "quarkus.version", ResourceType.versions, "Could not determine quarkus version from properties file.");
+                "quarkus.version", ResourceType.VERSIONS, "Could not determine quarkus version from properties file.");
     }
 
     /**
@@ -44,7 +44,20 @@ public final class ExportHelper {
      */
     public static String getCamelVersion() {
         return getString(
-                "camel.version", ResourceType.versions, "Could not determine camel version from properties file.");
+                "camel.version", ResourceType.VERSIONS, "Could not determine camel version from properties file.");
+    }
+
+    /**
+     * Gets the Maven version range of the Camel CLI versions this plugin supports, from the versions.properties file.
+     * (which is populated during buildtime)
+     *
+     * @return the supported Camel version range, e.g. {@code [4.23.0,4.24.0)}
+     */
+    public static String getSupportedCamelVersions() {
+        return getString(
+                "camel.jbang.plugin.camel-versions",
+                ResourceType.VERSIONS,
+                "Could not determine supported camel versions from properties file.");
     }
 
     /**
@@ -54,7 +67,7 @@ public final class ExportHelper {
      */
     public static String getProjectVersion() {
         return getString(
-                "project.version", ResourceType.versions, "Could not determine project version from properties file.");
+                "project.version", ResourceType.VERSIONS, "Could not determine project version from properties file.");
     }
 
     /**

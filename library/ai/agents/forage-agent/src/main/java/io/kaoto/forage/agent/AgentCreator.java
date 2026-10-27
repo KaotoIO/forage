@@ -52,6 +52,7 @@ public final class AgentCreator {
 
     private static final Logger LOG = LoggerFactory.getLogger(AgentCreator.class);
     public static final String DEFAULT_AGENT = "agent";
+    private static final String IN_MEMORY_STORE = "in.memory.store";
     private static final String FEATURE_MEMORY = "memory";
 
     private static final Object CREATION_LOCK = new Object();
@@ -161,7 +162,8 @@ public final class AgentCreator {
     public static Set<String> detectPrefixes(ClassLoader classLoader) {
         ConfigStore.getInstance().setClassLoader(classLoader);
         AgentConfig defaultConfig = new AgentConfig();
-        return ConfigStore.getInstance().readPrefixes(defaultConfig, ConfigHelper.getNamedPropertyRegexp("agent"));
+        return ConfigStore.getInstance()
+                .readPrefixes(defaultConfig, ConfigHelper.getNamedPropertyRegexp(DEFAULT_AGENT));
     }
 
     /**
@@ -171,7 +173,7 @@ public final class AgentCreator {
         ConfigStore.getInstance().setClassLoader(classLoader);
         AgentConfig defaultConfig = new AgentConfig();
         return !ConfigStore.getInstance()
-                .readPrefixes(defaultConfig, ConfigHelper.getDefaultPropertyRegexp("agent"))
+                .readPrefixes(defaultConfig, ConfigHelper.getDefaultPropertyRegexp(DEFAULT_AGENT))
                 .isEmpty();
     }
 
@@ -324,13 +326,13 @@ public final class AgentCreator {
                 Map<String, String> previousValues = new LinkedHashMap<>();
                 try {
                     setSystemPropertyIfNotNull(
-                            previousValues, prefix, "in.memory.store", "file.source", config.fileSource());
+                            previousValues, prefix, IN_MEMORY_STORE, "file.source", config.fileSource());
                     setSystemPropertyIfNotNull(
-                            previousValues, prefix, "in.memory.store", "max.size", config.embeddingStoreMaxSize());
+                            previousValues, prefix, IN_MEMORY_STORE, "max.size", config.embeddingStoreMaxSize());
                     setSystemPropertyIfNotNull(
                             previousValues,
                             prefix,
-                            "in.memory.store",
+                            IN_MEMORY_STORE,
                             "overlap.size",
                             config.embeddingStoreOverlapSize());
 

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import org.citrusframework.AbstractTestActionBuilder;
 import org.citrusframework.actions.AbstractTestAction;
-import org.citrusframework.camel.jbang.CamelJBang;
+import org.citrusframework.camel.cli.CamelCli;
 import org.citrusframework.context.TestContext;
 import org.citrusframework.exceptions.CitrusRuntimeException;
 import org.citrusframework.jbang.ProcessAndOutput;
@@ -66,7 +66,7 @@ public class ForageCmdSendAction extends AbstractTestAction {
                 args.add("--header=" + StringUtils.quote(k + "=" + context.replaceDynamicContentInString(v), true)));
 
         LOG.info("Sending message to Camel integration '{}' (pid: {}) endpoint {}", name, pid, endpoint);
-        ProcessAndOutput result = CamelJBang.camel().send(args.toArray(String[]::new));
+        ProcessAndOutput result = CamelCli.camel().send(args.toArray(String[]::new));
         String output = result.getOutput();
 
         // camel cmd send exits 0 even on failure, so validate the output instead
@@ -86,7 +86,7 @@ public class ForageCmdSendAction extends AbstractTestAction {
     private long waitForRunningPid(String name) {
         long deadline = System.currentTimeMillis() + READY_TIMEOUT_MILLIS;
         while (true) {
-            for (Map<String, String> row : CamelJBang.camel().getAll()) {
+            for (Map<String, String> row : CamelCli.camel().getAll()) {
                 if (name.equals(row.get("name"))
                         && "Running".equals(row.get("status"))
                         && "1/1".equals(row.get("ready"))) {

@@ -3,8 +3,8 @@ package io.kaoto.forage.integration.tests;
 import java.util.function.Consumer;
 import org.apache.camel.tooling.model.Strings;
 import org.citrusframework.TestAction;
-import org.citrusframework.TestActionSupport;
-import org.citrusframework.actions.camel.CamelIntegrationRunCustomizedActionBuilder;
+import org.citrusframework.api.actions.camel.CamelIntegrationRunCustomizedActionBuilder;
+import org.citrusframework.dsl.TestActionSupport;
 import org.citrusframework.spi.Resource;
 import org.citrusframework.spi.Resources;
 
@@ -47,7 +47,7 @@ public interface ForageIntegrationTest extends TestActionSupport {
     default CamelIntegrationRunCustomizedActionBuilder<?, ?> forageRun(
             String processName, String foragePropertiesFile, String camelRoute) {
         CamelIntegrationRunCustomizedActionBuilder<?, ?> builder =
-                camel().jbang().custom("forage", "run").processName(processName);
+                camel().cli().custom("forage", "run").processName(processName);
 
         if (!Strings.isNullOrEmpty(foragePropertiesFile)) {
             builder.addResource(classResource(foragePropertiesFile));
@@ -82,7 +82,7 @@ public interface ForageIntegrationTest extends TestActionSupport {
 
     /**
      * Sends a message to a running integration via {@code camel cmd send}, addressing it by the
-     * PID of its {@code Running} process. Use this instead of {@code camel().jbang().cmd().send()},
+     * PID of its {@code Running} process. Use this instead of {@code camel().cli().cmd().send()},
      * which addresses by name: with exported runtimes (spring-boot, quarkus) on Camel JBang 4.20
      * the launcher's leftover {@code Terminated} entry makes the name ambiguous and the send is
      * silently dropped (exit code 0). See {@link ForageCmdSendAction}.

@@ -53,6 +53,8 @@ public class ForageTestCaseRunner extends DefaultTestCaseRunner {
             // are no longer stubbed and cause NoSuchBeanException during export.
             // Only needed for exported runtimes (spring-boot, quarkus), not plain Camel.
             builder.withArg("--ignore-loading-error");
+            // Camel JBang defaults the exported project to Java 21; match the running JDK instead.
+            builder.withArg("--java-version=" + System.getProperty("java.specification.version"));
         }
         logTextInBox(runtime);
     }

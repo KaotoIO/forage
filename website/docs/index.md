@@ -88,6 +88,24 @@ Forage publishes release streams so you can match your Apache Camel version:
 | **Previous LTS** | {{ forage_previous_lts_version }} | {{ camel_previous_lts_version }} | Maintenance releases for the previous Camel LTS line |
 | **Latest** | {{ forage_latest_version }} | {{ camel_latest_version }} | Tracks the newest (non-LTS) Camel release |
 
+??? info "All releases"
+    Each Forage release is built against the exact Apache Camel version below. Install the release that matches your Camel CLI with `camel plugin add forage --gav io.kaoto.forage:camel-jbang-plugin-forage:<forage-version>`.
+
+    | Forage | Apache Camel |
+    |--------|-------------|
+    | 1.7.0 | 4.23.0 |
+    | 1.6.2 | 4.22.2 |
+    | 1.6.1 | 4.22.1 |
+    | 1.6.0 | 4.22.0 |
+    | 1.5.0 | 4.20.0 |
+    | 1.4.2 | 4.18.5 |
+    | 1.4.1 | 4.18.4 |
+    | 1.4.0 | 4.18.3 |
+    | 1.3 | 4.18.2 |
+    | 1.2 | 4.18.2 |
+    | 1.1 | 4.18.1 |
+    | 1.0 | 4.17.0 |
+
 Pick the stream that matches the Camel version you use, then follow the [Getting Started](getting-started/index.md) guide.
 
 !!! note "Installing the plugin for your Camel version"

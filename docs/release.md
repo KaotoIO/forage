@@ -38,5 +38,12 @@ After the workflow completes, check that:
 - the artifacts are visible on Maven Central.
 
 The Camel version keys in `website/mkdocs.yml` (`camel_lts_version`,
-`camel_previous_lts_version`, `camel_latest_version`) and the versions in `README.md` are
+`camel_previous_lts_version`, `camel_latest_version`, and the `camel_lts_range`,
+`camel_previous_lts_range`, `camel_latest_range` keys) and the versions in `README.md` are
 **not** updated by the workflow and must be bumped manually when the Camel line changes.
+
+Each `camel_*_range` key covers the Camel minor line of its stream's branch (`main`,
+`camel-4.18.x`, `camel-latest`), for example `[4.23.0,4.24.0)` for Camel 4.23.x. On branches
+that define `camel.jbang.plugin.camel-versions` in `tooling/camel-jbang-plugin-forage/pom.xml`
+(currently only `camel-latest`), copy that value; otherwise derive the range from the
+branch's `camel.version` in the root `pom.xml`.

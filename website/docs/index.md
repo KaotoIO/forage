@@ -84,9 +84,18 @@ Forage publishes release streams so you can match your Apache Camel version:
 
 | Stream | Forage | Apache Camel | Description |
 |--------|--------|-------------|-------------|
-| **LTS** | {{ forage_version }} | {{ camel_lts_version }} | Tracks the current Camel LTS line — recommended for production |
-| **Previous LTS** | {{ forage_previous_lts_version }} | {{ camel_previous_lts_version }} | Maintenance releases for the previous Camel LTS line |
-| **Latest** | {{ forage_latest_version }} | {{ camel_latest_version }} | Tracks the newest (non-LTS) Camel release |
+| **LTS** | {{ forage_version }} | `{{ camel_lts_range }}` | Tracks the current Camel LTS line — recommended for production |
+| **Previous LTS** | {{ forage_previous_lts_version }} | `{{ camel_previous_lts_range }}` | Maintenance releases for the previous Camel LTS line |
+| **Latest** | {{ forage_latest_version }} | `{{ camel_latest_range }}` | Tracks the newest (non-LTS) Camel release |
+
+The Apache Camel column is the supported range, in the same notation as the plugin's compatibility warning: `[4.23.0,4.24.0)` means any Camel 4.23.x release. Each stream is built and tested against the newest patch of its line (Camel {{ camel_lts_version }}, {{ camel_previous_lts_version }} and {{ camel_latest_version }} respectively).
+
+??? info "Older releases"
+    Releases for Camel lines that no stream tracks anymore. They receive no further updates; move to a current stream when you can.
+
+    | Forage | Apache Camel |
+    |--------|-------------|
+    | 1.5.0 | `[4.20.0,4.21.0)` |
 
 Pick the stream that matches the Camel version you use, then follow the [Getting Started](getting-started/index.md) guide.
 

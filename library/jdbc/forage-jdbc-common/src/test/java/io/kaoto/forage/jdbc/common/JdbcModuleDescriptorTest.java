@@ -64,6 +64,27 @@ class JdbcModuleDescriptorTest {
     }
 
     @Test
+    void driverPropertiesBecomeQuotedAdditionalJdbcProperties() {
+        System.setProperty("forage.jdbc.properties.sslConnection", "true");
+        System.setProperty("forage.jdbc.properties.oracle.jdbc.ReadTimeout", "5000");
+        try {
+            DataSourceFactoryConfig config = new DataSourceFactoryConfig();
+            Map<String, String> props = new JdbcModuleDescriptor().translateProperties(null, config);
+
+            assertThat(props)
+                    .containsEntry(
+                            "quarkus.datasource.\"dataSource\".jdbc.additional-jdbc-properties.\"sslConnection\"",
+                            "true")
+                    .containsEntry(
+                            "quarkus.datasource.\"dataSource\".jdbc.additional-jdbc-properties.\"oracle.jdbc.ReadTimeout\"",
+                            "5000");
+        } finally {
+            System.clearProperty("forage.jdbc.properties.sslConnection");
+            System.clearProperty("forage.jdbc.properties.oracle.jdbc.ReadTimeout");
+        }
+    }
+
+    @Test
     void jdbcObjectStoreIsTranslatedWithANonTransactionalStoreDataSource() {
         Map<String, String> objectStore = Map.of(
                 "forage.jdbc.transaction.enabled", "true",

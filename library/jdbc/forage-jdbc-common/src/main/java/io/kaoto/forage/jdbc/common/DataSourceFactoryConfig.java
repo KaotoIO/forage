@@ -1,7 +1,18 @@
 package io.kaoto.forage.jdbc.common;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.regex.Pattern;
 import io.kaoto.forage.core.jta.store.ObjectStoreSettings;
 import io.kaoto.forage.core.util.config.AbstractConfig;
+import io.kaoto.forage.core.util.config.ConfigResolver;
+import io.kaoto.forage.core.util.config.ConfigStore;
+import io.kaoto.forage.core.util.config.PlaceholderResolver;
 import io.kaoto.forage.jdbc.common.idempotent.ForageJdbcMessageIdRepository;
 
 import static io.kaoto.forage.jdbc.common.DataSourceFactoryConfigEntries.ACQUISITION_TIMEOUT_SECONDS;
@@ -50,6 +61,8 @@ import static io.kaoto.forage.jdbc.common.DataSourceFactoryConfigEntries.VALIDAT
  */
 public class DataSourceFactoryConfig extends AbstractConfig {
 
+    private static final String DRIVER_PROPERTIES_SEGMENT = "jdbc.properties.";
+
     public DataSourceFactoryConfig() {
         this(null);
     }
@@ -61,6 +74,69 @@ public class DataSourceFactoryConfig extends AbstractConfig {
     @Override
     public String name() {
         return "forage-datasource-factory";
+    }
+
+    /**
+     * Keeps driver property keys ({@code forage.[<name>.]jdbc.properties.<key>}) under their full
+     * name. They have no fixed set of modules, so {@link #driverProperties()} collects them.
+     */
+    @Override
+    public void register(String name, String value) {
+        if (isDriverPropertyKey(name)) {
+            ConfigStore.getInstance().setDirect(name, PlaceholderResolver.resolve(value));
+            return;
+        }
+        super.register(name, value);
+    }
+
+    static boolean isDriverPropertyKey(String name) {
+        return name.startsWith("forage.") && name.contains("." + DRIVER_PROPERTIES_SEGMENT);
+    }
+
+    /**
+     * Returns the driver-specific JDBC properties of this datasource, configured as
+     * {@code forage.[<name>.]jdbc.properties.<key>=<value>}.
+     *
+     * <p>Sources, lowest precedence first: the {@code forage-datasource-factory.properties} file,
+     * the runtime configuration sources ({@code application.properties}, the Spring Environment),
+     * and system properties. Environment variables are not read, because their names cannot keep
+     * the case of the property names drivers expect. Use a {@code {{env:NAME}}} placeholder in
+     * the value instead.
+     *
+     * @return the properties by name, sorted; empty when none are configured
+     */
+    public Map<String, String> driverProperties() {
+        String base = (prefix() == null ? "forage." : "forage." + prefix() + ".") + DRIVER_PROPERTIES_SEGMENT;
+        ConfigStore store = ConfigStore.getInstance();
+        Map<String, String> properties = new TreeMap<>();
+
+        for (String name : store.propertyNames()) {
+            if (name.startsWith(base) && name.length() > base.length()) {
+                store.getByPropertyName(name).ifPresent(value -> properties.put(name.substring(base.length()), value));
+            }
+        }
+
+        // Resolvers are ordered by priority, highest first: the first one with a value wins
+        List<ConfigResolver> resolvers = store.getResolvers();
+        Set<String> resolverKeys = new TreeSet<>();
+        String regexp = Pattern.quote(base) + "(.+)";
+        resolvers.forEach(resolver -> resolverKeys.addAll(resolver.discoverPrefixes(regexp)));
+        for (String key : resolverKeys) {
+            for (ConfigResolver resolver : resolvers) {
+                Optional<String> value = resolver.resolve(base + key);
+                if (value.isPresent()) {
+                    properties.put(key, PlaceholderResolver.resolve(value.get()));
+                    break;
+                }
+            }
+        }
+
+        for (String name : System.getProperties().stringPropertyNames()) {
+            if (name.startsWith(base) && name.length() > base.length()) {
+                properties.put(name.substring(base.length()), PlaceholderResolver.resolve(System.getProperty(name)));
+            }
+        }
+        return Collections.unmodifiableMap(properties);
     }
 
     // Database connection methods

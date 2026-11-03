@@ -53,6 +53,12 @@ Forage converts property names to environment variable names by:
 | `forage.myAgent.agent.base.url` | `FORAGE_MYAGENT_AGENT_BASE_URL` |
 | `forage.myBroker.jms.port` | `FORAGE_MYBROKER_JMS_PORT` |
 
+!!! note "JDBC driver properties"
+    [Driver properties](../modules/jdbc.md#driver-properties) (`forage.[<name>.]jdbc.properties.*`)
+    are the exception: they are not read from environment variables, because the conversion above
+    loses the case that driver property names need. Use a [placeholder](#property-placeholders) in
+    the value instead.
+
 {% raw %}
 ## Property Placeholders
 

@@ -167,6 +167,25 @@ class ForagePropertyValidatorTest {
     }
 
     @Test
+    void testDriverPropertiesAreAccepted() throws IOException {
+        // Given: JDBC driver properties, which take any key under forage.[<name>.]jdbc.properties
+        createPropertiesFile(
+                "application.properties",
+                "forage.jdbc.db.kind=db2",
+                "forage.jdbc.properties.sslConnection=true",
+                "forage.ds1.jdbc.db.kind=oracle",
+                "forage.ds1.jdbc.properties.oracle.jdbc.ReadTimeout=5000",
+                "forage.ds1.jdbc.propertiez.sslConnection=true"); // typo: still reported
+
+        // When: validating
+        ValidationResult result = ForagePropertyValidator.validate(tempDir.toFile(), catalog);
+
+        // Then: only the misspelled key is reported
+        assertThat(result.getWarnings()).singleElement().satisfies(warning -> assertThat(warning.getPropertyName())
+                .isEqualTo("forage.ds1.jdbc.propertiez.sslConnection"));
+    }
+
+    @Test
     void testEmptyDirectory() throws IOException {
         // Given: empty directory with no properties files
         // When: validating

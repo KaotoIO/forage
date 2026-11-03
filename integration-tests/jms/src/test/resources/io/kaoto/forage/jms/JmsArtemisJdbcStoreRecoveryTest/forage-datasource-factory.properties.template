@@ -1,0 +1,9 @@
+# Non-XA datasource holding the Narayana transaction log (JDBC object store, #447).
+# Transactions are deliberately not enabled: the object store needs a plain local-transaction pool.
+forage.txlog.jdbc.db.kind=postgresql
+forage.txlog.jdbc.url=JDBC_URL_PLACEHOLDER
+forage.txlog.jdbc.username=test
+forage.txlog.jdbc.password=test
+forage.txlog.jdbc.pool.initial.size=1
+forage.txlog.jdbc.pool.min.size=1
+forage.txlog.jdbc.pool.max.size=5

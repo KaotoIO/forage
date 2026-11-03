@@ -1,5 +1,6 @@
 package io.kaoto.forage.jms.common;
 
+import io.kaoto.forage.core.jta.store.ObjectStoreSettings;
 import io.kaoto.forage.core.util.config.AbstractConfig;
 
 import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.BLOCK_IF_FULL;
@@ -27,8 +28,12 @@ import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACT
 import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACTION_ENABLE_RECOVERY;
 import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACTION_EXPIRY_SCANNERS;
 import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACTION_NODE_ID;
+import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACTION_OBJECT_STORE_CREATE_TABLE;
+import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACTION_OBJECT_STORE_DATASOURCE;
 import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACTION_OBJECT_STORE_DIRECTORY;
+import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACTION_OBJECT_STORE_DROP_TABLE;
 import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACTION_OBJECT_STORE_ID;
+import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACTION_OBJECT_STORE_TABLE_PREFIX;
 import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACTION_OBJECT_STORE_TYPE;
 import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACTION_RECOVERY_BACKOFF_SECONDS;
 import static io.kaoto.forage.jms.common.ConnectionFactoryConfigEntries.TRANSACTION_RECOVERY_MODULES;
@@ -221,5 +226,41 @@ public class ConnectionFactoryConfig extends AbstractConfig {
 
     public String transactionObjectStoreType() {
         return get(TRANSACTION_OBJECT_STORE_TYPE).orElse(TRANSACTION_OBJECT_STORE_TYPE.defaultValue());
+    }
+
+    public String transactionObjectStoreDataSource() {
+        return get(TRANSACTION_OBJECT_STORE_DATASOURCE).orElse(null);
+    }
+
+    public boolean transactionObjectStoreCreateTable() {
+        return get(TRANSACTION_OBJECT_STORE_CREATE_TABLE)
+                .map(Boolean::parseBoolean)
+                .orElse(Boolean.parseBoolean(TRANSACTION_OBJECT_STORE_CREATE_TABLE.defaultValue()));
+    }
+
+    public boolean transactionObjectStoreDropTable() {
+        return get(TRANSACTION_OBJECT_STORE_DROP_TABLE)
+                .map(Boolean::parseBoolean)
+                .orElse(Boolean.parseBoolean(TRANSACTION_OBJECT_STORE_DROP_TABLE.defaultValue()));
+    }
+
+    public String transactionObjectStoreTablePrefix() {
+        return get(TRANSACTION_OBJECT_STORE_TABLE_PREFIX).orElse(TRANSACTION_OBJECT_STORE_TABLE_PREFIX.defaultValue());
+    }
+
+    /**
+     * The object store settings of this configuration, including the fully qualified property
+     * names (e.g. {@code forage.broker1.jms.transaction.object.store.datasource}) for error messages.
+     */
+    public ObjectStoreSettings transactionObjectStoreSettings() {
+        return new ObjectStoreSettings(
+                transactionObjectStoreType(),
+                transactionObjectStoreDirectory(),
+                transactionObjectStoreDataSource(),
+                transactionObjectStoreCreateTable(),
+                transactionObjectStoreDropTable(),
+                transactionObjectStoreTablePrefix(),
+                TRANSACTION_OBJECT_STORE_TYPE.asNamed(prefix()).propertyName(),
+                TRANSACTION_OBJECT_STORE_DATASOURCE.asNamed(prefix()).propertyName());
     }
 }

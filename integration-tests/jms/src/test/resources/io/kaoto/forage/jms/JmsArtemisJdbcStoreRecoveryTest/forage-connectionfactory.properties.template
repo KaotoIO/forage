@@ -1,0 +1,32 @@
+# ActiveMQ Artemis JMS with XA transactions and crash recovery, transaction log in PostgreSQL (#447)
+forage.jms.kind=artemis
+forage.jms.broker.url=tcp://localhost:61616  # Overridden by test with testcontainer URL
+forage.jms.username=artemis
+forage.jms.password=artemis
+
+# Connection pool settings
+forage.jms.pool.enabled=true
+forage.jms.pool.max.connections=10
+
+# XA transaction settings with recovery
+forage.jms.transaction.enabled=true
+forage.jms.transaction.timeout.seconds=30
+forage.jms.transaction.node.id=jdbc-store-node
+forage.jms.transaction.enable.recovery=true
+forage.jms.transaction.recovery.period.seconds=5
+forage.jms.transaction.recovery.backoff.seconds=1
+
+# JDBC object store: the transaction log lives in the 'txlog' datasource (forage-datasource-factory.properties).
+# The table prefix is unique per test execution (the database container is shared across suites).
+forage.jms.transaction.object.store.type=jdbc
+forage.jms.transaction.object.store.datasource=txlog
+forage.jms.transaction.object.store.create.table=true
+forage.jms.transaction.object.store.table.prefix=TABLE_PREFIX_PLACEHOLDER
+# Not used by the JDBC store. Each run points it at its own directory: if the log fell back to the
+# file store, the restarted run could not see it and recovery would fail.
+forage.jms.transaction.object.store.directory=OBJECT_STORE_DIR_PLACEHOLDER
+
+# Consumed by the route: the first run creates this file right before crashing; the restarted run
+# gets a pre-created marker of its own and skips the crash-producer route.
+crash.marker.file=CRASH_MARKER_PLACEHOLDER
+recovery.queue=recovery.jdbc.output

@@ -79,6 +79,13 @@ public class JdbcModuleDescriptor implements ForageModuleDescriptor<DataSourceFa
         props.put(quarkusPrefix + "jdbc.acquisition-timeout", config.acquisitionTimeoutSeconds() + "S");
         props.put(quarkusPrefix + "jdbc.validation-query-timeout", config.validationTimeoutSeconds() + "S");
         props.put(quarkusPrefix + "jdbc.leak-detection-interval", config.leakTimeoutMinutes() + "M");
+        // Quote the key: driver property names can contain dots (e.g. oracle.jdbc.ReadTimeout)
+        for (Map.Entry<String, String> driverProperty :
+                config.driverProperties().entrySet()) {
+            props.put(
+                    quarkusPrefix + "jdbc.additional-jdbc-properties.\"" + driverProperty.getKey() + "\"",
+                    driverProperty.getValue());
+        }
 
         if (config.transactionEnabled()) {
             props.put(quarkusPrefix + "jdbc.transaction-isolation-level", "READ_COMMITTED");

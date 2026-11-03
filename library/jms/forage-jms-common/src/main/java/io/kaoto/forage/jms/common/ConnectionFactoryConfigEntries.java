@@ -345,9 +345,51 @@ public final class ConnectionFactoryConfigEntries extends ConfigEntries {
     public static final ConfigModule TRANSACTION_OBJECT_STORE_TYPE = ConfigModule.of(
             ConnectionFactoryConfig.class,
             "forage.jms.transaction.object.store.type",
-            "Type of transaction object store (file-system or jdbc)",
+            "Type of transaction object store: file-system, jdbc (transaction log in a database table, no persistent volume needed) or volatile (in memory, tests only)",
             "Object Store Type",
             "file-system",
+            "string",
+            false,
+            ConfigTag.ADVANCED);
+
+    // The object store is JVM-global and shared with the JDBC module: these mirror the
+    // forage.jdbc.transaction.object.store.* properties and must be configured identically.
+    public static final ConfigModule TRANSACTION_OBJECT_STORE_DATASOURCE = ConfigModule.of(
+            ConnectionFactoryConfig.class,
+            "forage.jms.transaction.object.store.datasource",
+            "Name of the non-XA Forage datasource holding the transaction log table, as in forage.NAME.jdbc.*; required when the object store type is jdbc",
+            "Object Store DataSource",
+            null,
+            "string",
+            false,
+            ConfigTag.ADVANCED);
+
+    public static final ConfigModule TRANSACTION_OBJECT_STORE_CREATE_TABLE = ConfigModule.of(
+            ConnectionFactoryConfig.class,
+            "forage.jms.transaction.object.store.create.table",
+            "Create the JDBC object store table at startup if it does not exist",
+            "Create Table",
+            "false",
+            "boolean",
+            false,
+            ConfigTag.ADVANCED);
+
+    public static final ConfigModule TRANSACTION_OBJECT_STORE_DROP_TABLE = ConfigModule.of(
+            ConnectionFactoryConfig.class,
+            "forage.jms.transaction.object.store.drop.table",
+            "Drop the JDBC object store table at startup, discarding pending transaction logs (tests only)",
+            "Drop Table",
+            "false",
+            "boolean",
+            false,
+            ConfigTag.ADVANCED);
+
+    public static final ConfigModule TRANSACTION_OBJECT_STORE_TABLE_PREFIX = ConfigModule.of(
+            ConnectionFactoryConfig.class,
+            "forage.jms.transaction.object.store.table.prefix",
+            "Prefix of the JDBC object store table name; the table is PREFIX + JBossTSTxTable",
+            "Table Prefix",
+            "forage_",
             "string",
             false,
             ConfigTag.ADVANCED);
@@ -388,6 +430,10 @@ public final class ConnectionFactoryConfigEntries extends ConfigEntries {
                 TRANSACTION_EXPIRY_SCANNERS,
                 TRANSACTION_XA_RESOURCE_ORPHAN_FILTERS,
                 TRANSACTION_OBJECT_STORE_DIRECTORY,
-                TRANSACTION_OBJECT_STORE_TYPE);
+                TRANSACTION_OBJECT_STORE_TYPE,
+                TRANSACTION_OBJECT_STORE_DATASOURCE,
+                TRANSACTION_OBJECT_STORE_CREATE_TABLE,
+                TRANSACTION_OBJECT_STORE_DROP_TABLE,
+                TRANSACTION_OBJECT_STORE_TABLE_PREFIX);
     }
 }

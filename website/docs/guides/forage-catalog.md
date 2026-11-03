@@ -141,6 +141,7 @@ Config entries define the properties a user can set. Each entry carries enough m
 | `boolean` | Toggle / checkbox | True/false flags |
 | `password` | Password input | Masked text field for secrets |
 | `bean-name` | Dropdown | Options populated from `beansByFeature` matching `selectsFrom` |
+| `map` | Key/value list | `name` is a prefix: each pair is written as `name.key=value`, for example `forage.jdbc.properties.sslConnection=true` |
 
 **Config tags** allow a UI to organize fields into expandable sections. Typically `COMMON` fields are shown expanded by default, while `ADVANCED` and `SECURITY` sections are collapsed.
 

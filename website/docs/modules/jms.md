@@ -137,10 +137,11 @@ recovery in-process:
 
 For recovery to work across restarts:
 
-- **The object store must be persistent and stable.** `forage.jms.transaction.object.store.directory`
-  defaults to `ObjectStore`, resolved against the process working directory — in production point
-  it to an absolute path on durable storage, and make sure the restarted instance uses the same
-  directory.
+- **The object store must be persistent and stable.** With the default `file-system` store,
+  `forage.jms.transaction.object.store.directory` defaults to `ObjectStore`, resolved against the
+  process working directory — in production point it to an absolute path on durable storage, and
+  make sure the restarted instance uses the same directory. Alternatively keep the transaction log
+  in a database with the [JDBC object store](#transaction-log-storage).
 - **`forage.jms.transaction.node.id` must be stable and unique per node.** Narayana tags every
   transaction branch with it; a restarted instance only recovers branches created under the same
   node id, and two nodes sharing an id would steal each other's transactions.
@@ -154,3 +155,33 @@ With `forage.jms.transaction.enable.recovery=false` (the default) no recovery th
     Forage extension is registered with the Quarkus recovery service). The recovery scan
     interval is not configurable through Quarkus properties — use the Narayana system property
     `-DRecoveryEnvironmentBean.periodicRecoveryPeriod=<seconds>` if you need to change it.
+
+## Transaction Log Storage
+
+`forage.jms.transaction.object.store.type` selects where Narayana keeps the transaction log:
+`file-system` (default), `jdbc` (a database table, with no persistent volume needed on
+Kubernetes/OpenShift) or `volatile` (memory only, tests only). The JDBC store works with JMS-only
+applications too. It needs a plain, non-XA Forage datasource for the log table, so add the Forage
+JDBC module and a driver module (for example `forage-jdbc-postgresql`). With Camel JBang, defining
+the `forage.<name>.jdbc.*` datasource is enough:
+
+```properties
+forage.myBroker.jms.transaction.enabled=true
+forage.myBroker.jms.transaction.enable.recovery=true
+forage.myBroker.jms.transaction.node.id=broker-node-0
+forage.myBroker.jms.transaction.object.store.type=jdbc
+forage.myBroker.jms.transaction.object.store.datasource=txlog
+forage.myBroker.jms.transaction.object.store.create.table=true
+
+# non-XA datasource holding the transaction log (no transaction.enabled)
+forage.txlog.jdbc.db.kind=postgresql
+forage.txlog.jdbc.url=jdbc:postgresql://db:5432/txlog
+forage.txlog.jdbc.username=app
+forage.txlog.jdbc.password=secret
+```
+
+`forage.jms.transaction.object.store.{datasource,create.table,drop.table,table.prefix}` work the
+same as their `forage.jdbc.*` counterparts. See
+[JDBC object store](jdbc.md#jdbc-object-store) for the datasource rules, the table, and the
+Kubernetes/OpenShift guidance. The object store is shared by the whole JVM: in an application that
+also uses Forage JDBC transactions, configure the same object store on both.

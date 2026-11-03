@@ -5,13 +5,14 @@ import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.kaoto.forage.core.jta.store.NarayanaObjectStore;
+import io.kaoto.forage.core.jta.store.ObjectStoreDataSourceProvider;
+import io.kaoto.forage.core.jta.store.ObjectStoreSettings;
 import io.kaoto.forage.jms.common.ConnectionFactoryConfig;
 import com.arjuna.ats.arjuna.common.CoordinatorEnvironmentBean;
 import com.arjuna.ats.arjuna.common.CoreEnvironmentBean;
 import com.arjuna.ats.arjuna.common.CoreEnvironmentBeanException;
-import com.arjuna.ats.arjuna.common.ObjectStoreEnvironmentBean;
 import com.arjuna.ats.arjuna.common.RecoveryEnvironmentBean;
-import com.arjuna.ats.internal.arjuna.objectstore.VolatileStore;
 import com.arjuna.ats.jta.common.JTAEnvironmentBean;
 import com.arjuna.common.internal.util.propertyservice.BeanPopulator;
 
@@ -27,10 +28,21 @@ public class TransactionConfiguration {
 
     private final ConnectionFactoryConfig config;
     private final String instanceId;
+    private final ObjectStoreDataSourceProvider objectStoreDataSources;
 
     public TransactionConfiguration(ConnectionFactoryConfig config, String instanceId) {
+        this(config, instanceId, null);
+    }
+
+    /**
+     * @param objectStoreDataSources creates the datasource of the {@code jdbc} object store;
+     *     {@code null} discovers the Forage JDBC implementation on the classpath when needed
+     */
+    public TransactionConfiguration(
+            ConnectionFactoryConfig config, String instanceId, ObjectStoreDataSourceProvider objectStoreDataSources) {
         this.config = config;
         this.instanceId = instanceId;
+        this.objectStoreDataSources = objectStoreDataSources;
     }
 
     public void initializeNarayana() {
@@ -43,6 +55,11 @@ public class TransactionConfiguration {
             configureRecovery();
             configureJTA();
             LOG.info("Narayana transaction manager initialized successfully");
+        } catch (RuntimeException e) {
+            // Configuration errors (e.g. an unusable object store) already carry an actionable
+            // message: propagate them as they are.
+            LOG.error("Failed to initialize Narayana transaction manager", e);
+            throw e;
         } catch (Exception e) {
             LOG.error("Failed to initialize Narayana transaction manager", e);
             throw new RuntimeException("Transaction manager initialization failed", e);
@@ -77,25 +94,16 @@ public class TransactionConfiguration {
     }
 
     private void configureObjectStore() {
-        String objectStoreType = config.transactionObjectStoreType();
-        String objectStoreDir = config.transactionObjectStoreDirectory();
-
-        LOG.debug("Configuring object store - Type: {}, Directory: {}", objectStoreType, objectStoreDir);
-
-        if ("volatile".equalsIgnoreCase(objectStoreType)) {
-            for (String storeName : new String[] {null, "stateStore", "communicationStore"}) {
-                ObjectStoreEnvironmentBean bean = storeName == null
-                        ? BeanPopulator.getDefaultInstance(ObjectStoreEnvironmentBean.class)
-                        : BeanPopulator.getNamedInstance(ObjectStoreEnvironmentBean.class, storeName);
-                bean.setObjectStoreType(VolatileStore.class.getName());
-            }
-        } else {
-            BeanPopulator.getDefaultInstance(ObjectStoreEnvironmentBean.class).setObjectStoreDir(objectStoreDir);
-            BeanPopulator.getNamedInstance(ObjectStoreEnvironmentBean.class, "stateStore")
-                    .setObjectStoreDir(objectStoreDir);
-            BeanPopulator.getNamedInstance(ObjectStoreEnvironmentBean.class, "communicationStore")
-                    .setObjectStoreDir(objectStoreDir);
-        }
+        ObjectStoreSettings settings = config.transactionObjectStoreSettings();
+        LOG.debug(
+                "Configuring object store - Type: {}, Directory: {}, DataSource: {}",
+                settings.type(),
+                settings.directory(),
+                settings.dataSource());
+        // The object store environment beans are JVM-global and shared with the JDBC module:
+        // NarayanaObjectStore applies the cross-module rules under the default bean's monitor.
+        // The jdbc store's datasource comes from the Forage JDBC module (discovered when null).
+        NarayanaObjectStore.configure(settings, objectStoreDataSources);
     }
 
     private void configureCoordinator() {

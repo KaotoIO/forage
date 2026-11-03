@@ -6,13 +6,14 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.agroal.narayana.LocalXAResource;
+import io.kaoto.forage.core.jta.store.NarayanaObjectStore;
+import io.kaoto.forage.core.jta.store.ObjectStoreDataSourceProvider;
+import io.kaoto.forage.core.jta.store.ObjectStoreSettings;
 import io.kaoto.forage.jdbc.common.DataSourceFactoryConfig;
 import com.arjuna.ats.arjuna.common.CoordinatorEnvironmentBean;
 import com.arjuna.ats.arjuna.common.CoreEnvironmentBean;
 import com.arjuna.ats.arjuna.common.CoreEnvironmentBeanException;
-import com.arjuna.ats.arjuna.common.ObjectStoreEnvironmentBean;
 import com.arjuna.ats.arjuna.common.RecoveryEnvironmentBean;
-import com.arjuna.ats.internal.arjuna.objectstore.VolatileStore;
 import com.arjuna.ats.jta.common.JTAEnvironmentBean;
 import com.arjuna.common.internal.util.propertyservice.BeanPopulator;
 
@@ -25,9 +26,19 @@ public class TransactionConfiguration {
 
     private final DataSourceFactoryConfig config;
     private final String transactionNodeId;
+    private final ObjectStoreDataSourceProvider objectStoreDataSources;
 
     public TransactionConfiguration(DataSourceFactoryConfig config, String id) {
+        this(config, id, new JdbcObjectStoreDataSourceProvider());
+    }
+
+    /**
+     * @param objectStoreDataSources creates the datasource of the {@code jdbc} object store
+     */
+    public TransactionConfiguration(
+            DataSourceFactoryConfig config, String id, ObjectStoreDataSourceProvider objectStoreDataSources) {
         this.config = config;
+        this.objectStoreDataSources = objectStoreDataSources;
         if (config.transactionNodeId() == null) {
             transactionNodeId = id;
         } else {
@@ -74,27 +85,15 @@ public class TransactionConfiguration {
     }
 
     private void configureObjectStore() {
-        String objectStoreType = config.transactionObjectStoreType();
-        String objectStoreDir = config.transactionObjectStoreDirectory();
-
-        log.debug("Configuring object store with type: {} and directory: {}", objectStoreType, objectStoreDir);
-
-        if ("volatile".equalsIgnoreCase(objectStoreType)) {
-            for (String storeName : new String[] {null, "stateStore", "communicationStore"}) {
-                ObjectStoreEnvironmentBean bean = storeName == null
-                        ? BeanPopulator.getDefaultInstance(ObjectStoreEnvironmentBean.class)
-                        : BeanPopulator.getNamedInstance(ObjectStoreEnvironmentBean.class, storeName);
-                bean.setObjectStoreType(VolatileStore.class.getName());
-            }
-        } else {
-            BeanPopulator.getDefaultInstance(ObjectStoreEnvironmentBean.class).setObjectStoreDir(objectStoreDir);
-            BeanPopulator.getNamedInstance(ObjectStoreEnvironmentBean.class, "stateStore")
-                    .setObjectStoreDir(objectStoreDir);
-            BeanPopulator.getNamedInstance(ObjectStoreEnvironmentBean.class, "communicationStore")
-                    .setObjectStoreDir(objectStoreDir);
-        }
-
-        // TODO Handle jdbc case, a datasource has to be created for this use case
+        ObjectStoreSettings settings = config.transactionObjectStoreSettings();
+        log.debug(
+                "Configuring object store with type: {}, directory: {}, datasource: {}",
+                settings.type(),
+                settings.directory(),
+                settings.dataSource());
+        // The object store environment beans are JVM-global and shared with the JMS module:
+        // NarayanaObjectStore applies the cross-module rules under the default bean's monitor.
+        NarayanaObjectStore.configure(settings, objectStoreDataSources);
         log.debug("Object store configured successfully");
     }
 

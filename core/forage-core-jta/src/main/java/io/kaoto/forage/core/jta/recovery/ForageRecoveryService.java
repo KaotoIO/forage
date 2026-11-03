@@ -70,6 +70,23 @@ public final class ForageRecoveryService {
     }
 
     /**
+     * Whether quarkus-narayana-jta owns the Narayana lifecycle (recovery manager and object store
+     * configuration) in this JVM.
+     */
+    public boolean isQuarkusManaged() {
+        return quarkusManaged;
+    }
+
+    /**
+     * Whether this service has started the Narayana recovery manager. Once it runs, its recovery
+     * modules have opened the transaction object store, so the store implementation can no longer
+     * be changed in this JVM.
+     */
+    public synchronized boolean isRecoveryManagerStarted() {
+        return recoveryManager != null;
+    }
+
+    /**
      * Registers a recovery helper under the given key, starting the recovery manager on first use.
      * Re-registering an existing key replaces the previously registered helpers (reload safety).
      */

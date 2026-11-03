@@ -11,7 +11,6 @@ import org.testcontainers.utility.DockerImageName;
 import io.kaoto.forage.core.jdbc.DataSourceProvider;
 import io.kaoto.forage.jdbc.oracle.OracleJdbc;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 
 @Testcontainers(disabledWithoutDocker = true)
@@ -46,10 +45,5 @@ public class OracleDataSourceTest extends DataSourceTest {
         rs.next();
 
         Assertions.assertThat(rs.getString(1)).contains("Oracle");
-    }
-
-    @Test
-    public void testDefaultTransactedDataSource() {
-        // XA Transactions do not work with oracle-free docker image
     }
 }

@@ -47,8 +47,7 @@ forage.analyticsDb.jdbc.url=jdbc:mysql://db2:3306/analytics
 ## Driver Properties
 
 Driver-specific settings, such as SSL, failover or timeouts, go under
-`forage.[<name>.]jdbc.properties.<property>`. Forage passes each one to the JDBC driver unchanged,
-with or without XA transactions:
+`forage.[<name>.]jdbc.properties.<property>`, and Forage passes each one to the JDBC driver:
 
 ```properties
 forage.ordersDb.jdbc.db.kind=db2
@@ -63,6 +62,18 @@ forage.ordersDb.jdbc.properties.enableSeamlessFailover=1
 
 Property names are case-sensitive and must match the driver's documentation. Names may contain
 dots (for example `oracle.jdbc.ReadTimeout`).
+
+Without XA transactions, the properties go to the driver as connection properties. With
+`transaction.enabled=true`, Forage sets each one on the driver's XA datasource class, through the
+setter of the same name:
+
+- PostgreSQL and Oracle accept any property name.
+- DB2, MySQL and SQL Server accept the properties their XA datasource has a setter for, which covers
+  the documented connection properties.
+- The MariaDB and H2 XA datasources have almost no setters. Put their options in the JDBC URL
+  instead.
+
+Forage logs a warning for each property the XA datasource has no setter for.
 
 - Set them in properties files, `application.properties` or system properties. Environment
   variables are not read for these keys, because environment variable names cannot keep the case

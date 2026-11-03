@@ -7,6 +7,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.agroal.api.AgroalDataSource;
+import io.agroal.api.AgroalDataSourceListener;
 import io.agroal.api.configuration.AgroalConnectionPoolConfiguration.ConnectionValidator;
 import io.agroal.api.configuration.AgroalDataSourceConfiguration;
 import io.agroal.api.configuration.supplier.AgroalConnectionFactoryConfigurationSupplier;
@@ -163,7 +164,7 @@ public abstract class PooledDataSource implements DataSourceProvider, ForageIdRe
 
         LOG.info("Pooled DataSource initialized successfully for id: {}", id);
         try {
-            return AgroalDataSource.from(dsConfig);
+            return AgroalDataSource.from(dsConfig, new WarningLogger(id));
         } catch (Exception e) {
             LOG.error("Failed to create DataSource for id: {}", id, e);
             throw new RuntimeException("Failed to create DataSource", e);
@@ -180,5 +181,27 @@ public abstract class PooledDataSource implements DataSourceProvider, ForageIdRe
 
     protected DataSourceFactoryConfig getConfig() {
         return config;
+    }
+
+    /**
+     * Logs Agroal's warnings. Agroal reports problems such as a JDBC property the XA datasource
+     * has no setter for only to its listeners, so without one they would be lost.
+     */
+    private static final class WarningLogger implements AgroalDataSourceListener {
+        private final String id;
+
+        WarningLogger(String id) {
+            this.id = id;
+        }
+
+        @Override
+        public void onWarning(String message) {
+            LOG.warn("DataSource {}: {}", id, message);
+        }
+
+        @Override
+        public void onWarning(Throwable throwable) {
+            LOG.warn("DataSource {}: {}", id, throwable.getMessage(), throwable);
+        }
     }
 }

@@ -2,6 +2,7 @@ package io.kaoto.forage.jdbc;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.List;
 import org.assertj.core.api.Assertions;
 import io.agroal.api.AgroalDataSource;
@@ -42,10 +43,9 @@ public class H2DriverPropertiesTest {
                     .containsEntry("MODE", "MySQL");
 
             try (Connection connection = dataSource.getConnection();
-                    ResultSet mode = connection
-                            .createStatement()
-                            .executeQuery(
-                                    "SELECT SETTING_VALUE FROM INFORMATION_SCHEMA.SETTINGS WHERE SETTING_NAME = 'MODE'")) {
+                    Statement statement = connection.createStatement();
+                    ResultSet mode = statement.executeQuery(
+                            "SELECT SETTING_VALUE FROM INFORMATION_SCHEMA.SETTINGS WHERE SETTING_NAME = 'MODE'")) {
                 Assertions.assertThat(mode.next()).isTrue();
                 Assertions.assertThat(mode.getString(1)).isEqualTo("MySQL");
             }

@@ -143,6 +143,10 @@ For each Forage property found, the validator:
 2. Looks up valid properties in the catalog metadata
 3. Validates the property name and value
 
+Config entries of type `map` (such as `forage.jdbc.properties`) accept any key below their name,
+so `forage.ds1.jdbc.properties.sslConnection` is valid. A misspelled map name
+(`forage.ds1.jdbc.propertiez.sslConnection`) is still reported.
+
 ### 3. Suggestion Generation
 When an invalid property is found, the validator uses **Levenshtein distance** to find the closest match:
 - Maximum edit distance: 3 characters

@@ -3,6 +3,7 @@ package io.kaoto.forage.jdbc.common;
 import javax.sql.DataSource;
 
 import java.time.Duration;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.agroal.api.AgroalDataSource;
@@ -35,6 +36,33 @@ public abstract class PooledDataSource implements DataSourceProvider, ForageIdRe
      * @return the JDBC driver class name
      */
     protected abstract Class<?> getConnectionProviderClass();
+
+    /**
+     * Returns the JDBC properties handed to the connection provider. By default these are the
+     * configured {@link DataSourceFactoryConfig#driverProperties() driver properties}.
+     *
+     * <p>Agroal passes these properties to {@link java.sql.Driver#connect} when the provider is a
+     * driver. When the provider is an {@link javax.sql.XADataSource}, Agroal sets each one through
+     * the matching setter and converts the value to the setter's type. Subclasses override this
+     * method when their XA datasource cannot take the JDBC URL as a whole.
+     *
+     * @param config the configuration of the datasource being created
+     * @return the JDBC properties; never {@code null}
+     */
+    protected Map<String, String> connectionProperties(DataSourceFactoryConfig config) {
+        return config.driverProperties();
+    }
+
+    /**
+     * Returns the SQL that Agroal runs once on each new physical connection, or {@code null} for
+     * none. Subclasses override this method to work around driver behavior at connection set-up.
+     *
+     * @param config the configuration of the datasource being created
+     * @return the SQL statement, or {@code null}
+     */
+    protected String initialSql(DataSourceFactoryConfig config) {
+        return null;
+    }
 
     @Override
     public DataSource create(String id) {
@@ -79,6 +107,17 @@ public abstract class PooledDataSource implements DataSourceProvider, ForageIdRe
                 .connectionProviderClass(getConnectionProviderClass())
                 .principal(new NamePrincipal(config.username()))
                 .credential(new SimplePassword(config.password()));
+
+        Map<String, String> connectionProperties = connectionProperties(config);
+        if (!connectionProperties.isEmpty()) {
+            // Values can hold secrets (e.g. trust store passwords), so log the names only
+            LOG.info("DataSource JDBC properties for id {}: {}", id, connectionProperties.keySet());
+            connectionProperties.forEach(connectionFactoryConfig::jdbcProperty);
+        }
+        String initialSql = initialSql(config);
+        if (initialSql != null) {
+            connectionFactoryConfig.initialSql(initialSql);
+        }
 
         // Configure connection pool settings
         AgroalConnectionPoolConfigurationSupplier poolConfig = configSupplier.connectionPoolConfiguration();

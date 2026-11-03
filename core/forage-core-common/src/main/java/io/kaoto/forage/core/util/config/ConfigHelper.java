@@ -55,7 +55,11 @@ import io.smallrye.config.SmallRyeConfig;
 public final class ConfigHelper {
     private static final Logger LOG = LoggerFactory.getLogger(ConfigHelper.class);
     private static final String DEFAULT_PROPERTY_REGEXP = "forage\\.(%s)\\..+";
-    private static final String NAMED_PROPERTY_REGEXP = "forage\\.(.+)\\.%s\\..+";
+    // The name is one or more dot-separated segments, none of which is the module prefix itself.
+    // Otherwise a key whose suffix repeats the module prefix, such as the JDBC driver property
+    // forage.jdbc.properties.oracle.jdbc.ReadTimeout, would yield the bogus name "jdbc.properties.oracle".
+    private static final String NAMED_PROPERTY_REGEXP =
+            "forage\\.((?!%1$s\\.)[^.]+(?:\\.(?!%1$s\\.)[^.]+)*)\\.%1$s\\..+";
 
     /**
      * Sentinel for "application.properties was looked up and not found", so the

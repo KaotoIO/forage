@@ -46,6 +46,21 @@ public final class DataSourceFactoryConfigEntries extends ConfigEntries {
             true,
             ConfigTag.SECURITY);
 
+    /**
+     * Prefix for driver-specific JDBC properties: each {@code forage.jdbc.properties.<name>=<value>}
+     * key is passed to the driver as {@code <name>=<value>}. Read the keys with
+     * {@link DataSourceFactoryConfig#driverProperties()}.
+     */
+    public static final ConfigModule DRIVER_PROPERTIES = ConfigModule.of(
+            DataSourceFactoryConfig.class,
+            "forage.jdbc.properties",
+            "Driver-specific JDBC properties, one key per property, passed to the driver as is (for example forage.jdbc.properties.sslConnection=true)",
+            "Driver Properties",
+            null,
+            "map",
+            false,
+            ConfigTag.ADVANCED);
+
     // Connection pool configuration
     public static final ConfigModule INITIAL_SIZE = ConfigModule.of(
             DataSourceFactoryConfig.class,
@@ -418,6 +433,7 @@ public final class DataSourceFactoryConfigEntries extends ConfigEntries {
                 JDBC_URL,
                 USERNAME,
                 PASSWORD,
+                DRIVER_PROPERTIES,
                 INITIAL_SIZE,
                 MIN_SIZE,
                 MAX_SIZE,

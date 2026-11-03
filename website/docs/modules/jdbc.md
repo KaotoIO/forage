@@ -43,12 +43,55 @@ forage.analyticsDb.jdbc.db.kind=mysql
 forage.analyticsDb.jdbc.url=jdbc:mysql://db2:3306/analytics
 ```
 
+{% raw %}
+## Driver Properties
+
+Driver-specific settings, such as SSL, failover or timeouts, go under
+`forage.[<name>.]jdbc.properties.<property>`, and Forage passes each one to the JDBC driver:
+
+```properties
+forage.ordersDb.jdbc.db.kind=db2
+forage.ordersDb.jdbc.url=jdbc:db2://db2-primary:50001/ORDERS
+forage.ordersDb.jdbc.properties.sslConnection=true
+forage.ordersDb.jdbc.properties.sslTrustStoreLocation=/certs/truststore.jks
+forage.ordersDb.jdbc.properties.sslTrustStorePassword={{env:TRUSTSTORE_PASSWORD}}
+forage.ordersDb.jdbc.properties.clientRerouteAlternateServerName=db2-standby
+forage.ordersDb.jdbc.properties.clientRerouteAlternatePortNumber=50001
+forage.ordersDb.jdbc.properties.enableSeamlessFailover=1
+```
+
+Property names are case-sensitive and must match the driver's documentation. Names may contain
+dots (for example `oracle.jdbc.ReadTimeout`).
+
+Without XA transactions, the properties go to the driver as connection properties. With
+`transaction.enabled=true`, Forage sets each one on the driver's XA datasource class, through the
+setter of the same name:
+
+- PostgreSQL and Oracle accept any property name.
+- DB2, MySQL and SQL Server accept the properties their XA datasource has a setter for, which covers
+  the documented connection properties.
+- The MariaDB and H2 XA datasources have almost no setters. Put their options in the JDBC URL
+  instead.
+
+Forage logs a warning for each property the XA datasource has no setter for.
+
+- Set them in properties files, `application.properties` or system properties. Environment
+  variables are not read for these keys, because environment variable names cannot keep the case
+  the driver expects. Use an `{{env:NAME}}` placeholder in the value instead, as with the password above.
+- On Quarkus, they become `quarkus.datasource."<name>".jdbc.additional-jdbc-properties.*`.
+{% endraw %}
+
 ## XA Transactions
 
 Setting `forage.jdbc.transaction.enabled=true` switches the module to XA mode: the Agroal pool
 enlists connections in the Narayana transaction manager (initialized from the
 `forage.jdbc.transaction.*` properties), and JTA transaction policies (`PROPAGATION_REQUIRED`,
 `REQUIRES_NEW`, ...) are registered for use with the `transacted` EIP.
+
+!!! note "DB2"
+    The DB2 XA datasource (`DB2XADataSource`) cannot take a JDBC URL, so in XA mode Forage reads
+    the server, port, database and any `:property=value;` settings from `forage.jdbc.url` and
+    passes them to the driver one by one. Use a type 4 URL (`jdbc:db2://server:port/database`).
 
 ## Crash Recovery
 

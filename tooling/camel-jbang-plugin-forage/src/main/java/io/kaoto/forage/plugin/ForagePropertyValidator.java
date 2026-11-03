@@ -34,6 +34,7 @@ public final class ForagePropertyValidator {
 
     private static final Logger LOG = LoggerFactory.getLogger(ForagePropertyValidator.class);
     private static final String FORAGE_PREFIX = "forage.";
+    private static final String MAP_TYPE = "map";
 
     /**
      * Set when a Forage command ({@code camel forage run}/{@code camel forage export}) has already
@@ -252,6 +253,10 @@ public final class ForagePropertyValidator {
             return true;
         }
 
+        if (isMapEntryKey(propertyName, metadata, factoryTypeKey)) {
+            return true;
+        }
+
         // Check with wildcards for nested properties (e.g., ds1.jdbc.url matches jdbc.url)
         String[] parts = propertyName.split("\\.");
         if (parts.length >= 2) {
@@ -264,6 +269,29 @@ public final class ForagePropertyValidator {
             }
         }
 
+        return false;
+    }
+
+    /**
+     * Returns {@code true} when the property is a key under a {@code map} config entry, such as
+     * {@code properties.sslConnection} under {@code forage.jdbc.properties}. Map entries take
+     * any key, so there is nothing more to check.
+     */
+    private static boolean isMapEntryKey(
+            String propertyName, ForageCatalogReader.FactoryMetadata metadata, String factoryTypeKey) {
+        if (metadata.configEntries() == null) {
+            return false;
+        }
+        String factoryPrefix = FORAGE_PREFIX + factoryTypeKey + ".";
+        for (ConfigEntry entry : metadata.configEntries()) {
+            String name = entry.getName();
+            if (MAP_TYPE.equals(entry.getType()) && name != null && name.startsWith(factoryPrefix)) {
+                String mapPrefix = name.substring(factoryPrefix.length()) + ".";
+                if (propertyName.startsWith(mapPrefix) && propertyName.length() > mapPrefix.length()) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 

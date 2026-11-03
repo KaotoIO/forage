@@ -12,7 +12,6 @@ import org.testcontainers.utility.DockerImageName;
 import io.kaoto.forage.core.jdbc.DataSourceProvider;
 import io.kaoto.forage.jdbc.db2.Db2Jdbc;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -54,10 +53,5 @@ public class Db2DataSourceTest extends DataSourceTest {
         rs.next();
 
         Assertions.assertThat(rs.getString(1)).contains("DB2");
-    }
-
-    @Test
-    public void testDefaultTransactedDataSource() {
-        // XA Transactions do not work with db2 docker image
     }
 }

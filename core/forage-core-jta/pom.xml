@@ -11,6 +11,12 @@
     <name>Forage :: Core :: JTA</name>
 
     <dependencies>
+        <!-- MissingConfigException for the object store fail-fast paths -->
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-core-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-jta</artifactId>

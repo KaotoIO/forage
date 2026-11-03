@@ -1,5 +1,6 @@
 package io.kaoto.forage.jdbc.common;
 
+import io.kaoto.forage.core.jta.store.ObjectStoreSettings;
 import io.kaoto.forage.core.util.config.AbstractConfig;
 import io.kaoto.forage.jdbc.common.idempotent.ForageJdbcMessageIdRepository;
 
@@ -194,6 +195,22 @@ public class DataSourceFactoryConfig extends AbstractConfig {
 
     public String transactionObjectStoreTablePrefix() {
         return get(TRANSACTION_OBJECT_STORE_TABLE_PREFIX).orElse(TRANSACTION_OBJECT_STORE_TABLE_PREFIX.defaultValue());
+    }
+
+    /**
+     * The object store settings of this configuration, including the fully qualified property
+     * names (e.g. {@code forage.ds1.jdbc.transaction.object.store.datasource}) for error messages.
+     */
+    public ObjectStoreSettings transactionObjectStoreSettings() {
+        return new ObjectStoreSettings(
+                transactionObjectStoreType(),
+                transactionObjectStoreDirectory(),
+                transactionObjectStoreDataSource(),
+                transactionObjectStoreCreateTable(),
+                transactionObjectStoreDropTable(),
+                transactionObjectStoreTablePrefix(),
+                TRANSACTION_OBJECT_STORE_TYPE.asNamed(prefix()).propertyName(),
+                TRANSACTION_OBJECT_STORE_DATASOURCE.asNamed(prefix()).propertyName());
     }
 
     public String aggregationRepositoryName() {

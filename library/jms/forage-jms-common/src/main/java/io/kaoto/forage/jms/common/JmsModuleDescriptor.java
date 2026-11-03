@@ -9,6 +9,9 @@ import java.util.function.Supplier;
 import org.apache.camel.tooling.model.Strings;
 import io.kaoto.forage.core.common.ForageModuleDescriptor;
 import io.kaoto.forage.core.jms.ConnectionFactoryProvider;
+import io.kaoto.forage.core.jta.store.ObjectStoreSettings;
+import io.kaoto.forage.core.jta.store.ObjectStoreType;
+import io.kaoto.forage.core.util.config.MissingConfigException;
 
 /**
  * Module descriptor for Forage JMS. Captures all JMS-specific knowledge:
@@ -134,6 +137,30 @@ public class JmsModuleDescriptor implements ForageModuleDescriptor<ConnectionFac
                 props, "quarkus.transaction-manager.object-store.directory", config::transactionObjectStoreDirectory);
         addIfNotEmpty(props, "quarkus.transaction-manager.object-store.type", config::transactionObjectStoreType);
         addIfNotEmpty(props, "quarkus.transaction-manager.enable-recovery", config::transactionEnableRecovery);
+        addJdbcObjectStoreProperties(props, config.transactionObjectStoreSettings());
+    }
+
+    /**
+     * The {@code jdbc} object store keeps the transaction log in the referenced datasource, which
+     * quarkus-narayana-jta only accepts with its transaction integration disabled. The datasource
+     * itself is a Forage JDBC configuration ({@code forage.<name>.jdbc.*}), translated by the JDBC
+     * module.
+     */
+    private static void addJdbcObjectStoreProperties(Map<String, String> props, ObjectStoreSettings settings) {
+        if (settings.storeType() != ObjectStoreType.JDBC) {
+            return;
+        }
+        String name = settings.dataSource();
+        if (name == null) {
+            throw new MissingConfigException("The transaction object store type is 'jdbc' (" + settings.typeProperty()
+                    + ") but " + settings.dataSourceProperty() + " is not set. Set it to the name of a non-XA"
+                    + " Forage datasource (forage.<name>.jdbc.*) that holds the transaction log table.");
+        }
+        props.put("quarkus.transaction-manager.object-store.datasource", name);
+        props.put("quarkus.transaction-manager.object-store.create-table", String.valueOf(settings.createTable()));
+        props.put("quarkus.transaction-manager.object-store.drop-table", String.valueOf(settings.dropTable()));
+        addIfNotEmpty(props, "quarkus.transaction-manager.object-store.table-prefix", settings.tablePrefix());
+        props.put("quarkus.datasource.\"" + name + "\".jdbc.transactions", "disabled");
     }
 
     private static void addIfNotEmpty(Map<String, String> config, String key, String value) {

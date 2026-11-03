@@ -24,6 +24,9 @@ public class CrashRecoveryRoute extends RouteBuilder {
     @Override
     public void configure() throws Exception {
         String markerFile = getContext().resolvePropertyPlaceholders("{{crash.marker.file}}");
+        // tests sharing the broker use their own queue, so one test's message never satisfies another
+        String outputQueue =
+                "jms:queue:" + getContext().resolvePropertyPlaceholders("{{recovery.queue:recovery.output}}");
         // The test creates the go file only after the run action has verified the integration is
         // up; a startup-relative timer would race the verification on slow machines (the process
         // dying mid-verification fails the run action with exit code 137).
@@ -31,7 +34,7 @@ public class CrashRecoveryRoute extends RouteBuilder {
         boolean restartRun = Files.exists(Path.of(markerFile));
 
         // In the restarted run this consumer receives the message committed by crash recovery.
-        from("jms:queue:recovery.output")
+        from(outputQueue)
                 .routeId("recovery-output-consumer")
                 .log("Recovered message received: ${body}");
 
@@ -54,7 +57,7 @@ public class CrashRecoveryRoute extends RouteBuilder {
                     exchange.getMessage().setBody("XA crash recovery test message");
                 })
                 .log("Enlisted crashing XAResource - sending message within the XA transaction")
-                .to("jms:queue:recovery.output")
+                .to(outputQueue)
                 // never reached: the crasher halts the JVM during the commit phase
                 .log("UNEXPECTED: transaction committed without crashing");
     }

@@ -155,6 +155,19 @@ class PropertyFileLocatorTest {
     }
 
     @Test
+    void readPrefixesIgnoresModulePrefixRepeatedInPropertySuffix() {
+        Properties props = new Properties();
+        // Driver properties such as oracle.jdbc.ReadTimeout repeat the module prefix after the name
+        props.setProperty("forage.jdbc.properties.oracle.jdbc.ReadTimeout", "5000");
+        props.setProperty("forage.ds1.jdbc.properties.oracle.jdbc.ReadTimeout", "5000");
+        props.setProperty("forage.my.ds.jdbc.url", "jdbc:h2:mem:test");
+        props.setProperty("forage.myjdbc.jdbc.url", "jdbc:h2:mem:test");
+
+        Set<String> prefixes = PropertyFileLocator.readPrefixes(props, ConfigHelper.getNamedPropertyRegexp("jdbc"));
+        assertThat(prefixes).containsExactlyInAnyOrder("ds1", "my.ds", "myjdbc");
+    }
+
+    @Test
     void readPrefixesDefaultRegexpMatchesOnlyExactModulePrefix() {
         Properties props = new Properties();
         props.setProperty("forage.jdbc.url", "jdbc:h2:mem:test");

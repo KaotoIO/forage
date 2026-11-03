@@ -11,6 +11,9 @@ import io.kaoto.forage.core.common.AuxiliaryBeanDescriptor;
 import io.kaoto.forage.core.common.ForageModuleDescriptor;
 import io.kaoto.forage.core.common.ServiceLoaderHelper;
 import io.kaoto.forage.core.jdbc.DataSourceProvider;
+import io.kaoto.forage.core.jta.store.ObjectStoreSettings;
+import io.kaoto.forage.core.jta.store.ObjectStoreType;
+import io.kaoto.forage.core.util.config.MissingConfigException;
 import io.kaoto.forage.jdbc.common.aggregation.ForageAggregationRepository;
 import io.kaoto.forage.jdbc.common.idempotent.ForageIdRepository;
 import io.kaoto.forage.jdbc.common.idempotent.ForageJdbcMessageIdRepository;
@@ -100,15 +103,48 @@ public class JdbcModuleDescriptor implements ForageModuleDescriptor<DataSourceFa
                     "quarkus.transaction-manager.object-store.datasource",
                     config.transactionObjectStoreDataSource());
             props.put(
+                    "quarkus.transaction-manager.object-store.create-table",
+                    String.valueOf(config.transactionObjectStoreCreateTable()));
+            props.put(
                     "quarkus.transaction-manager.object-store.drop-table",
                     String.valueOf(config.transactionObjectStoreDropTable()));
             putIfNotEmpty(
                     props,
                     "quarkus.transaction-manager.object-store.table-prefix",
                     config.transactionObjectStoreTablePrefix());
+            props.putAll(jdbcObjectStoreDataSourceProperties(config.transactionObjectStoreSettings()));
         }
 
         return props;
+    }
+
+    /**
+     * For the {@code jdbc} object store, quarkus-narayana-jta requires the referenced datasource to
+     * have its transaction integration disabled (it rejects the store datasource otherwise): returns
+     * {@code quarkus.datasource."<name>".jdbc.transactions=disabled}. Applies the same rules as the
+     * other runtimes: the datasource must be configured and must not be a transactional Forage
+     * datasource. Empty for the other store types. (The JMS module descriptor emits the same
+     * property without the Forage-datasource check, as it has no JDBC dependency.)
+     */
+    static Map<String, String> jdbcObjectStoreDataSourceProperties(ObjectStoreSettings settings) {
+        if (settings.storeType() != ObjectStoreType.JDBC) {
+            return Map.of();
+        }
+        String name = settings.dataSource();
+        if (name == null) {
+            throw new MissingConfigException("The transaction object store type is 'jdbc' ("
+                    + settings.typeProperty() + ") but " + settings.dataSourceProperty() + " is not set. Set it to"
+                    + " the name of a non-XA Forage datasource (forage.<name>.jdbc.*) that holds the transaction"
+                    + " log table.");
+        }
+        DataSourceFactoryConfig referenced = new DataSourceFactoryConfig(name);
+        if (referenced.transactionEnabled()) {
+            throw new IllegalStateException("The JDBC transaction object store datasource '" + name
+                    + "' (" + settings.dataSourceProperty() + ") has transactions enabled (forage." + name
+                    + ".jdbc.transaction.enabled=true). The object store needs a non-XA datasource: configure a"
+                    + " separate forage.<name>.jdbc.* datasource without transaction.enabled and reference it.");
+        }
+        return Map.of("quarkus.datasource.\"" + name + "\".jdbc.transactions", "disabled");
     }
 
     /**

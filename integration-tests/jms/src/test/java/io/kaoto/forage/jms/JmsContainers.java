@@ -4,6 +4,7 @@ import java.util.Map;
 import org.eclipse.microprofile.config.ConfigProvider;
 import org.testcontainers.activemq.ArtemisContainer;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.images.builder.Transferable;
 import org.testcontainers.utility.DockerImageName;
@@ -25,6 +26,8 @@ final class JmsContainers {
     static final String ARTEMIS_IMAGE_NAME =
             ConfigProvider.getConfig().getValue("activemq.artemis.container.image", String.class);
     static final String IBMMQ_IMAGE_NAME = ConfigProvider.getConfig().getValue("ibmmq.container.image", String.class);
+    static final String POSTGRES_IMAGE_NAME =
+            ConfigProvider.getConfig().getValue("postgres.container.image", String.class);
 
     static final int IBMMQ_PORT = 1414;
     static final String IBMMQ_QUEUE_MANAGER_NAME = "QM1";
@@ -66,7 +69,22 @@ final class JmsContainers {
                 + "SET AUTHREC PROFILE('output.queue') PRINCIPAL('app') OBJTYPE(QUEUE) AUTHADD(PUT,GET,INQ,BROWSE)";
     }
 
+    // holds the Narayana transaction log of the JDBC object store recovery test (#447)
+    private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
+                    DockerImageName.parse(POSTGRES_IMAGE_NAME).asCompatibleSubstituteFor("postgres"))
+            .withExposedPorts(5432)
+            .withUsername("test")
+            .withPassword("test")
+            .withDatabaseName("txlog");
+
     private JmsContainers() {}
+
+    static synchronized PostgreSQLContainer<?> postgres() {
+        if (!POSTGRES.isRunning()) {
+            POSTGRES.start();
+        }
+        return POSTGRES;
+    }
 
     static synchronized ArtemisContainer artemis() {
         if (!ARTEMIS.isRunning()) {

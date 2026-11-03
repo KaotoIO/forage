@@ -140,7 +140,7 @@ public class JmsArtemisRecoveryTest implements ForageIntegrationTest {
                 .waitForLogMessage("Recovered message received: XA crash recovery test message"));
     }
 
-    private static Path createRecoveryDir(Consumer<AutoCloseable> afterAll) {
+    static Path createRecoveryDir(Consumer<AutoCloseable> afterAll) {
         try {
             Path recoveryDir = Files.createTempDirectory("forage-recovery-");
             afterAll.accept(() -> {
@@ -160,7 +160,7 @@ public class JmsArtemisRecoveryTest implements ForageIntegrationTest {
         }
     }
 
-    private static void awaitProcessDeath(long pid) {
+    static void awaitProcessDeath(long pid) {
         long deadline = System.currentTimeMillis() + 90_000;
         while (System.currentTimeMillis() < deadline) {
             boolean alive = ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false);
@@ -178,18 +178,22 @@ public class JmsArtemisRecoveryTest implements ForageIntegrationTest {
     }
 
     private static void assertMessageNotVisible(String brokerUrl) {
+        assertMessageNotVisible(brokerUrl, "recovery.output");
+    }
+
+    static void assertMessageNotVisible(String brokerUrl, String queue) {
         try (ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(brokerUrl);
                 Connection connection = connectionFactory.createConnection("artemis", "artemis");
                 Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)) {
             connection.start();
-            MessageConsumer consumer = session.createConsumer(session.createQueue("recovery.output"));
+            MessageConsumer consumer = session.createConsumer(session.createQueue(queue));
             Message message = consumer.receive(2_000);
             if (message != null) {
-                throw new IllegalStateException("The message is visible on recovery.output before recovery ran — "
+                throw new IllegalStateException("The message is visible on " + queue + " before recovery ran — "
                         + "the JMS branch was not left in doubt by the crash");
             }
         } catch (jakarta.jms.JMSException e) {
-            throw new IllegalStateException("Failed to probe recovery.output", e);
+            throw new IllegalStateException("Failed to probe " + queue, e);
         }
     }
 }

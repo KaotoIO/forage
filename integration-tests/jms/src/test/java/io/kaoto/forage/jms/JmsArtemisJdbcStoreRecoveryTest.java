@@ -77,14 +77,14 @@ public class JmsArtemisJdbcStoreRecoveryTest implements ForageIntegrationTest {
         Resource[] crashResources = prepareRun(brokerUrl, crashDir, crashMarker, afterAll);
         Resource[] restartResources = prepareRun(brokerUrl, restartDir, restartMarker, afterAll);
         if (crashResources[0]
-                .file()
+                .getFile()
                 .getParentFile()
-                .equals(restartResources[0].file().getParentFile())) {
+                .equals(restartResources[0].getFile().getParentFile())) {
             throw new IllegalStateException("The two runs must not share a working directory");
         }
 
         // First run: prepares the XA transaction and halts the JVM before the JMS branch commits.
-        runner.when(camel().cli()
+        runner.when(camel().jbang()
                 .custom("forage", "run")
                 .processName(CRASH_RUN)
                 .addResource(crashResources[0])
@@ -128,7 +128,7 @@ public class JmsArtemisJdbcStoreRecoveryTest implements ForageIntegrationTest {
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to create the restart marker", e);
         }
-        runner.when(camel().cli()
+        runner.when(camel().jbang()
                 .custom("forage", "run")
                 .processName(RESTART_RUN)
                 .addResource(restartResources[0])
@@ -148,7 +148,7 @@ public class JmsArtemisJdbcStoreRecoveryTest implements ForageIntegrationTest {
         // Note: the log record itself stays in the table, as it does in the file store test: the
         // recovery thread cannot deserialize the route-compiled CrashingXAResource (ARJUNA016114),
         // so that branch of the log record is never resolved. Only the JMS branch is asserted.
-        runner.then(camel().cli()
+        runner.then(camel().jbang()
                 .verify()
                 .integration(RESTART_RUN)
                 .waitForLogMessage("Recovered message received: XA crash recovery test message"));
@@ -181,7 +181,7 @@ public class JmsArtemisJdbcStoreRecoveryTest implements ForageIntegrationTest {
                 Resources.fromClasspath("JmsArtemisRecoveryTest/CrashRecoveryRoute.java", JmsArtemisRecoveryTest.class),
                 afterAll);
 
-        Path workDir = jmsProperties.file().toPath().getParent();
+        Path workDir = jmsProperties.getFile().toPath().getParent();
         return new Resource[] {
             jmsProperties,
             Resources.create(

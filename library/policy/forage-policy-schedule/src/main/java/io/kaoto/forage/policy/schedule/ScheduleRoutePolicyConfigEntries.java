@@ -25,6 +25,68 @@ public final class ScheduleRoutePolicyConfigEntries extends ConfigEntries {
      */
     public static final String CONFIG_PREFIX = "forage.route.policy";
 
+    /*
+     * Catalog entries for the schedule options. The route ID is part of the property name, so these modules
+     * only document the properties in the Forage catalog, where tooling resolves the {routeId} placeholder.
+     * At runtime the options are read through the per-route factory methods below, which reuse their
+     * metadata.
+     */
+
+    /** Catalog entry for {@code forage.route.policy.<routeId>.schedule.start-time}. */
+    public static final ConfigModule START_TIME = ConfigModule.of(
+            ScheduleRoutePolicyConfig.class,
+            "forage.route.policy.{routeId}.schedule.start-time",
+            "Daily start time in HH:mm format",
+            "Start Time",
+            null,
+            "string",
+            false,
+            ConfigTag.COMMON);
+
+    /** Catalog entry for {@code forage.route.policy.<routeId>.schedule.stop-time}. */
+    public static final ConfigModule STOP_TIME = ConfigModule.of(
+            ScheduleRoutePolicyConfig.class,
+            "forage.route.policy.{routeId}.schedule.stop-time",
+            "Daily stop time in HH:mm format",
+            "Stop Time",
+            null,
+            "string",
+            false,
+            ConfigTag.COMMON);
+
+    /** Catalog entry for {@code forage.route.policy.<routeId>.schedule.timezone}. */
+    public static final ConfigModule TIMEZONE = ConfigModule.of(
+            ScheduleRoutePolicyConfig.class,
+            "forage.route.policy.{routeId}.schedule.timezone",
+            "Timezone for scheduling (e.g., America/New_York)",
+            "Timezone",
+            null,
+            "string",
+            false,
+            ConfigTag.COMMON);
+
+    /** Catalog entry for {@code forage.route.policy.<routeId>.schedule.cron}. */
+    public static final ConfigModule CRON = ConfigModule.of(
+            ScheduleRoutePolicyConfig.class,
+            "forage.route.policy.{routeId}.schedule.cron",
+            "Cron expression for schedule (alternative to start/stop times)",
+            "Cron Expression",
+            null,
+            "string",
+            false,
+            ConfigTag.COMMON);
+
+    /** Catalog entry for {@code forage.route.policy.<routeId>.schedule.days-of-week}. */
+    public static final ConfigModule DAYS_OF_WEEK = ConfigModule.of(
+            ScheduleRoutePolicyConfig.class,
+            "forage.route.policy.{routeId}.schedule.days-of-week",
+            "Comma-separated days of week (MON,TUE,WED,THU,FRI,SAT,SUN)",
+            "Days of Week",
+            null,
+            "string",
+            false,
+            ConfigTag.COMMON);
+
     private static final Map<ConfigModule, ConfigEntry> CONFIG_MODULES = new ConcurrentHashMap<>();
 
     private ScheduleRoutePolicyConfigEntries() {}
@@ -36,16 +98,7 @@ public final class ScheduleRoutePolicyConfigEntries extends ConfigEntries {
      * @return a ConfigModule for the start-time configuration
      */
     public static ConfigModule startTime(String routeId) {
-        String name = CONFIG_PREFIX + "." + routeId + ".schedule.start-time";
-        return ConfigModule.of(
-                ScheduleRoutePolicyConfig.class,
-                name,
-                "Daily start time in HH:mm format",
-                "Start Time",
-                null,
-                "string",
-                false,
-                ConfigTag.COMMON);
+        return withName(START_TIME, CONFIG_PREFIX + "." + routeId + ".schedule.start-time");
     }
 
     /**
@@ -55,16 +108,7 @@ public final class ScheduleRoutePolicyConfigEntries extends ConfigEntries {
      * @return a ConfigModule for the stop-time configuration
      */
     public static ConfigModule stopTime(String routeId) {
-        String name = CONFIG_PREFIX + "." + routeId + ".schedule.stop-time";
-        return ConfigModule.of(
-                ScheduleRoutePolicyConfig.class,
-                name,
-                "Daily stop time in HH:mm format",
-                "Stop Time",
-                null,
-                "string",
-                false,
-                ConfigTag.COMMON);
+        return withName(STOP_TIME, CONFIG_PREFIX + "." + routeId + ".schedule.stop-time");
     }
 
     /**
@@ -74,16 +118,7 @@ public final class ScheduleRoutePolicyConfigEntries extends ConfigEntries {
      * @return a ConfigModule for the timezone configuration
      */
     public static ConfigModule timezone(String routeId) {
-        String name = CONFIG_PREFIX + "." + routeId + ".schedule.timezone";
-        return ConfigModule.of(
-                ScheduleRoutePolicyConfig.class,
-                name,
-                "Timezone for scheduling (e.g., America/New_York)",
-                "Timezone",
-                null,
-                "string",
-                false,
-                ConfigTag.COMMON);
+        return withName(TIMEZONE, CONFIG_PREFIX + "." + routeId + ".schedule.timezone");
     }
 
     /**
@@ -93,16 +128,7 @@ public final class ScheduleRoutePolicyConfigEntries extends ConfigEntries {
      * @return a ConfigModule for the cron configuration
      */
     public static ConfigModule cron(String routeId) {
-        String name = CONFIG_PREFIX + "." + routeId + ".schedule.cron";
-        return ConfigModule.of(
-                ScheduleRoutePolicyConfig.class,
-                name,
-                "Cron expression for schedule (alternative to start/stop times)",
-                "Cron Expression",
-                null,
-                "string",
-                false,
-                ConfigTag.COMMON);
+        return withName(CRON, CONFIG_PREFIX + "." + routeId + ".schedule.cron");
     }
 
     /**
@@ -112,16 +138,19 @@ public final class ScheduleRoutePolicyConfigEntries extends ConfigEntries {
      * @return a ConfigModule for the days-of-week configuration
      */
     public static ConfigModule daysOfWeek(String routeId) {
-        String name = CONFIG_PREFIX + "." + routeId + ".schedule.days-of-week";
+        return withName(DAYS_OF_WEEK, CONFIG_PREFIX + "." + routeId + ".schedule.days-of-week");
+    }
+
+    private static ConfigModule withName(ConfigModule catalogEntry, String name) {
         return ConfigModule.of(
                 ScheduleRoutePolicyConfig.class,
                 name,
-                "Comma-separated days of week (MON,TUE,WED,THU,FRI,SAT,SUN)",
-                "Days of Week",
-                null,
-                "string",
-                false,
-                ConfigTag.COMMON);
+                catalogEntry.description(),
+                catalogEntry.label(),
+                catalogEntry.defaultValue(),
+                catalogEntry.type(),
+                catalogEntry.required(),
+                catalogEntry.configTag());
     }
 
     public static Map<ConfigModule, ConfigEntry> entries() {

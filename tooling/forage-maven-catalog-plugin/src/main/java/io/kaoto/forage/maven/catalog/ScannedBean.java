@@ -24,6 +24,7 @@ public class ScannedBean {
     private String configClassName;
     private Map<String, List<String>> runtimeDependencies;
     private List<String> repositories;
+    private List<String> enabledBy;
 
     public ScannedBean() {
         this.bean = new ForageBean();
@@ -134,6 +135,14 @@ public class ScannedBean {
         this.repositories = repositories;
     }
 
+    public List<String> getEnabledBy() {
+        return enabledBy;
+    }
+
+    public void setEnabledBy(List<String> enabledBy) {
+        this.enabledBy = enabledBy;
+    }
+
     /**
      * Parses "variant:gav" format strings into a variant->gavs map.
      */
@@ -167,6 +176,7 @@ public class ScannedBean {
         catalogBean.setGav(gav);
         catalogBean.setRuntimeDependencies(runtimeDependencies);
         catalogBean.setRepositories(repositories);
+        catalogBean.setEnabledBy(enabledBy);
         return catalogBean;
     }
 

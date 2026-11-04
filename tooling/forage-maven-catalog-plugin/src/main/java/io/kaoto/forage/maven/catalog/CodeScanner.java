@@ -572,6 +572,7 @@ public class CodeScanner {
         String configClassName = null;
         List<String> runtimeDeps = null;
         List<String> repositories = null;
+        List<String> enabledBy = null;
 
         // Extract annotation values
         if (annotation instanceof SingleMemberAnnotationExpr singleMember) {
@@ -605,6 +606,7 @@ public class CodeScanner {
                     case ATTR_RUNTIME_DEPS ->
                         runtimeDeps = extractStringArrayValue(value, "@ForageBean 'runtimeDependencies'");
                     case "repositories" -> repositories = extractStringArrayValue(value, "@ForageBean 'repositories'");
+                    case "enabledBy" -> enabledBy = extractStringArrayValue(value, "@ForageBean 'enabledBy'");
                     default -> {}
                 }
             }
@@ -614,6 +616,9 @@ public class CodeScanner {
         String className = getFullyQualifiedClassName(classDecl, cu);
 
         ScannedBean bean = new ScannedBean(name, components, description, className, feature);
+        if (enabledBy != null && !enabledBy.isEmpty()) {
+            bean.setEnabledBy(enabledBy);
+        }
         bean.setConfigClassName(configClassName);
         bean.setDefaultBeanName(defaultBeanName);
         if (runtimeDeps != null && !runtimeDeps.isEmpty()) {

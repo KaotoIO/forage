@@ -305,6 +305,70 @@ class ForagePropertyValidatorTest {
         assertThat(ForagePropertyValidator.consumeValidationHandled()).isFalse();
     }
 
+    @Test
+    void testRoutePolicyPropertiesAreValid() throws IOException {
+        // Per-route properties match the {routeId} entries of the Route Policy factory
+        createPropertiesFile(
+                "forage-policy.properties",
+                "forage.route.policy.enabled=true",
+                "forage.route.policy.route-primary.name=flip",
+                "forage.route.policy.route-primary.flip.paired-route=route-secondary",
+                "forage.route.policy.route-primary.flip.initially-active=true",
+                "forage.route.policy.orders.v2.name=schedule,flip",
+                "forage.route.policy.orders.v2.schedule.start-time=09:00",
+                "forage.route.policy.orders.v2.schedule.stop-time=17:00",
+                "forage.route.policy.orders.v2.schedule.timezone=Europe/Rome",
+                "forage.route.policy.orders.v2.schedule.days-of-week=MON,TUE");
+
+        ValidationResult result = ForagePropertyValidator.validate(tempDir.toFile(), catalog);
+
+        assertThat(result.getWarnings()).isEmpty();
+    }
+
+    @Test
+    void testUnknownRoutePolicyOption() throws IOException {
+        createPropertiesFile(
+                "forage-policy.properties",
+                "forage.route.policy.route-a.name=flip",
+                "forage.route.policy.route-a.flip.enabled=true");
+
+        ValidationResult result = ForagePropertyValidator.validate(tempDir.toFile(), catalog);
+
+        assertThat(result.getWarnings()).singleElement().satisfies(warning -> {
+            assertThat(warning.getType()).isEqualTo(ValidationWarning.Type.UNKNOWN_PROPERTY);
+            assertThat(warning.getPropertyName()).isEqualTo("forage.route.policy.route-a.flip.enabled");
+        });
+    }
+
+    @Test
+    void testUnknownRoutePolicyName() throws IOException {
+        // Each policy of a comma-separated list is checked against the Route Policy beans
+        createPropertiesFile("forage-policy.properties", "forage.route.policy.route-a.name=schedule, flp");
+
+        ValidationResult result = ForagePropertyValidator.validate(tempDir.toFile(), catalog);
+
+        assertThat(result.getWarnings()).singleElement().satisfies(warning -> {
+            assertThat(warning.getType()).isEqualTo(ValidationWarning.Type.INVALID_BEAN_VALUE);
+            assertThat(warning.getMessage()).contains("'flp'").contains("Did you mean 'flip'?");
+            assertThat(warning.getMessage()).doesNotContain("'schedule'");
+        });
+    }
+
+    @Test
+    void testInMemoryEmbeddingStoreKindIsValid() throws IOException {
+        createPropertiesFile(
+                "application.properties",
+                "forage.myAgent.agent.model.kind=ollama",
+                "forage.myAgent.agent.embedding.model.name=granite-embedding:latest",
+                "forage.myAgent.agent.embedding.store.kind=in-memory-store",
+                "forage.myAgent.agent.in.memory.store.file.source=company-knowledge-base.txt",
+                "forage.myAgent.agent.rag.max.results=3");
+
+        ValidationResult result = ForagePropertyValidator.validate(tempDir.toFile(), catalog);
+
+        assertThat(result.getWarnings()).isEmpty();
+    }
+
     // Helper method to create properties files
     private File createPropertiesFile(String filename, String... lines) throws IOException {
         File file = tempDir.resolve(filename).toFile();

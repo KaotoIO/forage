@@ -22,6 +22,8 @@ forage.myAgent.agent.in.memory.store.max.size=300
 forage.myAgent.agent.in.memory.store.overlap.size=100
 ```
 
+These properties are enough for `camel forage run` and `camel forage export` to add the `forage-in-memory-store` module and, since the file source turns RAG on, `forage-default-retrieval-augmentor`. Setting `forage.myAgent.agent.embedding.store.kind=in-memory-store` selects the store explicitly.
+
 ### Pinecone
 
 Supports automatic index creation when `create.index=true` is set alongside `dimension`, `cloud`, and `region`.

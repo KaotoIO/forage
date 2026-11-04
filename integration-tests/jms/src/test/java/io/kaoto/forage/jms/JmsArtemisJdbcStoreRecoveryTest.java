@@ -90,6 +90,7 @@ public class JmsArtemisJdbcStoreRecoveryTest implements ForageIntegrationTest {
                 .addResource(crashResources[0])
                 .addResource(crashResources[1])
                 .addResource(crashResources[2])
+                .addResource(crashResources[3])
                 .dumpIntegrationOutput(true));
         registerIntegrationCleanup(runner, CRASH_RUN, afterAll);
 
@@ -134,6 +135,7 @@ public class JmsArtemisJdbcStoreRecoveryTest implements ForageIntegrationTest {
                 .addResource(restartResources[0])
                 .addResource(restartResources[1])
                 .addResource(restartResources[2])
+                .addResource(restartResources[3])
                 .dumpIntegrationOutput(true));
 
         return RESTART_RUN;
@@ -167,8 +169,7 @@ public class JmsArtemisJdbcStoreRecoveryTest implements ForageIntegrationTest {
                         "TABLE_PREFIX_PLACEHOLDER", Matcher.quoteReplacement(TABLE_PREFIX),
                         "OBJECT_STORE_DIR_PLACEHOLDER",
                                 Matcher.quoteReplacement(
-                                        runDir.resolve("tx-object-store").toString()),
-                        "CRASH_MARKER_PLACEHOLDER", Matcher.quoteReplacement(marker.toString())),
+                                        runDir.resolve("tx-object-store").toString())),
                 afterAll);
         Resource dataSourceProperties = PropertiesTemplateHelper.createFromTemplate(
                 classResource("forage-datasource-factory.properties.template"),
@@ -186,7 +187,8 @@ public class JmsArtemisJdbcStoreRecoveryTest implements ForageIntegrationTest {
             jmsProperties,
             Resources.create(
                     workDir.resolve("forage-datasource-factory.properties").toFile()),
-            Resources.create(workDir.resolve("CrashRecoveryRoute.java").toFile())
+            Resources.create(workDir.resolve("CrashRecoveryRoute.java").toFile()),
+            JmsArtemisRecoveryTest.routeProperties(jmsProperties, marker, afterAll)
         };
     }
 

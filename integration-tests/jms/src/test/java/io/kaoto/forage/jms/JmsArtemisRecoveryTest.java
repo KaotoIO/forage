@@ -70,8 +70,7 @@ public class JmsArtemisRecoveryTest implements ForageIntegrationTest {
                 Map.of(
                         "forage\\.jms\\.broker\\.url=.*",
                                 Matcher.quoteReplacement("forage.jms.broker.url=" + brokerUrl),
-                        "OBJECT_STORE_DIR_PLACEHOLDER", Matcher.quoteReplacement(objectStoreDir.toString()),
-                        "CRASH_MARKER_PLACEHOLDER", Matcher.quoteReplacement(crashMarker.toString())),
+                        "OBJECT_STORE_DIR_PLACEHOLDER", Matcher.quoteReplacement(objectStoreDir.toString())),
                 afterAll);
         // The route file must sit next to the templated properties: the run action derives the
         // integration's working directory from its resource files, and both runs must use the
@@ -83,6 +82,7 @@ public class JmsArtemisRecoveryTest implements ForageIntegrationTest {
                 .getParent()
                 .resolve("CrashRecoveryRoute.java")
                 .toFile());
+        Resource routeProperties = routeProperties(properties, crashMarker, afterAll);
 
         // First run: prepares the XA transaction and halts the JVM before the JMS branch commits.
         runner.when(camel().cli()
@@ -90,6 +90,7 @@ public class JmsArtemisRecoveryTest implements ForageIntegrationTest {
                 .processName(CRASH_RUN)
                 .addResource(properties)
                 .addResource(route)
+                .addResource(routeProperties)
                 .dumpIntegrationOutput(true));
         registerIntegrationCleanup(runner, CRASH_RUN, afterAll);
 
@@ -124,6 +125,7 @@ public class JmsArtemisRecoveryTest implements ForageIntegrationTest {
                 .processName(RESTART_RUN)
                 .addResource(properties)
                 .addResource(route)
+                .addResource(routeProperties)
                 .dumpIntegrationOutput(true));
 
         return RESTART_RUN;
@@ -195,5 +197,23 @@ public class JmsArtemisRecoveryTest implements ForageIntegrationTest {
         } catch (jakarta.jms.JMSException e) {
             throw new IllegalStateException("Failed to probe " + queue, e);
         }
+    }
+
+    /**
+     * Writes the settings of the crash route itself to {@code application.properties}, next to the Forage
+     * properties: {@code crash.marker.file}, which the crash run creates right before crashing and whose presence
+     * makes a restarted run skip the crash-producer route. Since Camel 4.23, {@code camel run --runtime=main} starts a packaged Camel Main application
+     * (CAMEL-24659), which loads {@code application.properties} as Camel properties but not the other
+     * properties files of the run; Forage still reads its own {@code forage-*.properties} files.
+     */
+    static Resource routeProperties(Resource forageProperties, Path crashMarker, Consumer<AutoCloseable> afterAll) {
+        Path file = forageProperties.file().toPath().resolveSibling("application.properties");
+        try {
+            Files.writeString(file, "crash.marker.file=" + crashMarker + System.lineSeparator());
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to write " + file, e);
+        }
+        afterAll.accept(() -> Files.deleteIfExists(file));
+        return Resources.create(file.toFile());
     }
 }

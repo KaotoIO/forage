@@ -136,6 +136,8 @@ public class DataSourceFactoryConfig extends AbstractConfig {
                 properties.put(name.substring(base.length()), PlaceholderResolver.resolve(System.getProperty(name)));
             }
         }
+        // Driver properties such as sslpassword may reference a secret store, e.g. {{secret:db/ssl}}
+        properties.replaceAll((key, value) -> resolvePlaceholders(base + key, value));
         return Collections.unmodifiableMap(properties);
     }
 

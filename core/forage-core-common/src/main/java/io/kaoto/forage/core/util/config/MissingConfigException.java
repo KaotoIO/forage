@@ -54,4 +54,15 @@ public class MissingConfigException extends RuntimeException {
     public MissingConfigException(String message) {
         super(message);
     }
+
+    /**
+     * Constructs a new MissingConfigException with the specified detail message and cause.
+     *
+     * @param message the detail message explaining which configuration is missing
+     * @param cause the cause, or {@code null}
+     * @since 1.6
+     */
+    public MissingConfigException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

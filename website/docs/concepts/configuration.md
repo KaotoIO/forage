@@ -62,15 +62,16 @@ Forage converts property names to environment variable names by:
 {% raw %}
 ## Property Placeholders
 
-You can reference environment variables and system properties directly in property values using Camel-style placeholders:
+Property values accept Camel property placeholders, with the same syntax as in routes: environment
+variables, system properties, and secrets read from Kubernetes or a vault.
 
 ```properties
-forage.myDb.jdbc.url={{env:DATABASE_URL}}
+forage.myDb.jdbc.url=jdbc:postgresql://{{env:DB_HOST:localhost}}:5432/orders
 forage.myDb.jdbc.username={{env:DB_USER}}
-forage.myDb.jdbc.password={{env:DB_PASSWORD}}
+forage.myDb.jdbc.password={{secret:orders-db/password}}
 ```
 
-### Syntax
+### Environment Variables and System Properties
 
 | Placeholder | Resolves to |
 |---|---|
@@ -79,7 +80,82 @@ forage.myDb.jdbc.password={{env:DB_PASSWORD}}
 | `{{sys:KEY}}` | System property `KEY` |
 | `{{sys:KEY:default}}` | System property `KEY`, or `default` if not set |
 
-Placeholders are resolved at property-loading time, before values are used by Forage modules. If a variable is not set and no default is provided, the placeholder is left unchanged and a warning is logged.
+Forage resolves these itself, on every runtime, when it loads the properties. If a variable is not set
+and the placeholder has no default, the placeholder is left unchanged.
+
+### Secrets
+
+Any other placeholder function is applied by Camel when Forage creates the bean that uses the value,
+so the secret never has to be written in a properties file. Add the Camel component that provides the
+function and configure it as you would for routes:
+
+| Placeholder | Reads from | Camel component |
+|---|---|---|
+| `{{secret:name/key}}` | Kubernetes Secret | `camel-kubernetes` |
+| `{{configmap:name/key}}` | Kubernetes ConfigMap | `camel-kubernetes` |
+| `{{aws:name}}`, `{{aws:name#field}}` | AWS Secrets Manager | `camel-aws-secrets-manager` |
+| `{{azure:name}}`, `{{azure:name#field}}` | Azure Key Vault | `camel-azure-key-vault` |
+| `{{gcp:name}}`, `{{gcp:name#field}}` | Google Secret Manager | `camel-google-secret-manager` |
+| `{{hashicorp:engine:path#field}}` | HashiCorp Vault | `camel-hashicorp-vault` |
+
+CyberArk Conjur (`{{cyberark:...}}`), IBM Secrets Manager (`{{ibm:...}}`), AWS Parameter Store
+(`{{aws-parameterstore:...}}`) and any other Camel properties function work the same way. See the
+[Camel documentation](https://camel.apache.org/manual/using-propertyplaceholder.html) for the syntax of
+each function, including default values.
+
+In a Kubernetes pod, `{{secret:...}}` needs no configuration: Camel uses the pod service account, which
+must be allowed to `get` the secret, or reads the secrets mounted in the directory set by
+`camel.kubernetes-config.mount-path-secrets`. Vaults are configured with the `camel.vault.*` properties
+or their environment variables, as for routes:
+
+```properties
+camel.vault.aws.region=eu-west-1
+camel.vault.aws.defaultCredentialsProvider=true
+
+forage.ordersDb.jdbc.password={{aws:orders-db#password}}
+```
+
+Camel JBang downloads the component of the common functions automatically, as it does for routes. On
+Spring Boot, add the component starter (for example `camel-kubernetes-starter`).
+
+### Unresolvable Placeholders
+
+When a function cannot resolve a placeholder (the secret does not exist, the vault cannot be reached,
+or the component is not on the classpath), the application fails at startup. The error names the
+property, never its value:
+
+```text
+UnresolvedPlaceholderException: Cannot resolve the {{secret:...}} placeholder in property
+'forage.ordersDb.jdbc.password': the placeholder function returned no value
+```
+
+When Camel ignores missing properties (`camel.component.properties.ignore-missing-property=true`, which
+Camel JBang sets when exporting a project), the placeholder is left unchanged instead.
+
+Placeholders without a function, such as `{{name}}` or `{{name:default}}`, are always left unchanged:
+values such as AI agent prompts may contain them on purpose.
+
+### Runtime Support
+
+| Placeholder | Camel JBang / Camel Main | Spring Boot | Quarkus |
+|---|---|---|---|
+| `{{env:...}}`, `{{sys:...}}` | Yes | Yes | Yes |
+| `{{secret:...}}`, `{{aws:...}}` and other functions | Yes | Yes | No, fails at build and startup |
+| `${KEY}` | No | Yes, Spring Environment | Yes, SmallRye Config |
+
+On Spring Boot, the functions are applied through the `CamelContext` bean, so the `camel.vault.*`
+properties can come from `application.properties`, YAML or any Spring property source.
+
+On Quarkus, Forage translates its properties into Quarkus configuration before any `CamelContext`
+exists, and that configuration is consumed by Quarkus extensions (Agroal for JDBC, Artemis for JMS,
+LangChain4j for AI models), not by Camel. Camel cannot resolve the value there, so Forage fails with an
+explanation instead of passing the placeholder through. Use a mechanism Quarkus understands:
+
+- Expose the secret as an environment variable (on Kubernetes, `env.valueFrom.secretKeyRef`) and use
+  `{{env:NAME}}`.
+- Use a configuration expression (`${...}`) backed by a Quarkus configuration source, such as the
+  [Kubernetes Config extension](https://quarkus.io/guides/kubernetes-config), which reads Secrets and
+  ConfigMaps. Forage passes `${...}` through unchanged.
 
 ### Placeholders vs Overrides
 
@@ -95,9 +171,7 @@ When both are present, overrides take priority — they are checked before file-
 forage.myDb.jdbc.url=jdbc:postgresql://{{env:DB_HOST:localhost}}:{{env:DB_PORT:5432}}/{{env:DB_NAME:orders}}
 ```
 
-### Runtime-Specific Alternatives
-
-Spring Boot and Quarkus have their own placeholder syntax (`${KEY}`). Both syntaxes work in Forage property files — see the [Runtime Support](runtimes.md) page for details.
+See the [Runtime Support](runtimes.md) page for `${KEY}` placeholders on Spring Boot and Quarkus.
 {% endraw %}
 
 !!! note "Bean-name properties"

@@ -38,7 +38,7 @@ public class SecurityShiroTest implements ForageIntegrationTest {
                 afterAll);
         runner.when(forageRun(NAME)
                 .addResource(properties)
-                .addResource(classResource("route.camel.yaml"))
+                .addResource(classResource(NAME + ".camel.yaml"))
                 .dumpIntegrationOutput(true));
         return NAME;
     }

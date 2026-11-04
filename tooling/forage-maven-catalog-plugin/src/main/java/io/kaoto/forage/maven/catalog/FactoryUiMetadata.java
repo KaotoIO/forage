@@ -153,7 +153,7 @@ class FactoryUiMetadata {
         if (value == null) {
             return null;
         }
-        return value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
+        return value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(?:^-)|(?:-$)", "");
     }
 
     /**

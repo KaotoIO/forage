@@ -159,6 +159,7 @@ Config entries define the properties a user can set. Each entry carries enough m
 | `configTag` | Grouping hint: `COMMON`, `ADVANCED`, or `SECURITY` |
 | `selectsFrom` | For `bean-name` type -- the feature name whose beans populate the dropdown |
 | `hidden` | `true` for internal entries (infrastructure overrides) that a UI should not render; omitted otherwise |
+| `multiValue` | `true` when the value can list several entries, comma-separated -- for a `bean-name` entry, several beans (e.g., `forage.route.policy.{routeId}.name=schedule,flip`). Present only when `true`: any other selector takes exactly one bean name |
 
 **Supported types:**
 
@@ -175,6 +176,8 @@ Config entries define the properties a user can set. Each entry carries enough m
 | `map` | Key/value list | `name` is a prefix: each pair is written as `name.key=value`, for example `forage.jdbc.properties.sslConnection=true` |
 
 **Config tags** allow a UI to organize fields into expandable sections. Typically `COMMON` fields are shown expanded by default, while `ADVANCED` and `SECURITY` sections are collapsed.
+
+**Placeholder segments.** When part of a property name is chosen by the user, the entry name has a placeholder segment in braces. Route policies are configured per route, so their entries are named like `forage.route.policy.{routeId}.name` and `forage.route.policy.{routeId}.flip.paired-route`. Tooling replaces the placeholder with the actual value -- for the route `orders`, the property is `forage.route.policy.orders.name` -- and a placeholder matches one or more dot-separated segments, since a route ID may contain dots. Placeholders are different from instance names (see [Multi-Instance Support](#step-3-multi-instance-support)), which tooling inserts after `forage.`.
 
 ### Beans by Feature
 
@@ -210,7 +213,20 @@ Beans represent the concrete implementations a user can choose from. They are gr
 
 The link between a factory's `configEntries` and its `beansByFeature` is the **`selectsFrom`** field. When a config entry has `"type": "bean-name"` and `"selectsFrom": "Memory"`, the UI populates its dropdown from the beans in the `"Memory"` feature group. When the user selects a bean (e.g., `redis`), that bean's own `configEntries` are rendered as additional form fields.
 
-Each bean also carries a `gav` field so that tooling can add the correct Maven dependency to the project, and a `propertiesSchema` with the JSON Schema of its own properties (see [UI Metadata](#ui-metadata)).
+Each bean also carries a `gav` field so that tooling can add the correct Maven dependency to the project, and a `propertiesSchema` with the JSON Schema of its own properties (see [UI Metadata](#ui-metadata)). Tooling adds the `gav` when a `bean-name` entry selects the bean, or when one of the bean's own config entries is set.
+
+A bean can also list `enabledBy`: factory config entries whose presence means the factory uses the bean, even when none of the bean's own config entries is set. For example, the agent assembles its RAG pipeline as soon as an embedding model or an in-memory store file is configured, so the `defaultRag` retrieval augmentor declares:
+
+```json
+{
+  "name": "defaultRag",
+  "gav": "io.kaoto.forage:forage-default-retrieval-augmentor:{{ forage_version }}",
+  "enabledBy": ["forage.agent.embedding.model.name", "forage.agent.in.memory.store.file.source"],
+  "configEntries": [ ... ]
+}
+```
+
+`camel forage run` and `camel forage export` add the bean's `gav` when one of these entries is set, for any instance name (e.g., `forage.myAgent.agent.embedding.model.name`).
 
 ### Conditional Beans
 
@@ -299,8 +315,9 @@ It is generated from the config entries:
 | `type: Duration` | `"type": "string", "format": "duration"` |
 | `type: map` | `"type": "object", "additionalProperties": {"type": "string"}` |
 | `type: bean-name` + `selectsFrom` | `"type": "string", "enum": [...]` listing the beans of the `selectsFrom` feature |
+| `type: bean-name` + `selectsFrom` + `multiValue: true` | `"type": "string", "pattern": ...` accepting one or more of those beans, comma-separated (an `enum` would reject `schedule,flip`) |
 | `configTag` | `"$comment": "group:common"`, `group:advanced` or `group:security` (lower case, as in camel-catalog) |
-| `required: true` | The key is listed in the schema level `required` array |
+| `required: true` | The key is listed in the schema level `required` array, unless the name has a `{placeholder}` segment |
 | `defaultValue` | `"default"`, as a number or boolean for numeric and boolean properties |
 | `label` / `description` | `"title"` / `"description"` |
 | `hidden: true` | Left out of the schema |
@@ -308,6 +325,8 @@ It is generated from the config entries:
 **Property keys are the full keys of the default instance** (`forage.jms.broker.url`): the same names as in `configEntries` and in the documentation. A UI writes the form values of the default instance as they are, and applies the `prefixPattern` for a named instance (see below).
 
 A `map` property holds free-form keys: the form value `{"sslConnection": "true"}` of `forage.jdbc.properties` is written as `forage.jdbc.properties.sslConnection=true`.
+
+**An entry whose name has a `{placeholder}` segment is a family of properties**, for example `forage.route.policy.{routeId}.name`, one per route. It is listed under `patternProperties`, keyed by a regular expression in which the placeholder matches one or more dot-separated segments (a route ID may contain dots): `^forage\.route\.policy\.[^.]+(?:\.[^.]+)*\.name$`. JSON Schema can't require a family of properties, so these entries are never in `required`. The template name, with its placeholder, is the entry `name` in `configEntries`: a UI asks for the placeholder value (the route ID) and writes the resolved key.
 
 **Factory and bean schemas do not overlap.** The factory `propertiesSchema` holds the factory's own properties; the properties a bean brings are only in that bean's `propertiesSchema`. A UI renders the factory form, then the form of each bean the user selects (for example the `forage.jms.artemis.*` properties once `artemis` is chosen as `forage.jms.kind`). Together they cover every non-hidden config entry of the factory exactly once.
 
@@ -446,8 +465,10 @@ The catalog is entirely derived from annotations and configuration classes in th
 | `@ForageFactory(configClass = ...)` | Links the factory to its config entries |
 | `@ForageBean` on a class | Bean entry under the `beansByFeature` of every factory that shares one of its `components` |
 | `@ForageBean(feature = "Memory")` | Groups the bean under the `"Memory"` feature |
+| `@ForageBean(enabledBy = ...)` | Bean `enabledBy`: factory config entries that make the factory use the bean |
 | `ConfigModule.of(...)` | Config entry with `name`, `type`, `label`, `description`, `defaultValue`, `configTag` |
 | `ConfigModule.ofBeanName(...)` | Config entry with `type: "bean-name"` and `selectsFrom` linking to a feature |
+| `ConfigModule.ofBeanName(..., true)` | The same, with `multiValue: true`: the value can list several beans |
 | `@InternalConfig` on a `ConfigModule` field | Config entry with `hidden: true`, left out of `propertiesSchema` |
 | `@ForageFactory(namedInstances = false)` | No `prefixPattern` on the factory |
 | `@ForageFactory(beanReferences = ...)` | Declared `beanReferences`, replacing the derived ones for the same component |

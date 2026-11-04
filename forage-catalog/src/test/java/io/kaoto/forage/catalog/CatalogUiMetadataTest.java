@@ -14,6 +14,8 @@ import org.apache.camel.catalog.CamelCatalog;
 import org.apache.camel.catalog.DefaultCamelCatalog;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SchemaId;
@@ -86,10 +88,16 @@ class CatalogUiMetadataTest {
             assertThat(schema.getValue().get("$schema").asText()).isEqualTo("http://json-schema.org/draft-07/schema#");
             assertThat(schema.getValue().get("type").asText()).isEqualTo("object");
 
-            schema.getValue().get("properties").properties().forEach(property -> {
+            schema.getValue().path("patternProperties").properties().forEach(property -> assertThat(property.getKey())
+                    .as("pattern property key of %s", schema.getKey())
+                    .startsWith("^forage\\."));
+            List<Map.Entry<String, JsonNode>> allProperties = new ArrayList<>();
+            schema.getValue().get("properties").properties().forEach(allProperties::add);
+            schema.getValue().path("patternProperties").properties().forEach(allProperties::add);
+            allProperties.forEach(property -> {
                 assertThat(property.getKey())
                         .as("property key of %s", schema.getKey())
-                        .startsWith("forage.");
+                        .matches("\\^?forage.*");
                 assertThat(property.getValue().get("type").asText())
                         .isIn("string", "integer", "number", "boolean", "object");
                 JsonNode defaultValue = property.getValue().get("default");
@@ -115,6 +123,31 @@ class CatalogUiMetadataTest {
                 visibleEntries.add(entry.get("name").asText());
             }
         });
+
+        // A templated entry (forage.route.policy.{routeId}.name) is covered by exactly one pattern property
+        Map<String, JsonNode> patterns = new LinkedHashMap<>();
+        factory.at("/propertiesSchema/patternProperties")
+                .properties()
+                .forEach(p -> patterns.put(p.getKey(), p.getValue()));
+        beans(factory).forEach(bean -> bean.at("/propertiesSchema/patternProperties")
+                .properties()
+                .forEach(p -> assertThat(patterns.put(p.getKey(), p.getValue()))
+                        .as("pattern %s in one schema only", p.getKey())
+                        .isNull()));
+        Set<String> matchedPatterns = new HashSet<>();
+        visibleEntries.removeIf(entry -> {
+            if (!entry.contains("{")) {
+                return false;
+            }
+            String sample = entry.replaceAll("\\{[^}]+}", "orders.in");
+            List<String> matching = patterns.keySet().stream()
+                    .filter(pattern -> sample.matches(pattern.substring(1, pattern.length() - 1)))
+                    .toList();
+            assertThat(matching).as("pattern properties matching %s", entry).hasSize(1);
+            matchedPatterns.add(matching.get(0));
+            return true;
+        });
+        assertThat(matchedPatterns).containsExactlyInAnyOrderElementsOf(patterns.keySet());
 
         Set<String> factoryKeys = keys(factory.get("propertiesSchema"));
         Set<String> beanKeys = new HashSet<>();
@@ -147,6 +180,9 @@ class CatalogUiMetadataTest {
             List<String> expected = beansByFeature.get(entry.get("selectsFrom").asText());
             if (expected == null) {
                 assertThat(property.has("enum")).isFalse();
+            } else if (entry.path("multiValue").asBoolean(false)) {
+                assertThat(property.has("enum")).isFalse();
+                assertThat(property.get("pattern").asText()).contains(expected);
             } else {
                 assertThat(property.get("enum")).extracting(JsonNode::asText).containsExactlyElementsOf(expected);
             }
@@ -189,7 +225,7 @@ class CatalogUiMetadataTest {
             }
         });
 
-        assertThat(withoutPrefixPattern).containsExactlyInAnyOrder("WebSearch", "Security Policy");
+        assertThat(withoutPrefixPattern).containsExactlyInAnyOrder("WebSearch", "Security Policy", "Route Policy");
     }
 
     @Test
@@ -217,9 +253,11 @@ class CatalogUiMetadataTest {
         assertThat(references.get("Agent")).containsExactly("component:langchain4j-agent:agent:parameter:#{beanRef}");
         assertThat(references.get("CXF Web Service")).containsExactly("component:cxf:beanId:path:bean:{beanRef}");
         assertThat(references.get("Security Policy")).containsExactly("processor:policy:ref:attribute:{beanRef}");
+        // Camel uses these beans without a route referencing them
         assertThat(references.get("TLS Context")).isEmpty();
+        assertThat(references.get("Route Policy")).isEmpty();
         references.forEach((factory, values) -> {
-            if (!"TLS Context".equals(factory)) {
+            if (!"TLS Context".equals(factory) && !"Route Policy".equals(factory)) {
                 assertThat(values).as("bean references of %s", factory).isNotEmpty();
             }
         });
@@ -275,6 +313,21 @@ class CatalogUiMetadataTest {
         List<JsonNode> beans = new ArrayList<>();
         factory.path("beansByFeature").forEach(feature -> feature.path("beans").forEach(beans::add));
         return beans;
+    }
+
+    @Test
+    void routePolicyNameAcceptsSeveralPoliciesForAnyRoute() {
+        JsonNode schema = factory("Route Policy").get("propertiesSchema");
+        assertThat(keys(schema)).doesNotContain("forage.route.policy.{routeId}.name");
+        assertThat(DRAFT_07.validate(schema)).isEmpty();
+
+        JsonSchema validator = SCHEMA_FACTORY.getSchema(schema);
+        ObjectNode valid = JsonNodeFactory.instance.objectNode();
+        valid.put("forage.route.policy.orders.in.name", "schedule,flip");
+        assertThat(validator.validate(valid)).isEmpty();
+        ObjectNode invalid = JsonNodeFactory.instance.objectNode();
+        invalid.put("forage.route.policy.orders.name", "schedule,flop");
+        assertThat(validator.validate(invalid)).isNotEmpty();
     }
 
     private static Set<String> keys(JsonNode schema) {

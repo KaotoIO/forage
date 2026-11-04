@@ -15,7 +15,9 @@ import org.slf4j.LoggerFactory;
 import io.kaoto.forage.core.util.config.Config;
 import io.kaoto.forage.core.util.config.ConfigHelper;
 import io.kaoto.forage.core.util.config.ConfigStore;
+import io.kaoto.forage.core.util.config.PlaceholderResolver;
 import io.kaoto.forage.core.util.config.PropertyFileLocator;
+import io.kaoto.forage.core.util.config.UnsupportedPlaceholderFunctionResolver;
 import io.smallrye.config.ConfigSourceContext;
 import io.smallrye.config.ConfigSourceFactory;
 import io.smallrye.config.ConfigValue;
@@ -45,8 +47,20 @@ public abstract class ForageQuarkusConfigSourceAdapter<C extends Config> impleme
      */
     protected abstract ForageModuleDescriptor<C, ?> descriptor();
 
+    /**
+     * Translates the module's Forage properties. The translated values are consumed by Quarkus extensions,
+     * not by Camel, so a Camel secret-store placeholder ({@code {{secret:...}}}, {@code {{aws:...}}}, ...)
+     * in a translated value fails here with an explanation instead of reaching the extension as a literal.
+     * {@code {{env:...}}}/{@code {{sys:...}}} placeholders keep working, and stay unresolved when the
+     * variable is only set at runtime (this also runs at build time).
+     */
     @Override
     public Iterable<ConfigSource> getConfigSources(ConfigSourceContext context) {
+        return PlaceholderResolver.withFunctionResolver(
+                UnsupportedPlaceholderFunctionResolver.QUARKUS, () -> translate(context));
+    }
+
+    private Iterable<ConfigSource> translate(ConfigSourceContext context) {
         ForageModuleDescriptor<C, ?> desc = descriptor();
         ConfigStore.getInstance().setClassLoader(Thread.currentThread().getContextClassLoader());
 

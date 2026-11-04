@@ -9,12 +9,23 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
  * The JSON Schema of a single configuration property inside a {@link PropertiesSchema}.
  *
  * <p>Only the keywords a form renderer needs are used: {@code title}, {@code description},
- * {@code type}, {@code format} ({@code password}, {@code duration}), {@code enum}, {@code default},
+ * {@code type}, {@code format} ({@code password}, {@code duration}), {@code enum}, {@code pattern}
+ * (for comma-separated lists of beans), {@code default},
  * {@code additionalProperties} (for free-form key/value properties) and {@code $comment}, which
  * carries the form group as {@code group:NAME} like the camel-catalog does.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({"title", "description", "type", "format", "enum", "default", "additionalProperties", "$comment"})
+@JsonPropertyOrder({
+    "title",
+    "description",
+    "type",
+    "format",
+    "enum",
+    "pattern",
+    "default",
+    "additionalProperties",
+    "$comment"
+})
 public class PropertySchema {
 
     @JsonProperty("title")
@@ -31,6 +42,9 @@ public class PropertySchema {
 
     @JsonProperty("enum")
     private List<String> enumValues;
+
+    @JsonProperty("pattern")
+    private String pattern;
 
     @JsonProperty("default")
     private Object defaultValue;
@@ -109,5 +123,13 @@ public class PropertySchema {
 
     public void setComment(String comment) {
         this.comment = comment;
+    }
+
+    public String getPattern() {
+        return pattern;
+    }
+
+    public void setPattern(String pattern) {
+        this.pattern = pattern;
     }
 }

@@ -16,8 +16,13 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
  * <p>Property names are the full property keys of the default (unnamed) instance, for example
  * {@code forage.jdbc.url}. The keys of a named instance are derived with the factory
  * {@code prefixPattern}.
+ *
+ * <p>An entry whose name contains a {@code {placeholder}} segment, such as
+ * {@code forage.route.policy.{routeId}.name}, is a family of properties: it is listed under
+ * {@code patternProperties}, keyed by a regular expression in which the placeholder matches one or more
+ * dot-separated segments, and is never part of {@code required}.
  */
-@JsonPropertyOrder({"$schema", "type", "required", "properties"})
+@JsonPropertyOrder({"$schema", "type", "required", "properties", "patternProperties"})
 public class PropertiesSchema {
 
     /** The JSON Schema dialect of every {@code propertiesSchema}. */
@@ -35,6 +40,10 @@ public class PropertiesSchema {
 
     @JsonProperty("properties")
     private Map<String, PropertySchema> properties = new LinkedHashMap<>();
+
+    @JsonProperty("patternProperties")
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private Map<String, PropertySchema> patternProperties = new LinkedHashMap<>();
 
     public String getSchema() {
         return schema;
@@ -66,5 +75,13 @@ public class PropertiesSchema {
 
     public void setProperties(Map<String, PropertySchema> properties) {
         this.properties = properties;
+    }
+
+    public Map<String, PropertySchema> getPatternProperties() {
+        return patternProperties;
+    }
+
+    public void setPatternProperties(Map<String, PropertySchema> patternProperties) {
+        this.patternProperties = patternProperties;
     }
 }

@@ -1,10 +1,12 @@
 package io.kaoto.forage.maven.catalog;
 
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import io.kaoto.forage.catalog.model.ConfigEntry;
 import io.kaoto.forage.catalog.model.PropertiesSchema;
 import io.kaoto.forage.catalog.model.PropertySchema;
@@ -63,9 +65,17 @@ final class PropertiesSchemaBuilder {
             return schema;
         }
         for (ConfigEntry entry : entries) {
-            if (entry.isHidden()
-                    || entry.getName() == null
-                    || schema.getProperties().containsKey(entry.getName())) {
+            if (entry.isHidden() || entry.getName() == null) {
+                continue;
+            }
+            if (isTemplate(entry.getName())) {
+                // A family of properties (e.g., one per route): JSON Schema can only describe it with a
+                // pattern, and cannot require it
+                schema.getPatternProperties()
+                        .putIfAbsent(namePattern(entry.getName()), property(entry, beanNamesOfFeature));
+                continue;
+            }
+            if (schema.getProperties().containsKey(entry.getName())) {
                 continue;
             }
             schema.getProperties().put(entry.getName(), property(entry, beanNamesOfFeature));
@@ -100,7 +110,12 @@ final class PropertiesSchemaBuilder {
                 if (entry.getSelectsFrom() != null) {
                     List<String> beanNames = beanNamesOfFeature.apply(entry.getSelectsFrom());
                     if (beanNames != null && !beanNames.isEmpty()) {
-                        property.setEnumValues(List.copyOf(beanNames));
+                        if (entry.isMultiValue()) {
+                            // A comma-separated list of beans: an enum would reject "schedule,flip"
+                            property.setPattern(beanListPattern(beanNames));
+                        } else {
+                            property.setEnumValues(List.copyOf(beanNames));
+                        }
                     }
                 }
             }
@@ -114,6 +129,42 @@ final class PropertiesSchemaBuilder {
             property.setComment(GROUP_COMMENT_PREFIX + entry.getConfigTag().toLowerCase(Locale.ROOT));
         }
         return property;
+    }
+
+    /**
+     * Whether the entry name has a {@code {placeholder}} segment, such as {@code {routeId}}.
+     */
+    static boolean isTemplate(String name) {
+        return Arrays.stream(name.split("\\.")).anyMatch(PropertiesSchemaBuilder::isPlaceholder);
+    }
+
+    /**
+     * The {@code patternProperties} key of a templated entry name: each placeholder segment matches one or
+     * more dot-separated segments (a route ID may contain dots), as in the Forage JBang plugin.
+     */
+    static String namePattern(String name) {
+        return Arrays.stream(name.split("\\."))
+                .map(segment -> isPlaceholder(segment) ? "[^.]+(?:\\.[^.]+)*" : escapeRegex(segment))
+                .collect(Collectors.joining("\\.", "^", "$"));
+    }
+
+    /**
+     * A pattern accepting one bean name, or several comma-separated ones (spaces allowed around commas).
+     */
+    static String beanListPattern(List<String> beanNames) {
+        String bean = beanNames.stream()
+                .map(PropertiesSchemaBuilder::escapeRegex)
+                .collect(Collectors.joining("|", "(?:", ")"));
+        return "^\\s*" + bean + "\\s*(?:,\\s*" + bean + "\\s*)*$";
+    }
+
+    private static boolean isPlaceholder(String segment) {
+        return segment.length() > 2 && segment.startsWith("{") && segment.endsWith("}");
+    }
+
+    /** Escapes the characters that are special in ECMA-262 regular expressions, the JSON Schema dialect. */
+    private static String escapeRegex(String literal) {
+        return literal.replaceAll("[\\\\^$.|?*+()\\[\\]{}]", "\\\\$0");
     }
 
     /**

@@ -167,6 +167,53 @@ class PropertiesSchemaBuilderTest {
         assertThat(Draft07.errors(schema, Map.of())).isNotEmpty();
     }
 
+    @Test
+    void multiValueBeanNameAcceptsCommaSeparatedBeans() {
+        ConfigEntry policy = entry("forage.route.policy.name", "bean-name");
+        policy.setSelectsFrom("Route Policy");
+        policy.setMultiValue(true);
+
+        PropertiesSchema schema =
+                PropertiesSchemaBuilder.build(List.of(policy), feature -> List.of("flip", "schedule"));
+
+        PropertySchema property = schema.getProperties().get("forage.route.policy.name");
+        assertThat(property.getEnumValues()).isNull();
+        assertThat(property.getPattern()).isNotNull();
+        assertThat(Draft07.metaSchemaErrors(schema)).isEmpty();
+        for (String valid : List.of("flip", "schedule", "schedule,flip", " schedule , flip ")) {
+            assertThat(Draft07.errors(schema, Map.of("forage.route.policy.name", valid)))
+                    .as(valid)
+                    .isEmpty();
+        }
+        for (String invalid : List.of("", "flop", "flip,", "flip,flop", "flipschedule")) {
+            assertThat(Draft07.errors(schema, Map.of("forage.route.policy.name", invalid)))
+                    .as(invalid)
+                    .isNotEmpty();
+        }
+    }
+
+    @Test
+    void templatedEntriesBecomePatternPropertiesThatAreNeverRequired() {
+        ConfigEntry pairedRoute = entry("forage.route.policy.{routeId}.flip.paired-route", "string");
+        pairedRoute.setRequired(true);
+        ConfigEntry initiallyActive = entry("forage.route.policy.{routeId}.flip.initially-active", "boolean");
+
+        PropertiesSchema schema = PropertiesSchemaBuilder.build(List.of(pairedRoute, initiallyActive), NO_BEANS);
+
+        assertThat(schema.getProperties()).isEmpty();
+        assertThat(schema.getRequired()).isEmpty();
+        assertThat(schema.getPatternProperties())
+                .containsOnlyKeys(
+                        "^forage\\.route\\.policy\\.[^.]+(?:\\.[^.]+)*\\.flip\\.paired-route$",
+                        "^forage\\.route\\.policy\\.[^.]+(?:\\.[^.]+)*\\.flip\\.initially-active$");
+        assertThat(Draft07.metaSchemaErrors(schema)).isEmpty();
+        // The route ID may contain dots, and each property keeps its type
+        assertThat(Draft07.errors(schema, Map.of("forage.route.policy.orders.in.flip.initially-active", false)))
+                .isEmpty();
+        assertThat(Draft07.errors(schema, Map.of("forage.route.policy.orders.flip.initially-active", "yes")))
+                .isNotEmpty();
+    }
+
     private static ConfigEntry entry(String name, String type) {
         ConfigEntry entry = new ConfigEntry(name, type, null, false);
         entry.setType(type);

@@ -42,6 +42,9 @@ public class ForageBean {
     @JsonProperty("propertiesSchema")
     private PropertiesSchema propertiesSchema;
 
+    @JsonProperty("enabledBy")
+    private List<String> enabledBy;
+
     public ForageBean() {}
 
     public ForageBean(String name, String description, String className, String gav) {
@@ -132,6 +135,18 @@ public class ForageBean {
 
     public void setPropertiesSchema(PropertiesSchema propertiesSchema) {
         this.propertiesSchema = propertiesSchema;
+    }
+
+    /**
+     * Config entries of the owning factory whose presence means the factory uses this bean, in addition
+     * to the bean's own config entries.
+     */
+    public List<String> getEnabledBy() {
+        return enabledBy;
+    }
+
+    public void setEnabledBy(List<String> enabledBy) {
+        this.enabledBy = enabledBy;
     }
 
     @Override

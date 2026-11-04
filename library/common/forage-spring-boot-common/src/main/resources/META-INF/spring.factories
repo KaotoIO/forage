@@ -1,2 +1,4 @@
 org.springframework.boot.env.EnvironmentPostProcessor=\
   io.kaoto.forage.springboot.common.ForageEnvironmentPostProcessor
+org.springframework.context.ApplicationContextInitializer=\
+  io.kaoto.forage.springboot.common.ForagePlaceholderFunctionsInitializer

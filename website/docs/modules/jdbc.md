@@ -19,6 +19,13 @@ forage.myDb.jdbc.password=secret
       dataSource: "#myDb"
 ```
 
+{% raw %}
+!!! tip "Keep the password out of the file"
+    Use a placeholder instead of a literal password: `{{env:DB_PASSWORD}}` on every runtime, or a
+    Kubernetes Secret (`{{secret:my-db/password}}`) or vault placeholder on Camel JBang and Spring Boot.
+    See [Secrets](../concepts/configuration.md#secrets).
+{% endraw %}
+
 ## Supported Databases
 
 {{ forage_beans_table("DataSource", "javax.sql.DataSource") }}

@@ -76,6 +76,17 @@ public @interface ForageBean {
     String[] runtimeDependencies() default {};
 
     /**
+     * Config entries of the factory this bean belongs to whose presence means the factory uses this bean,
+     * even when none of the bean's own config entries is set. For example, the agent builds its retrieval
+     * augmentor whenever {@code forage.agent.embedding.model.name} is set. Tooling such as
+     * {@code camel forage run} and {@code camel forage export} adds the bean's artifact when one of them is
+     * configured, for any instance name.
+     *
+     * @return full config entry names (e.g., "forage.agent.embedding.model.name")
+     */
+    String[] enabledBy() default {};
+
+    /**
      * Additional Maven repository URLs required to resolve this bean's transitive dependencies.
      * Only applied during {@code camel run} to configure KameletMain repositories.
      *

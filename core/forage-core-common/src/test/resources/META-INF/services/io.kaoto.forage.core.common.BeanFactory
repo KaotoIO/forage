@@ -1,2 +1,3 @@
 io.kaoto.forage.core.ForageContextServicePluginTest$PlainFactory
 io.kaoto.forage.core.ForageContextServicePluginTest$RuntimeManagedFactory
+io.kaoto.forage.core.PlaceholderTestBeanFactory

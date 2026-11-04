@@ -79,6 +79,28 @@ public class ForageScheduleRoutePolicy extends RoutePolicySupport {
         this.cronExpression = null;
     }
 
+    // Package-private accessors to the resolved schedule, for tests
+
+    LocalTime startTime() {
+        return startTime;
+    }
+
+    LocalTime stopTime() {
+        return stopTime;
+    }
+
+    ZoneId timezone() {
+        return timezone;
+    }
+
+    Set<DayOfWeek> daysOfWeek() {
+        return daysOfWeek;
+    }
+
+    String cronExpression() {
+        return cronExpression;
+    }
+
     @Override
     public void onInit(Route route) {
         LOG.info("Initializing schedule route policy for route {}", route.getId());

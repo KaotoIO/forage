@@ -537,6 +537,23 @@ mvn clean verify -f integration-tests/mymodule -Dit.test=MyModuleTest
 
 ---
 
+## Step 7: Add the Module to the Catalog
+
+Kaoto and `camel forage run/export` only know what is in `forage-catalog.json` (see the [Forage Catalog guide](../website/docs/guides/forage-catalog.md)). To get there:
+
+1. Add every new artifact holding a `@ForageBean` or `@ForageFactory` (provider, factory, Spring Boot starter, Quarkus deployment module) as an `<optional>true</optional>` dependency of `forage-catalog/pom.xml`.
+2. Make sure each `@ForageBean` declares at least one of the `components` of the `@ForageFactory` it belongs to: a bean is only listed under the factories that share one of its components.
+
+The build enforces both. The `forage-maven-catalog-plugin` fails on a bean that no factory picks up, and `CatalogCompletenessTest` in `forage-catalog` fails on any `@ForageBean` or `@ForageFactory` class of the repository that is not in the generated catalog:
+
+```bash
+mvn -pl forage-catalog -am package
+```
+
+If a bean is deliberately kept out of the catalog, for example because its factory is tracked by another issue, add it to `<excludedBeans>` in the plugin configuration of `forage-catalog/pom.xml`, with a `<reason>` that names the issue. Remove the entry once the factory exists: the build fails on entries whose bean is now in the catalog.
+
+---
+
 ## Checklist for Adding a New Module
 
 ### Core (all runtimes)
@@ -568,6 +585,11 @@ mvn clean verify -f integration-tests/mymodule -Dit.test=MyModuleTest
 - [ ] Citrus test class implementing `ForageIntegrationTest`
 - [ ] Test properties and route files
 - [ ] Test passes on plain, Spring Boot, and Quarkus runtimes
+
+### Catalog
+- [ ] Every new artifact with a `@ForageBean` or `@ForageFactory` is an optional dependency of `forage-catalog/pom.xml`
+- [ ] Each `@ForageBean` shares a component with a `@ForageFactory`, or is listed in `<excludedBeans>` with a reason
+- [ ] `mvn -pl forage-catalog -am package` passes (catalog plugin checks and `CatalogCompletenessTest`)
 
 ---
 

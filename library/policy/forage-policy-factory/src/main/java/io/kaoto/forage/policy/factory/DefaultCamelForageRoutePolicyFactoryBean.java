@@ -3,8 +3,26 @@ package io.kaoto.forage.policy.factory;
 import org.apache.camel.CamelContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.kaoto.forage.core.annotations.FactoryType;
+import io.kaoto.forage.core.annotations.ForageFactory;
 import io.kaoto.forage.core.common.BeanFactory;
 
+/**
+ * Registers {@link DefaultCamelForageRoutePolicyFactory} on the CamelContext, so that each route gets the
+ * policies listed in {@code forage.route.policy.<routeId>.name}.
+ *
+ * <p>The policy implementations (flip, schedule) are {@code RoutePolicyProvider} beans in the
+ * "Route Policy" feature of this factory. The factory works the same on every runtime, so it has no
+ * Spring Boot or Quarkus variant.
+ */
+@ForageFactory(
+        value = "Route Policy",
+        components = {"camel-core"},
+        description =
+                "Applies route policies, such as flip or schedule, to the routes configured in forage.route.policy properties",
+        type = FactoryType.ROUTE_POLICY,
+        autowired = true,
+        configClass = RoutePolicyFactoryConfig.class)
 public class DefaultCamelForageRoutePolicyFactoryBean implements BeanFactory {
     private static final Logger LOG = LoggerFactory.getLogger(DefaultCamelForageRoutePolicyFactoryBean.class);
 

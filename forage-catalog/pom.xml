@@ -558,6 +558,18 @@
             <artifactId>jackson-databind</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Validate the generated propertiesSchema and bean references -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${json-schema-validator.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-catalog</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -699,6 +711,7 @@
                         <enabled>
                             <option>DEFINITIONS_FOR_ALL_OBJECTS</option>
                             <option>EXTRA_OPEN_API_FORMAT_VALUES</option>
+                            <option>MAP_VALUES_AS_ADDITIONAL_PROPERTIES</option>
                         </enabled>
                     </options>
                     <modules>

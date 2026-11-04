@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.logging.Log;
+import io.kaoto.forage.catalog.model.BeanReference;
 import io.kaoto.forage.catalog.model.ConditionalBeanGroup;
 import io.kaoto.forage.catalog.model.ConditionalBeanInfo;
 import io.kaoto.forage.catalog.model.ConfigEntry;
@@ -365,6 +366,8 @@ public class CodeScanner {
         if (!data.getRuntimeDependencies().isEmpty()) {
             factory.setRuntimeDependencies(data.getRuntimeDependencies());
         }
+        factory.setNamedInstances(data.isNamedInstances());
+        factory.setBeanReferences(data.getBeanReferences());
         return factory;
     }
 
@@ -401,9 +404,52 @@ public class CodeScanner {
                 case "configClass" -> data.setConfigClassName(extractClassValue(value, cu));
                 case "runtimeDependencies" ->
                     data.setRuntimeDependencies(extractStringArrayValue(value, "@ForageFactory 'runtimeDependencies'"));
+                case "namedInstances" -> {
+                    if (value instanceof BooleanLiteralExpr booleanLiteral) {
+                        data.setNamedInstances(booleanLiteral.getValue());
+                    }
+                }
+                case "beanReferences" -> data.setBeanReferences(extractBeanReferenceArray(value));
                 default -> {}
             }
         }
+    }
+
+    /**
+     * Extracts the {@code @BeanReference} annotations of {@code @ForageFactory(beanReferences = ...)}.
+     * Accepts a single annotation or an array; references without a name or option are skipped.
+     */
+    private List<BeanReference> extractBeanReferenceArray(Expression value) {
+        List<Expression> elements =
+                value instanceof ArrayInitializerExpr arrayExpr ? arrayExpr.getValues() : List.of(value);
+        List<BeanReference> references = new ArrayList<>();
+        for (Expression element : elements) {
+            if (!(element instanceof NormalAnnotationExpr annotation)) {
+                log.warn("Skipping unsupported @ForageFactory 'beanReferences' element: " + element);
+                continue;
+            }
+            Map<String, String> attributes = new HashMap<>();
+            for (MemberValuePair pair : annotation.getPairs()) {
+                if (pair.getValue() instanceof StringLiteralExpr stringLiteral) {
+                    attributes.put(pair.getNameAsString(), stringLiteral.asString());
+                } else {
+                    log.warn("Skipping non-string-literal @BeanReference '" + pair.getNameAsString() + "': "
+                            + pair.getValue());
+                }
+            }
+            BeanReference reference = FactoryUiMetadata.declaredReference(
+                    attributes.get("catalogKind"),
+                    attributes.get("name"),
+                    attributes.get("option"),
+                    attributes.get("optionKind"),
+                    attributes.get("valueTemplate"));
+            if (reference == null) {
+                log.warn("Skipping @BeanReference without name or option: " + annotation);
+            } else {
+                references.add(reference);
+            }
+        }
+        return references;
     }
 
     /**
@@ -649,6 +695,7 @@ public class CodeScanner {
                     if (isConfigModuleField(field)) {
                         ConfigEntry configProp = extractConfigEntry(variable);
                         if (configProp != null) {
+                            configProp.setHidden(isInternalConfig(field));
                             log.debug("Extracted configuration property: " + configProp.getName());
                             configProperties.add(configProp);
                         }
@@ -656,6 +703,15 @@ public class CodeScanner {
                 });
             }
         });
+    }
+
+    /**
+     * Checks if a ConfigModule field is annotated with {@code @InternalConfig}.
+     */
+    private static boolean isInternalConfig(FieldDeclaration field) {
+        return field.getAnnotations().stream()
+                .map(AnnotationExpr::getNameAsString)
+                .anyMatch(name -> "InternalConfig".equals(name) || Constants.INTERNAL_CONFIG_FQN.equals(name));
     }
 
     /**

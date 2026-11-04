@@ -61,6 +61,19 @@ public interface SecurityPolicyProvider extends BeanProvider<AuthorizationPolicy
     }
 
     /**
+     * Returns the descriptor the Spring Boot and Quarkus adapters use to detect this provider's configuration and
+     * register its policy bean.
+     *
+     * <p>Providers returning {@code null} are only registered on plain Camel, by {@link SecurityPolicyBeanFactory}.
+     *
+     * @return the provider's descriptor, or {@code null}
+     * @since 1.6.3
+     */
+    default SecurityPolicyModuleDescriptor<?> descriptor() {
+        return null;
+    }
+
+    /**
      * Creates an AuthorizationPolicy with the given configuration ID.
      *
      * <p>The ID is used to load provider-specific configuration from

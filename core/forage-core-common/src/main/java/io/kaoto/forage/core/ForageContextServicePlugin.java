@@ -1,13 +1,16 @@
 package io.kaoto.forage.core;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.Set;
 import org.apache.camel.CamelContext;
 import org.apache.camel.spi.ContextServicePlugin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.kaoto.forage.core.common.BeanFactory;
+import io.kaoto.forage.core.common.RuntimeManagedBeanFactories;
 import io.kaoto.forage.core.util.config.ConfigStore;
 
 public class ForageContextServicePlugin implements ContextServicePlugin {
@@ -17,11 +20,18 @@ public class ForageContextServicePlugin implements ContextServicePlugin {
 
     @Override
     public void load(CamelContext camelContext) {
-        ServiceLoader<BeanFactory> loader =
-                ServiceLoader.load(BeanFactory.class, camelContext.getApplicationContextClassLoader());
+        ClassLoader classLoader = camelContext.getApplicationContextClassLoader();
+        Set<String> runtimeManaged = runtimeManagedFactories(classLoader);
 
-        loader.forEach(beanFactory -> {
+        ServiceLoader.load(BeanFactory.class, classLoader).stream().forEach(provider -> {
+            if (runtimeManaged.contains(provider.type().getName())) {
+                LOG.debug(
+                        "Skipping bean factory {}: its beans are registered by the runtime",
+                        provider.type().getName());
+                return;
+            }
             try {
+                BeanFactory beanFactory = provider.get();
                 beanFactory.setCamelContext(camelContext);
                 beanFactory.configure();
                 factories.add(beanFactory);
@@ -29,12 +39,17 @@ public class ForageContextServicePlugin implements ContextServicePlugin {
                         "Successfully configured bean factory: {}",
                         beanFactory.getClass().getName());
             } catch (Exception e) {
-                LOG.warn(
-                        "Failed to configure bean factory: {}",
-                        beanFactory.getClass().getName(),
-                        e);
+                LOG.warn("Failed to configure bean factory: {}", provider.type().getName(), e);
             }
         });
+    }
+
+    private static Set<String> runtimeManagedFactories(ClassLoader classLoader) {
+        Set<String> names = new HashSet<>();
+        for (RuntimeManagedBeanFactories managed : ServiceLoader.load(RuntimeManagedBeanFactories.class, classLoader)) {
+            names.addAll(managed.beanFactoryClassNames());
+        }
+        return names;
     }
 
     /**

@@ -41,6 +41,7 @@
         <module>messaging</module>
         <module>cxf</module>
         <module>influxdb</module>
+        <module>security</module>
     </modules>
 
     <build>

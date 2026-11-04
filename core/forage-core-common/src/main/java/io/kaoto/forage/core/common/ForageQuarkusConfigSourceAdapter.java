@@ -47,6 +47,11 @@ public abstract class ForageQuarkusConfigSourceAdapter<C extends Config> impleme
 
     @Override
     public Iterable<ConfigSource> getConfigSources(ConfigSourceContext context) {
+        // The Quarkus configuration is being built: Forage lookups must not ask for it
+        return ConfigHelper.whileBuildingQuarkusConfig(() -> createConfigSources(context));
+    }
+
+    private Iterable<ConfigSource> createConfigSources(ConfigSourceContext context) {
         ForageModuleDescriptor<C, ?> desc = descriptor();
         ConfigStore.getInstance().setClassLoader(Thread.currentThread().getContextClassLoader());
 

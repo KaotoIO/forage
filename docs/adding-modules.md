@@ -461,6 +461,36 @@ public class ForageMyModuleProcessor {
 - Config source uses ordinal 275 (below system properties at 400), so `-D` overrides work
 - Use Quarkus recorders (`@Record`) when creating runtime beans that need Quarkus CDI context
 - Produce `CamelRuntimeBeanBuildItem`s for beans that must be in the Camel registry
+- A `ConfigSourceFactory` that does not extend `ForageQuarkusConfigSourceAdapter` must read Forage configuration inside `ConfigHelper.whileBuildingQuarkusConfig(...)`: otherwise the lookups call `ConfigProvider.getConfig()` while the configuration is being built, which registers a second configuration and fails Quarkus tests with `SRCFG00017`
+
+### 5c. Take Over a Plain `BeanFactory`
+
+Camel Quarkus also loads the plain-Camel `BeanFactory` of a module: it starts context service plugins, and with
+them `ForageContextServicePlugin`, while building the CamelContext during static initialization, which runs at image
+build time in native mode. When the Quarkus extension registers the beans itself (`CamelRuntimeBeanBuildItem` from a
+`RUNTIME_INIT` recorder), declare the factory as runtime-managed so that its beans are neither created twice nor
+built into the native image:
+
+```java
+package io.kaoto.forage.quarkus.mymodule;
+
+import java.util.Set;
+import io.kaoto.forage.core.common.RuntimeManagedBeanFactories;
+import io.kaoto.forage.mymodule.MyModuleBeanFactory;
+
+public class ForageMyModuleManagedBeanFactories implements RuntimeManagedBeanFactories {
+
+    @Override
+    public Set<String> beanFactoryClassNames() {
+        return Set.of(MyModuleBeanFactory.class.getName());
+    }
+}
+```
+
+Register it in the runtime module's `META-INF/services/io.kaoto.forage.core.common.RuntimeManagedBeanFactories`.
+
+On Spring Boot no such declaration is needed when the starter registers Spring beans: the plain factory looks the bean
+up in the Camel registry, which sees the Spring context, and skips it.
 
 ---
 
@@ -531,6 +561,8 @@ mvn clean verify -f integration-tests/mymodule -Dit.test=MyModuleTest
 - [ ] `ForageXxxConfigSourceFactory extends ForageQuarkusConfigSourceAdapter<C>`
 - [ ] `META-INF/services/io.smallrye.config.ConfigSourceFactory`
 - [ ] `@BuildStep` deployment processor with `@ForageFactory(variant = QUARKUS)`
+- [ ] `RuntimeManagedBeanFactories` registration if the extension replaces a plain `BeanFactory`
+- [ ] Native image: `NativeImageResourceBuildItem` for the `forage-xxx.properties` file and the classpath resources the beans load at runtime, `ServiceProviderBuildItem` for providers looked up with `ServiceLoader` at runtime
 
 ### Integration Tests
 - [ ] Citrus test class implementing `ForageIntegrationTest`

@@ -23,6 +23,7 @@ import io.kaoto.forage.core.common.RuntimeType;
 public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
     private static final Logger LOG = LoggerFactory.getLogger(CatalogDrivenExportCustomizer.class);
+    private static final String FORAGE_PREFIX = "forage.";
 
     private Map<String, Map<String, List<String>>> scannedProperties;
     private Boolean enabled;

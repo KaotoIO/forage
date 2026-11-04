@@ -220,7 +220,7 @@ class CatalogDrivenExportCustomizerTest {
         CatalogDrivenExportCustomizer customizer =
                 createCustomizer("forage.route.policy.orders.v2.name=schedule, flip\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.main);
         assertThat(deps).anyMatch(d -> d.contains("forage-policy-factory:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-policy-schedule:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-policy-flip:"));
@@ -231,7 +231,7 @@ class CatalogDrivenExportCustomizerTest {
         // db.kind is not multi-value: "postgresql,mysql" is one unknown kind, as the runtime sees it
         CatalogDrivenExportCustomizer customizer = createCustomizer("forage.jdbc.db.kind=postgresql,mysql\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.main);
         assertThat(deps).anyMatch(d -> d.contains("forage-jdbc:"));
         assertThat(deps).noneMatch(d -> d.contains("forage-jdbc-postgresql:"));
         assertThat(deps).noneMatch(d -> d.contains("forage-jdbc-mysql:"));
@@ -263,7 +263,7 @@ class CatalogDrivenExportCustomizerTest {
         CatalogDrivenExportCustomizer customizer =
                 createCustomizer("forage.route.policy.route-a.flip.paired-route=route-b\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.main);
         assertThat(deps).anyMatch(d -> d.contains("forage-policy-factory:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-policy-flip:"));
         assertThat(deps).noneMatch(d -> d.contains("forage-policy-schedule:"));
@@ -285,9 +285,9 @@ class CatalogDrivenExportCustomizerTest {
 
     static Stream<Arguments> agentVariants() {
         return Stream.of(
-                Arguments.of(RuntimeType.MAIN, "forage-agent:"),
-                Arguments.of(RuntimeType.SPRING_BOOT, "forage-agent-starter:"),
-                Arguments.of(RuntimeType.QUARKUS, "forage-quarkus-agent-deployment:"));
+                Arguments.of(RuntimeType.main, "forage-agent:"),
+                Arguments.of(RuntimeType.springBoot, "forage-agent-starter:"),
+                Arguments.of(RuntimeType.quarkus, "forage-quarkus-agent-deployment:"));
     }
 
     @ParameterizedTest
@@ -326,7 +326,7 @@ class CatalogDrivenExportCustomizerTest {
         CatalogDrivenExportCustomizer customizer = createCustomizer(
                 "forage.agent.model.kind=ollama\n" + "forage.agent.embedding.model.name=granite-embedding:latest\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.main);
         assertThat(deps).anyMatch(d -> d.contains("forage-default-retrieval-augmentor:"));
         assertThat(deps).noneMatch(d -> d.contains("forage-in-memory-store:"));
     }
@@ -339,7 +339,7 @@ class CatalogDrivenExportCustomizerTest {
                 + "forage.ollama.agent.embedding.model.name=granite-embedding:latest\n"
                 + "forage.ollama.agent.in.memory.store.file.source=company-knowledge-base.txt\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.main);
         assertThat(deps).anyMatch(d -> d.contains("forage-model-ollama:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-in-memory-store:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-default-retrieval-augmentor:"));
@@ -351,7 +351,7 @@ class CatalogDrivenExportCustomizerTest {
                 + "forage.agent.embedding.model.name=granite-embedding:latest\n"
                 + "forage.agent.embedding.store.kind=in-memory-store\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.main);
         assertThat(deps).anyMatch(d -> d.contains("forage-in-memory-store:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-default-retrieval-augmentor:"));
     }
@@ -363,7 +363,7 @@ class CatalogDrivenExportCustomizerTest {
                 + "forage.agent.model.name=granite4:3b\n"
                 + "forage.ollama.embedding.model.name=granite-embedding:latest\n");
 
-        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.main);
         assertThat(deps).anyMatch(d -> d.contains("forage-model-ollama:"));
         assertThat(deps).noneMatch(d -> d.contains("forage-in-memory-store:"));
         assertThat(deps).noneMatch(d -> d.contains("forage-default-retrieval-augmentor:"));

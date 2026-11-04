@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.kaoto.forage.core.common.RuntimeType;
@@ -85,6 +86,33 @@ public final class ConfigHelper {
      * {@link io.kaoto.forage.core.common.ForageQuarkusConfigSourceAdapter}).
      */
     private static final ThreadLocal<Boolean> quarkusConfigBuilding = ThreadLocal.withInitial(() -> false);
+
+    /**
+     * Runs an action that takes part in building the Quarkus configuration, such as a SmallRye
+     * {@code ConfigSourceFactory}.
+     *
+     * <p>Forage lookups made meanwhile do not call {@code ConfigProvider.getConfig()}: the configuration being built
+     * is not available yet, and the call would build and register a second configuration for the class loader, which
+     * makes the registration of the real one fail (SmallRye {@code SRCFG00017}, for example when the Quarkus JUnit
+     * extensions start). They fall back to environment variables, system properties and properties files instead.
+     *
+     * @param action the action
+     * @param <T> the action result type
+     * @return the action result
+     * @since 1.4.3
+     */
+    public static <T> T whileBuildingQuarkusConfig(Supplier<T> action) {
+        if (quarkusConfigBuilding.get()) {
+            return action.get();
+        }
+        quarkusConfigBuilding.set(true);
+        try {
+            return action.get();
+        } finally {
+            // remove() instead of set(false) so pooled threads don't retain the entry
+            quarkusConfigBuilding.remove();
+        }
+    }
 
     /**
      * @deprecated Runtime detection is now handled by the {@link ConfigResolver} chain.

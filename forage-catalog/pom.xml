@@ -621,6 +621,20 @@
                             <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
                         </excludedBean>
 
+                        <!-- Security policies: the Security Policy factory exists on main from 1.6.1 only -->
+                        <excludedBean>
+                            <className>io.kaoto.forage.security.keycloak.KeycloakSecurityPolicyProvider</className>
+                            <reason>camel-4.18.x has no Security Policy factory (added on main in 1.6.1), so this provider is not registered from properties on this branch</reason>
+                        </excludedBean>
+                        <excludedBean>
+                            <className>io.kaoto.forage.security.shiro.ShiroSecurityPolicyProvider</className>
+                            <reason>camel-4.18.x has no Security Policy factory (added on main in 1.6.1), so this provider is not registered from properties on this branch</reason>
+                        </excludedBean>
+                        <excludedBean>
+                            <className>io.kaoto.forage.security.spring.SpringSecurityPolicyProvider</className>
+                            <reason>camel-4.18.x has no Security Policy factory (added on main in 1.6.1), so this provider is not registered from properties on this branch</reason>
+                        </excludedBean>
+
                         <!-- Providers that are only usable programmatically, not from the Kaoto wizard -->
                         <excludedBean>
                             <className>io.kaoto.forage.cloud.eventhubs.AzureEventHubsProvider</className>

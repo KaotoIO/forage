@@ -269,7 +269,10 @@ public final class ForagePropertyValidator {
             }
         }
 
-        return false;
+        // Entries with a placeholder segment (e.g., policy.{routeId}.name matches policy.route-a.name)
+        return validPropertyNames.stream()
+                .filter(PropertyKeys::isTemplate)
+                .anyMatch(template -> PropertyKeys.matches(propertyName, template));
     }
 
     /**
@@ -312,7 +315,7 @@ public final class ForagePropertyValidator {
                 String name = entry.getName();
                 if (name != null && name.startsWith(factoryPrefix)) {
                     String suffix = name.substring(factoryPrefix.length());
-                    if (propertyName.equals(suffix) || propertyName.endsWith("." + suffix)) {
+                    if (PropertyKeys.matches(propertyName, suffix)) {
                         return entry;
                     }
                 }
@@ -342,7 +345,9 @@ public final class ForagePropertyValidator {
     }
 
     /**
-     * Validates a bean-name property value (e.g., db.kind=postgresql).
+     * Validates a bean-name property value (e.g., db.kind=postgresql). For a multi-value entry, each
+     * bean of a comma-separated list is checked (e.g., forage.route.policy.route-a.name=schedule,flip);
+     * a single-value entry must name exactly one bean, so a list is reported as an unknown bean.
      */
     private static void validateBeanName(
             PropertyOccurrence occurrence,
@@ -350,11 +355,11 @@ public final class ForagePropertyValidator {
             ForageCatalogReader catalog,
             ValidationResult result) {
 
-        String beanName = occurrence.value();
-        if (beanName == null || beanName.trim().isEmpty()) {
+        String value = occurrence.value();
+        if (value == null || value.trim().isEmpty()) {
             return;
         }
-        if (PlaceholderResolver.containsPlaceholders(beanName)) {
+        if (PlaceholderResolver.containsPlaceholders(value)) {
             return;
         }
 
@@ -363,9 +368,14 @@ public final class ForagePropertyValidator {
         if (feature != null) {
             // Get feature-scoped beans and check if the bean exists within this feature
             List<String> validBeans = getAllBeansForFeature(catalog, feature);
-            if (!validBeans.contains(beanName.trim())) {
+            List<String> beanNames =
+                    configEntry.isMultiValue() ? PropertyKeys.splitValues(value) : List.of(value.trim());
+            for (String beanName : beanNames) {
+                if (validBeans.contains(beanName)) {
+                    continue;
+                }
                 // Bean not found in this feature - suggest alternatives
-                String suggestion = findClosestMatch(beanName.trim(), new HashSet<>(validBeans));
+                String suggestion = findClosestMatch(beanName, new HashSet<>(validBeans));
 
                 result.addWarning(new ValidationWarning(
                         occurrence.file(),

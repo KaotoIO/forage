@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.kaoto.forage.catalog.model.ConditionalBeanGroup;
@@ -69,7 +70,8 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
                             String propSuffix = extractPropertySuffix(entry.getName(), factoryTypeKey);
                             if (propSuffix != null) {
                                 // Collect ALL bean kind values across all instances
-                                Set<String> beanKinds = findAllValues(factoryProperties, propSuffix);
+                                Set<String> beanKinds =
+                                        findAllValues(factoryProperties, propSuffix, entry.isMultiValue());
                                 if (beanKinds.isEmpty()
                                         && entry.getDefaultValue() != null
                                         && !entry.getDefaultValue().isEmpty()) {
@@ -94,6 +96,14 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
                 }
             });
 
+            // Provider-backed factories (for example Security Policy) select their
+            // implementation through technology-specific property prefixes rather than a
+            // generic bean-name property, and some beans are used as soon as a factory property
+            // turns their feature on (for example the agent RAG pipeline). Add each bean artifact
+            // whose configuration, or one of whose enabledBy entries, is present in the scanned
+            // properties.
+            addConfiguredBeanDependencies(catalog, factoryTypeKey, factoryProperties, variantName, dependencies);
+
             // 4. Check conditional beans for runtime dependencies
             List<ConditionalBeanGroup> conditionalGroups = catalog.getConditionalBeans(factoryTypeKey);
             for (ConditionalBeanGroup group : conditionalGroups) {
@@ -111,6 +121,63 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
         dependencies.forEach(dep -> LOG.debug("  Dependency: {}", dep));
 
         return dependencies;
+    }
+
+    private static void addConfiguredBeanDependencies(
+            ForageCatalogReader catalog,
+            String factoryTypeKey,
+            Map<String, List<String>> factoryProperties,
+            String variantName,
+            Set<String> dependencies) {
+        for (io.kaoto.forage.catalog.model.ForageBean bean : catalog.getAllBeansForFactory(factoryTypeKey)) {
+            if (!isConfigured(bean, factoryTypeKey, factoryProperties)) {
+                continue;
+            }
+            if (bean.getGav() != null && !bean.getGav().isBlank()) {
+                dependencies.add(toMvnGav(bean.getGav()));
+            }
+            if (bean.getRuntimeDependencies() != null) {
+                List<String> beanDependencies = bean.getRuntimeDependencies().get(variantName);
+                if (beanDependencies != null) {
+                    beanDependencies.stream()
+                            .map(CatalogDrivenExportCustomizer::toMvnGav)
+                            .forEach(dependencies::add);
+                }
+            }
+        }
+    }
+
+    /**
+     * A bean is configured when one of its own config entries, or one of the factory config entries listed
+     * in its {@code enabledBy}, is set in any instance.
+     */
+    private static boolean isConfigured(
+            io.kaoto.forage.catalog.model.ForageBean bean,
+            String factoryTypeKey,
+            Map<String, List<String>> factoryProperties) {
+        Stream<String> ownEntries = bean.getConfigEntries() == null
+                ? Stream.empty()
+                : bean.getConfigEntries().stream().map(ConfigEntry::getName);
+        Stream<String> enabledBy = bean.getEnabledBy() == null ? Stream.empty() : bean.getEnabledBy().stream();
+        return Stream.concat(ownEntries, enabledBy)
+                .filter(name -> name != null && name.startsWith(FORAGE_PREFIX))
+                .anyMatch(name -> isSet(name, factoryTypeKey, factoryProperties));
+    }
+
+    /**
+     * Whether a config entry is set in any instance. The scanner drops the factory key, and an instance name
+     * in front of it, from the keys it groups under the factory ({@code forage.myAgent.agent.rag.max.results}
+     * becomes {@code rag.max.results}), but keeps the whole key when the instance name is also a bean name
+     * ({@code forage.ollama.agent.rag.max.results} stays {@code ollama.agent.rag.max.results}).
+     */
+    private static boolean isSet(String entryName, String factoryTypeKey, Map<String, List<String>> factoryProperties) {
+        String entryKey = entryName.substring(FORAGE_PREFIX.length());
+        String factoryPrefix = FORAGE_PREFIX + factoryTypeKey + ".";
+        String factoryRelativeKey =
+                entryName.startsWith(factoryPrefix) ? entryName.substring(factoryPrefix.length()) : null;
+        return factoryProperties.keySet().stream()
+                .anyMatch(key -> PropertyKeys.matches(key, entryKey)
+                        || (factoryRelativeKey != null && PropertyKeys.matchesExactly(key, factoryRelativeKey)));
     }
 
     /**
@@ -195,16 +262,21 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
     /**
      * Finds all unique values for properties matching the given suffix.
      * Collects values from all named instances (e.g., both "mysql" and "postgresql"
-     * from ds1.jdbc.db.kind=mysql and ds2.jdbc.db.kind=postgresql).
+     * from ds1.jdbc.db.kind=mysql and ds2.jdbc.db.kind=postgresql), from every value
+     * of a placeholder suffix (e.g., "policy.{routeId}.name" for each route) and, for a
+     * multi-value entry, every bean of a comma-separated list (e.g., "schedule,flip").
+     * A single-value entry takes the value as one bean name.
      */
-    private static Set<String> findAllValues(Map<String, List<String>> factoryProperties, String propSuffix) {
+    private static Set<String> findAllValues(
+            Map<String, List<String>> factoryProperties, String propSuffix, boolean multiValue) {
         Set<String> values = new LinkedHashSet<>();
         for (Map.Entry<String, List<String>> entry : factoryProperties.entrySet()) {
-            String key = entry.getKey();
             // Match direct property or property within a named instance
-            if (key.equals(propSuffix) || key.endsWith("." + propSuffix)) {
+            if (PropertyKeys.matches(entry.getKey(), propSuffix)) {
                 for (String value : entry.getValue()) {
-                    if (value != null && !value.isEmpty()) {
+                    if (multiValue) {
+                        values.addAll(PropertyKeys.splitValues(value));
+                    } else if (value != null && !value.isEmpty()) {
                         values.add(value);
                     }
                 }

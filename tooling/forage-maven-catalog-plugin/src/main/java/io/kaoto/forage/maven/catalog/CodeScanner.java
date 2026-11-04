@@ -572,6 +572,7 @@ public class CodeScanner {
         String configClassName = null;
         List<String> runtimeDeps = null;
         List<String> repositories = null;
+        List<String> enabledBy = null;
 
         // Extract annotation values
         if (annotation instanceof SingleMemberAnnotationExpr singleMember) {
@@ -605,6 +606,7 @@ public class CodeScanner {
                     case "runtimeDependencies" ->
                         runtimeDeps = extractStringArrayValue(value, "@ForageBean 'runtimeDependencies'");
                     case "repositories" -> repositories = extractStringArrayValue(value, "@ForageBean 'repositories'");
+                    case "enabledBy" -> enabledBy = extractStringArrayValue(value, "@ForageBean 'enabledBy'");
                     default -> {}
                 }
             }
@@ -614,6 +616,9 @@ public class CodeScanner {
         String className = getFullyQualifiedClassName(classDecl, cu);
 
         ScannedBean bean = new ScannedBean(name, components, description, className, feature);
+        if (enabledBy != null && !enabledBy.isEmpty()) {
+            bean.setEnabledBy(enabledBy);
+        }
         bean.setConfigClassName(configClassName);
         bean.setDefaultBeanName(defaultBeanName);
         if (runtimeDeps != null && !runtimeDeps.isEmpty()) {
@@ -761,7 +766,7 @@ public class CodeScanner {
 
     /**
      * Extracts bean-name configuration entry from ConfigModule.ofBeanName() call.
-     * Arguments: (config, name, description, label, required, configTag, selectsFrom)
+     * Arguments: (config, name, description, label, required, configTag, selectsFrom[, multiValue])
      */
     private void extractBeanNameConfigEntry(MethodCallExpr methodCall, ConfigEntry configProp) {
         configProp.setType("bean-name");
@@ -795,6 +800,11 @@ public class CodeScanner {
         // SelectsFrom (7th argument)
         if (methodCall.getArguments().size() > 6) {
             extractStringArg(methodCall, 6, configProp::setSelectsFrom);
+        }
+
+        // MultiValue (8th argument): the value may list several beans, comma-separated
+        if (methodCall.getArguments().size() > 7) {
+            extractBooleanArg(methodCall, 7, configProp::setMultiValue);
         }
     }
 

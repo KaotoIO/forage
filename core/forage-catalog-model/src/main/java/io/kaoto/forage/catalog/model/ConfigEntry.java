@@ -36,6 +36,14 @@ public class ConfigEntry {
     @JsonProperty("selectsFrom")
     private String selectsFrom;
 
+    /**
+     * Whether the value may list several entries, comma-separated (e.g., several beans for a bean-name
+     * entry). Only written to the catalog when true.
+     */
+    @JsonProperty("multiValue")
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    private boolean multiValue;
+
     public ConfigEntry() {}
 
     public ConfigEntry(String name, String type, String description, boolean required) {
@@ -115,5 +123,13 @@ public class ConfigEntry {
 
     public void setSelectsFrom(String selectsFrom) {
         this.selectsFrom = selectsFrom;
+    }
+
+    public boolean isMultiValue() {
+        return multiValue;
+    }
+
+    public void setMultiValue(boolean multiValue) {
+        this.multiValue = multiValue;
     }
 }

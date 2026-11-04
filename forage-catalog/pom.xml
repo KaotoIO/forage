@@ -585,10 +585,6 @@
                             <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
                         </excludedBean>
                         <excludedBean>
-                            <className>io.kaoto.forage.vectordb.inmemory.InMemoryStoreProvider</className>
-                            <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
-                        </excludedBean>
-                        <excludedBean>
                             <className>io.kaoto.forage.vectordb.infinispan.InfinispanProvider</className>
                             <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
                         </excludedBean>
@@ -623,16 +619,6 @@
                         <excludedBean>
                             <className>io.kaoto.forage.vectordb.weaviate.WeaviateProvider</className>
                             <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
-                        </excludedBean>
-
-                        <!-- Route policies: the factory is tracked by #231 -->
-                        <excludedBean>
-                            <className>io.kaoto.forage.policy.flip.FlipRoutePolicyProvider</className>
-                            <reason>Pending #231: the route policy modules have no @ForageFactory yet</reason>
-                        </excludedBean>
-                        <excludedBean>
-                            <className>io.kaoto.forage.policy.schedule.ScheduleRoutePolicyProvider</className>
-                            <reason>Pending #231: the route policy modules have no @ForageFactory yet</reason>
                         </excludedBean>
 
                         <!-- Providers that are only usable programmatically, not from the Kaoto wizard -->

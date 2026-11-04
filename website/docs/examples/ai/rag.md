@@ -120,11 +120,13 @@ The route sends a question about the company's cancellation policy. The agent re
 camel run *
 ```
 
+No `--dep` flags are needed: the Forage plugin reads the properties and adds the RAG modules next to the Ollama chat and embedding models. The embedding model and in-memory store properties add `forage-in-memory-store` and `forage-default-retrieval-augmentor`; `camel forage export` adds the same modules to the exported project.
+
 The route fires once and asks about the cancellation policy. Because RAG is enabled, the agent retrieves the relevant chunk from the knowledge base and correctly answers that a **full refund** is given when cancelling 24 hours before pickup.
 
 ### Without RAG
 
-To see the difference RAG makes, run the same route without the RAG dependencies:
+To see the difference RAG makes, comment out the embedding model, in-memory vector store and retrieval settings in `forage-agent-factory.properties`, and run the route again:
 
 ```bash
 camel run main-route.camel.yaml forage-agent-factory.properties

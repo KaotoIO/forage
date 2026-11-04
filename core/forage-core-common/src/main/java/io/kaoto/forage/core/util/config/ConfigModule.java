@@ -59,6 +59,7 @@ public class ConfigModule {
     private final boolean required;
     private final ConfigTag configTag;
     private final String selectsFrom;
+    private final boolean multiValue;
 
     public ConfigModule(Class<? extends Config> config, String name, String prefix) {
         this.config = config;
@@ -71,6 +72,7 @@ public class ConfigModule {
         this.required = false;
         this.configTag = null;
         this.selectsFrom = null;
+        this.multiValue = false;
     }
 
     public ConfigModule(
@@ -93,6 +95,7 @@ public class ConfigModule {
         this.required = required;
         this.configTag = configTag;
         this.selectsFrom = null;
+        this.multiValue = false;
     }
 
     public ConfigModule(
@@ -106,6 +109,21 @@ public class ConfigModule {
             boolean required,
             ConfigTag configTag,
             String selectsFrom) {
+        this(config, name, prefix, description, label, defaultValue, type, required, configTag, selectsFrom, false);
+    }
+
+    public ConfigModule(
+            Class<? extends Config> config,
+            String name,
+            String prefix,
+            String description,
+            String label,
+            String defaultValue,
+            String type,
+            boolean required,
+            ConfigTag configTag,
+            String selectsFrom,
+            boolean multiValue) {
         this.config = config;
         this.name = name;
         this.prefix = prefix;
@@ -116,6 +134,7 @@ public class ConfigModule {
         this.required = required;
         this.configTag = configTag;
         this.selectsFrom = selectsFrom;
+        this.multiValue = multiValue;
     }
 
     /**
@@ -153,8 +172,36 @@ public class ConfigModule {
             boolean required,
             ConfigTag configTag,
             String selectsFrom) {
+        return ofBeanName(config, name, description, label, required, configTag, selectsFrom, false);
+    }
+
+    /**
+     * Creates a bean-name configuration entry that selects from the beans of a feature.
+     *
+     * @param multiValue whether the value may list several beans, comma-separated (e.g., "schedule,flip").
+     *        Single-value selectors (the default) take exactly one bean name.
+     */
+    public static ConfigModule ofBeanName(
+            Class<? extends Config> config,
+            String name,
+            String description,
+            String label,
+            boolean required,
+            ConfigTag configTag,
+            String selectsFrom,
+            boolean multiValue) {
         return new ConfigModule(
-                config, name, null, description, label, null, "bean-name", required, configTag, selectsFrom);
+                config,
+                name,
+                null,
+                description,
+                label,
+                null,
+                "bean-name",
+                required,
+                configTag,
+                selectsFrom,
+                multiValue);
     }
 
     /**
@@ -171,7 +218,17 @@ public class ConfigModule {
         }
 
         return new ConfigModule(
-                config, name, prefix, description, label, defaultValue, type, required, configTag, selectsFrom);
+                config,
+                name,
+                prefix,
+                description,
+                label,
+                defaultValue,
+                type,
+                required,
+                configTag,
+                selectsFrom,
+                multiValue);
     }
 
     /**
@@ -262,6 +319,13 @@ public class ConfigModule {
 
     public String selectsFrom() {
         return selectsFrom;
+    }
+
+    /**
+     * Whether the value may list several entries, comma-separated (for bean-name entries, several beans).
+     */
+    public boolean multiValue() {
+        return multiValue;
     }
 
     @Override

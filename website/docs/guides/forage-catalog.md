@@ -150,6 +150,7 @@ Config entries define the properties a user can set. Each entry carries enough m
 | `label` | Human-readable label for the form field |
 | `configTag` | Grouping hint: `COMMON`, `ADVANCED`, or `SECURITY` |
 | `selectsFrom` | For `bean-name` type -- the feature name whose beans populate the dropdown |
+| `multiValue` | `true` when the value can list several entries, comma-separated -- for a `bean-name` entry, several beans (e.g., `forage.route.policy.{routeId}.name=schedule,flip`). Present only when `true`: any other selector takes exactly one bean name |
 
 **Supported types:**
 
@@ -164,6 +165,8 @@ Config entries define the properties a user can set. Each entry carries enough m
 | `map` | Key/value list | `name` is a prefix: each pair is written as `name.key=value`, for example `forage.jdbc.properties.sslConnection=true` |
 
 **Config tags** allow a UI to organize fields into expandable sections. Typically `COMMON` fields are shown expanded by default, while `ADVANCED` and `SECURITY` sections are collapsed.
+
+**Placeholder segments.** When part of a property name is chosen by the user, the entry name has a placeholder segment in braces. Route policies are configured per route, so their entries are named like `forage.route.policy.{routeId}.name` and `forage.route.policy.{routeId}.flip.paired-route`. Tooling replaces the placeholder with the actual value -- for the route `orders`, the property is `forage.route.policy.orders.name` -- and a placeholder matches one or more dot-separated segments, since a route ID may contain dots. Placeholders are different from instance names (see [Multi-Instance Support](#step-3-multi-instance-support)), which tooling inserts after `forage.`.
 
 ### Beans by Feature
 
@@ -199,7 +202,20 @@ Beans represent the concrete implementations a user can choose from. They are gr
 
 The link between a factory's `configEntries` and its `beansByFeature` is the **`selectsFrom`** field. When a config entry has `"type": "bean-name"` and `"selectsFrom": "Memory"`, the UI populates its dropdown from the beans in the `"Memory"` feature group. When the user selects a bean (e.g., `redis`), that bean's own `configEntries` are rendered as additional form fields.
 
-Each bean also carries a `gav` field so that tooling can add the correct Maven dependency to the project.
+Each bean also carries a `gav` field so that tooling can add the correct Maven dependency to the project. Tooling adds it when a `bean-name` entry selects the bean, or when one of the bean's own config entries is set.
+
+A bean can also list `enabledBy`: factory config entries whose presence means the factory uses the bean, even when none of the bean's own config entries is set. For example, the agent assembles its RAG pipeline as soon as an embedding model or an in-memory store file is configured, so the `defaultRag` retrieval augmentor declares:
+
+```json
+{
+  "name": "defaultRag",
+  "gav": "io.kaoto.forage:forage-default-retrieval-augmentor:{{ forage_version }}",
+  "enabledBy": ["forage.agent.embedding.model.name", "forage.agent.in.memory.store.file.source"],
+  "configEntries": [ ... ]
+}
+```
+
+`camel forage run` and `camel forage export` add the bean's `gav` when one of these entries is set, for any instance name (e.g., `forage.myAgent.agent.embedding.model.name`).
 
 ### Conditional Beans
 
@@ -301,8 +317,10 @@ The catalog is entirely derived from annotations and configuration classes in th
 | `@ForageFactory(configClass = ...)` | Links the factory to its config entries |
 | `@ForageBean` on a class | Bean entry under the `beansByFeature` of every factory that shares one of its `components` |
 | `@ForageBean(feature = "Memory")` | Groups the bean under the `"Memory"` feature |
+| `@ForageBean(enabledBy = ...)` | Bean `enabledBy`: factory config entries that make the factory use the bean |
 | `ConfigModule.of(...)` | Config entry with `name`, `type`, `label`, `description`, `defaultValue`, `configTag` |
 | `ConfigModule.ofBeanName(...)` | Config entry with `type: "bean-name"` and `selectsFrom` linking to a feature |
+| `ConfigModule.ofBeanName(..., true)` | The same, with `multiValue: true`: the value can list several beans |
 
 ## Configuration Catalog
 

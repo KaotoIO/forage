@@ -54,7 +54,10 @@ import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
  */
 @ForageBean(
         value = "in-memory-store",
-        components = {"camel-langchain4j-embeddings"},
+        // camel-langchain4j-agent: the agent builds this store from forage.agent.in.memory.store.*, and
+        // forage.agent.embedding.store.kind selects it from the Agent's "Embedding Store" feature
+        components = {"camel-langchain4j-embeddings", "camel-langchain4j-agent"},
+        feature = "Embedding Store",
         description = "In-memory embedding store")
 public class InMemoryStoreProvider implements EmbeddingStoreProvider, EmbeddingModelAware {
     private static final Logger LOG = LoggerFactory.getLogger(InMemoryStoreProvider.class);

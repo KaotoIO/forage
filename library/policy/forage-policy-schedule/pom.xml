@@ -49,6 +49,13 @@
             <artifactId>camel-core</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Creates the schedule policy the way a Forage project does, through the route policy factory -->
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-policy-factory</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
 </project>

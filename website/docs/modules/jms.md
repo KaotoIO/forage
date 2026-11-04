@@ -18,6 +18,13 @@ forage.myBroker.jms.password=secret
       connectionFactory: "#myBroker"
 ```
 
+{% raw %}
+!!! tip "Keep the password out of the file"
+    Use a placeholder instead of a literal password: `{{env:BROKER_PASSWORD}}` on every runtime, or a
+    Kubernetes Secret (`{{secret:my-broker/password}}`) or vault placeholder on Camel JBang and Spring Boot.
+    See [Secrets](../concepts/configuration.md#secrets).
+{% endraw %}
+
 ## Supported Brokers
 
 {{ forage_beans_table("JMS Connection", "jakarta.jms.ConnectionFactory") }}

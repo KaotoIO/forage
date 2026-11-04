@@ -43,15 +43,11 @@ public class SecurityShiroTest implements ForageIntegrationTest {
         return NAME;
     }
 
+    // One test method: Citrus stops the integration at the end of the first test that verifies it
     @Test
     @CitrusTest
-    void grantsAccessToUsersWithTheRequiredRole(ForageTestCaseRunner runner) {
+    void authorizesUsersByRole(ForageTestCaseRunner runner) {
         runner.then(camel().cli().verify().integration(NAME).waitForLogMessage("Shiro access granted to alice"));
-    }
-
-    @Test
-    @CitrusTest
-    void deniesAccessToUsersWithoutTheRequiredRole(ForageTestCaseRunner runner) {
         runner.then(camel().cli().verify().integration(NAME).waitForLogMessage("Shiro access denied to bob"));
     }
 }

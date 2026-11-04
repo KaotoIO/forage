@@ -39,31 +39,24 @@ public class SecurityKeycloakTest implements ForageIntegrationTest {
         return NAME;
     }
 
+    // One test method: Citrus stops the integration at the end of the first test that verifies it
     @Test
     @CitrusTest
-    void grantsAccessToTokensWithTheRequiredRole(ForageTestCaseRunner runner) {
+    void authorizesTokensByRole(ForageTestCaseRunner runner) {
         runner.when(forageCmdSend(NAME)
                 .endpoint("direct:secured")
                 .body("request")
                 .header("caller", "admin")
                 .header(TOKEN_HEADER, KeycloakContainer.accessToken("forage-admin", "admin-secret")));
         runner.then(camel().cli().verify().integration(NAME).waitForLogMessage("Keycloak access granted to admin"));
-    }
 
-    @Test
-    @CitrusTest
-    void deniesAccessToTokensWithoutTheRequiredRole(ForageTestCaseRunner runner) {
         runner.when(forageCmdSend(NAME)
                 .endpoint("direct:secured")
                 .body("request")
                 .header("caller", "guest")
                 .header(TOKEN_HEADER, KeycloakContainer.accessToken("forage-guest", "guest-secret")));
         runner.then(camel().cli().verify().integration(NAME).waitForLogMessage("Keycloak access denied to guest"));
-    }
 
-    @Test
-    @CitrusTest
-    void deniesAccessWithoutToken(ForageTestCaseRunner runner) {
         runner.when(
                 forageCmdSend(NAME).endpoint("direct:secured").body("request").header("caller", "anonymous"));
         runner.then(camel().cli().verify().integration(NAME).waitForLogMessage("Keycloak access denied to anonymous"));

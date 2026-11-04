@@ -15,8 +15,9 @@ import io.kaoto.forage.core.security.SecurityPolicyProvider;
  *
  * <p>The created policy is configured with basic properties from the Forage
  * configuration system. An {@code AuthenticationManager} and
- * {@code AuthorizationManager} must be provided separately (e.g., via Spring Boot
- * auto-configuration or programmatic setup) before the policy can be used at runtime.
+ * {@code AuthorizationManager} must be set before the policy can be used at runtime:
+ * on Spring Boot, the {@code forage-security-policy-starter} wires the application's ones;
+ * on plain Camel, they must be set programmatically. Spring Security is not supported on Quarkus.
  *
  * <p><strong>Configuration:</strong>
  * <ul>
@@ -38,6 +39,10 @@ import io.kaoto.forage.core.security.SecurityPolicyProvider;
 public class SpringSecurityPolicyProvider implements SecurityPolicyProvider {
     private static final Logger LOG = LoggerFactory.getLogger(SpringSecurityPolicyProvider.class);
 
+    // The Spring Boot starter wires the managers before Spring initializes the policy
+    private static final boolean STARTER_PRESENT =
+            isPresent("io.kaoto.forage.springboot.security.ForageSecurityPolicyAutoConfiguration");
+
     @Override
     public String name() {
         return "spring-security";
@@ -45,7 +50,12 @@ public class SpringSecurityPolicyProvider implements SecurityPolicyProvider {
 
     @Override
     public String beanName() {
-        return "springSecurityPolicy";
+        return SpringSecurityPolicyModuleDescriptor.DEFAULT_BEAN_NAME;
+    }
+
+    @Override
+    public SpringSecurityPolicyModuleDescriptor descriptor() {
+        return new SpringSecurityPolicyModuleDescriptor();
     }
 
     @Override
@@ -64,11 +74,22 @@ public class SpringSecurityPolicyProvider implements SecurityPolicyProvider {
                 config.id(),
                 config.alwaysReauthenticate(),
                 config.useThreadSecurityContext());
-        LOG.warn(
-                "Spring Security policy '{}' requires an AuthenticationManager and AuthorizationManager to be set"
-                        + " before use (e.g., via Spring Boot auto-configuration or manual wiring)",
-                config.id());
+        if (!STARTER_PRESENT) {
+            LOG.warn(
+                    "Spring Security policy '{}' requires an AuthenticationManager and AuthorizationManager to be set"
+                            + " before use: on Spring Boot, add forage-security-policy-starter to wire them",
+                    config.id());
+        }
 
         return policy;
+    }
+
+    private static boolean isPresent(String className) {
+        try {
+            Class.forName(className, false, SpringSecurityPolicyProvider.class.getClassLoader());
+            return true;
+        } catch (ClassNotFoundException | LinkageError e) {
+            return false;
+        }
     }
 }

@@ -56,8 +56,9 @@ public abstract class ForageQuarkusConfigSourceAdapter<C extends Config> impleme
      */
     @Override
     public Iterable<ConfigSource> getConfigSources(ConfigSourceContext context) {
-        return PlaceholderResolver.withFunctionResolver(
-                UnsupportedPlaceholderFunctionResolver.QUARKUS, () -> translate(context));
+        // The Quarkus configuration is being built: Forage lookups must not ask for it
+        return ConfigHelper.whileBuildingQuarkusConfig(() -> PlaceholderResolver.withFunctionResolver(
+                UnsupportedPlaceholderFunctionResolver.QUARKUS, () -> translate(context)));
     }
 
     private Iterable<ConfigSource> translate(ConfigSourceContext context) {

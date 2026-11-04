@@ -1,0 +1,2 @@
+io.kaoto.forage.quarkus.security.ForageSecurityPolicyRecorderTest$CloseableProvider
+io.kaoto.forage.quarkus.security.ForageSecurityPolicyRecorderTest$PlainProvider

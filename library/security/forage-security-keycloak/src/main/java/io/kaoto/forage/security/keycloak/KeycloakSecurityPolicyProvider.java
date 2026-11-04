@@ -39,7 +39,8 @@ import io.kaoto.forage.core.security.SecurityPolicyProvider;
         defaultBeanName = "keycloakPolicy",
         components = {"camel-keycloak"},
         feature = "Security Policy",
-        description = "Keycloak security authorization policy")
+        description = "Keycloak security authorization policy",
+        runtimeDependencies = {"quarkus:mvn:org.apache.camel.quarkus:camel-quarkus-keycloak"})
 public class KeycloakSecurityPolicyProvider implements SecurityPolicyProvider {
     private static final Logger LOG = LoggerFactory.getLogger(KeycloakSecurityPolicyProvider.class);
 
@@ -49,12 +50,26 @@ public class KeycloakSecurityPolicyProvider implements SecurityPolicyProvider {
     }
 
     @Override
+    public String beanName() {
+        return KeycloakSecurityPolicyModuleDescriptor.DEFAULT_BEAN_NAME;
+    }
+
+    @Override
+    public KeycloakSecurityPolicyModuleDescriptor descriptor() {
+        return new KeycloakSecurityPolicyModuleDescriptor();
+    }
+
+    /**
+     * Creates a policy whose clients are released by {@link ForageKeycloakSecurityPolicy#close()}, which the
+     * policy's owner calls when the application stops.
+     */
+    @Override
     public AuthorizationPolicy create(String id) {
         LOG.debug("Creating Keycloak security policy with id: {}", id);
 
         KeycloakSecurityPolicyConfig config = new KeycloakSecurityPolicyConfig(id);
 
-        KeycloakSecurityPolicy policy = new KeycloakSecurityPolicy(
+        KeycloakSecurityPolicy policy = new ForageKeycloakSecurityPolicy(
                 config.serverUrl(), config.realm(), config.clientId(), config.clientSecret());
 
         config.requiredRoles().ifPresent(policy::setRequiredRoles);

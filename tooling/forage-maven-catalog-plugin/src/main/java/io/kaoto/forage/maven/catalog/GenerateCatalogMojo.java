@@ -4,8 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -55,8 +57,17 @@ public class GenerateCatalogMojo extends AbstractMojo {
     @Parameter(defaultValue = "${maven.multiModuleProjectDirectory}", readonly = true)
     protected File rootDir;
 
+    /**
+     * {@code @ForageBean} classes that are deliberately attached to no {@code @ForageFactory}, each with the
+     * reason why. Any other bean that no factory picks up fails the build, because a bean missing from the
+     * catalog is invisible to Kaoto and its dependency is never resolved by {@code camel forage run/export}.
+     * An entry that no longer matches an unattached bean fails the build as well, so the list stays current.
+     */
+    @Parameter
+    private List<ExcludedBean> excludedBeans;
+
     @Override
-    public void execute() throws MojoExecutionException {
+    public void execute() throws MojoExecutionException, MojoFailureException {
         getLog().info("Generating Forage component catalog...");
 
         try {
@@ -68,6 +79,7 @@ public class GenerateCatalogMojo extends AbstractMojo {
 
             // Configure generator
             generator.setFormat(format);
+            generator.setExcludedBeans(excludedBeans);
 
             // Generate catalog
             getLog().info("Using root directory for source scanning: " + rootDir.getAbsolutePath());
@@ -87,6 +99,8 @@ public class GenerateCatalogMojo extends AbstractMojo {
 
         } catch (MojoExecutionException e) {
             throw e;
+        } catch (CatalogValidationException e) {
+            throw new MojoFailureException(e.getMessage(), e);
         } catch (Exception e) {
             throw new MojoExecutionException("Failed to generate Forage catalog", e);
         }

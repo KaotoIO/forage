@@ -41,6 +41,7 @@ public class CatalogGenerator {
     private final ObjectMapper yamlObjectMapper;
 
     private String format = "json";
+    private List<ExcludedBean> excludedBeans = List.of();
 
     public CatalogGenerator(Log log) {
         this.log = log;
@@ -57,22 +58,32 @@ public class CatalogGenerator {
      * @param outputDirectory the directory to write catalog files
      * @return the catalog generation result
      * @throws IOException if file operations fail
+     * @throws CatalogValidationException if a scanned bean or factory would be missing from the catalog
      */
-    public CatalogResult generateCatalog(MavenProject project, File outputDirectory, File rootDir) throws IOException {
+    public CatalogResult generateCatalog(MavenProject project, File outputDirectory, File rootDir)
+            throws IOException, CatalogValidationException {
         log.info("Scanning project dependencies for Forage components...");
 
         List<ForageComponent> components = discoverComponents(project, rootDir);
 
         log.info("Found " + components.size() + " Forage components");
 
-        List<ForageFactory> factories = transformToSimplifiedCatalog(components, project.getProperties());
+        return generateCatalog(components, project.getProperties(), outputDirectory);
+    }
+
+    /**
+     * Generates the catalog files from already scanned components. Nothing is written when validation fails.
+     */
+    CatalogResult generateCatalog(List<ForageComponent> components, Properties projectProperties, File outputDirectory)
+            throws IOException, CatalogValidationException {
+        List<ForageFactory> factories = transformToSimplifiedCatalog(components, projectProperties);
 
         log.info("Generated " + factories.size() + " factories in simplified catalog");
 
         ForageCatalog catalog = new ForageCatalog();
         catalog.setVersion("2.0");
         catalog.setFactories(factories);
-        catalog.setRuntimeVersions(collectRuntimeVersions(project.getProperties()));
+        catalog.setRuntimeVersions(collectRuntimeVersions(projectProperties));
         catalog.setGeneratedBy("forage-maven-catalog-plugin");
         catalog.setTimestamp(System.currentTimeMillis());
 
@@ -162,7 +173,7 @@ public class CatalogGenerator {
      * Transform component-based structure to simplified factory-centric catalog.
      */
     private List<ForageFactory> transformToSimplifiedCatalog(
-            List<ForageComponent> components, Properties projectProperties) {
+            List<ForageComponent> components, Properties projectProperties) throws CatalogValidationException {
         ConfigMappings configMappings = collectConfigMappings(components);
         log.info("Found " + configMappings.classToConfigName.size() + " Config classes total");
 
@@ -171,7 +182,87 @@ public class CatalogGenerator {
         associateBeansWithFactories(data, configMappings.classToConfigName);
         associateConfigEntriesWithFactories(data, configMappings.classToArtifactId);
 
+        List<String> problems = validateCompleteness(data);
+        if (!problems.isEmpty()) {
+            throw new CatalogValidationException(problems);
+        }
+
         return new ArrayList<>(data.factoryMap.values());
+    }
+
+    /**
+     * A bean is only listed under the factories that share one of its components, and a factory variant slot holds
+     * a single class. Anything that does not fit would silently disappear from the catalog, so it is reported
+     * instead, unless the bean is listed in {@code <excludedBeans>}.
+     */
+    private List<String> validateCompleteness(CollectedData data) {
+        List<String> problems = new ArrayList<>(data.problems);
+        Map<String, ExcludedBean> exclusions = collectExclusions(problems);
+
+        List<BeanWithGav> orphans = new ArrayList<>();
+        for (BeanWithGav beanWithGav : data.beansByClassName.values()) {
+            String className = beanWithGav.bean.getClassName();
+            String factoryName = data.factoryByAttachedBeanClass.get(className);
+            ExcludedBean exclusion = exclusions.get(className);
+            if (factoryName == null && exclusion == null) {
+                orphans.add(beanWithGav);
+            } else if (factoryName != null && exclusion != null) {
+                problems.add(("Stale <excludedBean> %s: the bean is now listed under factory '%s'. "
+                                + "Remove it from <excludedBeans>.")
+                        .formatted(className, factoryName));
+            } else if (exclusion != null) {
+                log.info("Excluded from the catalog: " + describe(beanWithGav) + " - " + exclusion.getReason());
+            }
+        }
+
+        exclusions.keySet().stream()
+                .filter(className -> !data.beansByClassName.containsKey(className))
+                .forEach(className -> problems.add(("<excludedBean> %s does not match any scanned @ForageBean: "
+                                + "the class was renamed or removed, or its module is not a dependency of this project. "
+                                + "Fix or remove the entry.")
+                        .formatted(className)));
+
+        if (!orphans.isEmpty()) {
+            StringBuilder message = new StringBuilder(
+                    "@ForageBean classes not attached to any @ForageFactory, so they would be missing from the catalog:");
+            orphans.forEach(orphan -> message.append("\n  - ").append(describe(orphan)));
+            message.append("\nA bean is listed under every factory that declares one of its components. Give the bean ")
+                    .append("a component that a factory declares, add the missing @ForageFactory, or, if the bean is ")
+                    .append("deliberately kept out of the catalog, add its class to <excludedBeans> in the ")
+                    .append("forage-maven-catalog-plugin configuration with a <reason>.");
+            problems.add(message.toString());
+        }
+
+        return problems;
+    }
+
+    private Map<String, ExcludedBean> collectExclusions(List<String> problems) {
+        Map<String, ExcludedBean> exclusions = new LinkedHashMap<>();
+        for (ExcludedBean exclusion : excludedBeans) {
+            String className = exclusion.getClassName() == null
+                    ? ""
+                    : exclusion.getClassName().trim();
+            if (className.isEmpty()) {
+                problems.add("An <excludedBean> entry has no <className>.");
+            } else if (exclusion.getReason() == null || exclusion.getReason().isBlank()) {
+                problems.add(("<excludedBean> %s has no <reason>: explain why the bean is not in the catalog, "
+                                + "for example the issue that tracks its factory.")
+                        .formatted(className));
+            } else if (exclusions.putIfAbsent(className, exclusion) != null) {
+                problems.add("<excludedBean> %s is listed more than once.".formatted(className));
+            }
+        }
+        return exclusions;
+    }
+
+    private static String describe(BeanWithGav beanWithGav) {
+        ScannedBean bean = beanWithGav.bean;
+        return "%s: %s (module %s, components %s)"
+                .formatted(
+                        bean.getName(),
+                        bean.getClassName(),
+                        beanWithGav.artifactId,
+                        bean.getComponents() == null ? List.of() : bean.getComponents());
     }
 
     /**
@@ -206,7 +297,7 @@ public class CatalogGenerator {
 
             collectConfigEntries(component, artifactId, data.configsByPrefix);
             collectFactories(component, data, gav, configMappings, projectProperties);
-            collectBeans(component, data.beansByComponent, gav, projectProperties);
+            collectBeans(component, data, gav, projectProperties);
         }
 
         return data;
@@ -261,6 +352,12 @@ public class CatalogGenerator {
                 variant.setAdditionalDependencies(
                         resolveGavVersions(scannedFactory.getRuntimeDependencies(), projectProperties));
             }
+            FactoryVariant existing = getVariantByPlatform(catalogFactory.getVariants(), platform);
+            if (existing != null && !existing.getClassName().equals(variant.getClassName())) {
+                data.problems.add(("@ForageFactory classes %s and %s both declare type '%s' with the %s variant, "
+                                + "but a factory holds one class per variant: only one of them would be in the catalog.")
+                        .formatted(existing.getClassName(), variant.getClassName(), factoryType, platform));
+            }
             setVariantByPlatform(catalogFactory.getVariants(), platform, variant);
             mergeDefaultBeanName(catalogFactory, scannedFactory);
 
@@ -311,11 +408,7 @@ public class CatalogGenerator {
     /**
      * Collects beans from a component.
      */
-    private void collectBeans(
-            ForageComponent component,
-            Map<String, List<BeanWithGav>> beansByComponent,
-            String gav,
-            Properties projectProperties) {
+    private void collectBeans(ForageComponent component, CollectedData data, String gav, Properties projectProperties) {
         if (component.getBeans() == null) {
             return;
         }
@@ -326,10 +419,12 @@ public class CatalogGenerator {
                 bean.setRuntimeDependencies(
                         resolveVariantDependencyVersions(bean.getRuntimeDependencies(), projectProperties));
             }
-            BeanWithGav beanWithGav = new BeanWithGav(bean, gav, component.getConfigurationProperties());
+            BeanWithGav beanWithGav =
+                    new BeanWithGav(bean, gav, component.getArtifactId(), component.getConfigurationProperties());
+            data.beansByClassName.putIfAbsent(bean.getClassName(), beanWithGav);
             if (bean.getComponents() != null) {
                 for (String comp : bean.getComponents()) {
-                    beansByComponent
+                    data.beansByComponent
                             .computeIfAbsent(comp, k -> new ArrayList<>())
                             .add(beanWithGav);
                 }
@@ -346,37 +441,46 @@ public class CatalogGenerator {
                 continue;
             }
 
-            // Track already-added beans by name to avoid duplicates
-            Map<String, Set<String>> addedBeansByFeature = new HashMap<>();
+            // Bean name -> class name per feature: a bean matching several components is added once
+            Map<String, Map<String, String>> addedBeansByFeature = new HashMap<>();
 
             for (String component : factory.getComponents()) {
                 List<BeanWithGav> matchingBeans = data.beansByComponent.get(component);
                 if (matchingBeans != null) {
-                    addBeansToFactory(factory, matchingBeans, addedBeansByFeature, classToConfigName);
+                    addBeansToFactory(factory, matchingBeans, addedBeansByFeature, classToConfigName, data);
                 }
             }
         }
     }
 
     /**
-     * Adds beans to a factory, avoiding duplicates.
+     * Adds beans to a factory, avoiding duplicates. Two different classes with the same bean name in the same
+     * feature are reported: the catalog (and the runtime lookup by name) can only hold one of them.
      */
     private void addBeansToFactory(
             ForageFactory factory,
             List<BeanWithGav> matchingBeans,
-            Map<String, Set<String>> addedBeansByFeature,
-            Map<String, String> classToConfigName) {
+            Map<String, Map<String, String>> addedBeansByFeature,
+            Map<String, String> classToConfigName,
+            CollectedData data) {
 
         for (BeanWithGav beanWithGav : matchingBeans) {
             String feature = determineFeature(beanWithGav.bean, factory.getFactoryType());
             String beanName = beanWithGav.bean.getName();
+            String className = beanWithGav.bean.getClassName();
 
             // Skip if already added
-            Set<String> addedBeans = addedBeansByFeature.computeIfAbsent(feature, k -> new HashSet<>());
-            if (addedBeans.contains(beanName)) {
+            Map<String, String> addedBeans = addedBeansByFeature.computeIfAbsent(feature, k -> new HashMap<>());
+            String existingClassName = addedBeans.putIfAbsent(beanName, className);
+            if (existingClassName != null) {
+                if (!existingClassName.equals(className)) {
+                    data.problems.add(("@ForageBean classes %s and %s are both named '%s' in feature '%s' of "
+                                    + "factory '%s': only one of them would be in the catalog. Rename one of them.")
+                            .formatted(existingClassName, className, beanName, feature, factory.getName()));
+                }
                 continue;
             }
-            addedBeans.add(beanName);
+            data.factoryByAttachedBeanClass.putIfAbsent(className, factory.getName());
 
             ForageBean catalogBean = createCatalogBean(beanWithGav, classToConfigName);
             getOrCreateFeatureBeans(factory.getBeansByFeature(), feature)
@@ -442,6 +546,14 @@ public class CatalogGenerator {
                 variants.setBase(variant);
             }
         }
+    }
+
+    private FactoryVariant getVariantByPlatform(FactoryVariants variants, String platform) {
+        return switch (platform) {
+            case "springboot" -> variants.getSpringboot();
+            case "quarkus" -> variants.getQuarkus();
+            default -> variants.getBase();
+        };
     }
 
     /**
@@ -695,6 +807,13 @@ public class CatalogGenerator {
     }
 
     /**
+     * Beans that are allowed to be attached to no factory, see {@link ExcludedBean}.
+     */
+    public void setExcludedBeans(List<ExcludedBean> excludedBeans) {
+        this.excludedBeans = excludedBeans == null ? List.of() : List.copyOf(excludedBeans);
+    }
+
+    /**
      * Holds both config class mappings built from a single pass over components.
      */
     private static class ConfigMappings {
@@ -720,19 +839,30 @@ public class CatalogGenerator {
 
         /** Maps factory type to the config class name from the factory's @ForageFactory annotation. */
         final Map<String, String> factoryTypeToConfigClassName = new HashMap<>();
+
+        /** Every scanned bean, by class name, whether or not a factory picks it up. */
+        final Map<String, BeanWithGav> beansByClassName = new LinkedHashMap<>();
+
+        /** Maps the class name of each bean listed in the catalog to the first factory that lists it. */
+        final Map<String, String> factoryByAttachedBeanClass = new HashMap<>();
+
+        /** Entries that could not be placed in the catalog. */
+        final List<String> problems = new ArrayList<>();
     }
 
     /**
-     * Helper class to track bean with its GAV and configs.
+     * Helper class to track bean with its GAV, module and configs.
      */
     private static class BeanWithGav {
         final ScannedBean bean;
         final String gav;
+        final String artifactId;
         final List<ConfigEntry> configs;
 
-        BeanWithGav(ScannedBean bean, String gav, List<ConfigEntry> configs) {
+        BeanWithGav(ScannedBean bean, String gav, String artifactId, List<ConfigEntry> configs) {
             this.bean = bean;
             this.gav = gav;
+            this.artifactId = artifactId;
             this.configs = configs;
         }
     }

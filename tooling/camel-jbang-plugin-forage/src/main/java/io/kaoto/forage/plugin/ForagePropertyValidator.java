@@ -222,6 +222,12 @@ public final class ForagePropertyValidator {
             if (bean.getConfigEntries() != null) {
                 for (ConfigEntry entry : bean.getConfigEntries()) {
                     String name = entry.getName();
+                    if (name != null && name.startsWith(factoryPrefix)) {
+                        // Bean entries under the factory prefix (e.g., the route policy options
+                        // forage.route.policy.{routeId}.flip.*): main copies them into the factory
+                        // config entries, camel-4.18.x does not
+                        validNames.add(name.substring(factoryPrefix.length()));
+                    }
                     if (name != null && name.startsWith("forage.")) {
                         // Extract property suffix
                         String beanPrefix = extractBeanPrefix(name);

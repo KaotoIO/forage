@@ -117,8 +117,12 @@ class CatalogUiMetadataTest {
     @ParameterizedTest(name = "{0}")
     @MethodSource("factories")
     void factoryAndBeanSchemasCoverTheVisibleConfigEntriesOnce(String name, JsonNode factory) {
+        // On camel-4.18.x the factory configEntries do not repeat the entries of its beans
         Set<String> visibleEntries = new HashSet<>();
-        factory.path("configEntries").forEach(entry -> {
+        List<JsonNode> entries = new ArrayList<>();
+        factory.path("configEntries").forEach(entries::add);
+        beans(factory).forEach(bean -> bean.path("configEntries").forEach(entries::add));
+        entries.forEach(entry -> {
             if (!entry.path("hidden").asBoolean(false)) {
                 visibleEntries.add(entry.get("name").asText());
             }
@@ -225,7 +229,8 @@ class CatalogUiMetadataTest {
             }
         });
 
-        assertThat(withoutPrefixPattern).containsExactlyInAnyOrder("WebSearch", "Security Policy", "Route Policy");
+        // camel-4.18.x has no Security Policy factory
+        assertThat(withoutPrefixPattern).containsExactlyInAnyOrder("WebSearch", "Route Policy");
     }
 
     @Test
@@ -252,7 +257,6 @@ class CatalogUiMetadataTest {
                 .containsExactly("component:jms:connectionFactory:parameter:#{beanRef}");
         assertThat(references.get("Agent")).containsExactly("component:langchain4j-agent:agent:parameter:#{beanRef}");
         assertThat(references.get("CXF Web Service")).containsExactly("component:cxf:beanId:path:bean:{beanRef}");
-        assertThat(references.get("Security Policy")).containsExactly("processor:policy:ref:attribute:{beanRef}");
         // Camel uses these beans without a route referencing them
         assertThat(references.get("TLS Context")).isEmpty();
         assertThat(references.get("Route Policy")).isEmpty();

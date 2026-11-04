@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import org.apache.camel.CamelContext;
 import org.apache.camel.spi.PropertiesComponent;
 import org.apache.camel.spi.PropertiesFunction;
@@ -42,6 +43,23 @@ public class CamelPlaceholderFunctionResolver implements PlaceholderFunctionReso
 
     private static final Logger LOG = LoggerFactory.getLogger(CamelPlaceholderFunctionResolver.class);
     private static final String VAULT_PREFIX = "camel.vault.";
+
+    /**
+     * The {@code camel.vault.<name>} groups, by lower-case name, with the vault configuration each one binds to:
+     * the same groups as Camel Main (BaseMainSupport#setVaultProperties). A test checks that every vault of
+     * {@link VaultConfiguration} is listed, so a Camel upgrade that adds one fails the build.
+     */
+    static final Map<String, Function<VaultConfiguration, Object>> VAULTS = Map.of(
+            "aws", VaultConfiguration::aws,
+            "azure", VaultConfiguration::azure,
+            "cyberark", VaultConfiguration::cyberark,
+            "gcp", VaultConfiguration::gcp,
+            "hashicorp", VaultConfiguration::hashicorp,
+            "ibm", VaultConfiguration::ibmSecretsManager,
+            "kubernetes", VaultConfiguration::kubernetes,
+            "kubernetescm", VaultConfiguration::kubernetesConfigmaps,
+            "springconfig", VaultConfiguration::springConfig);
+
     private static final String IGNORE_MISSING_PROPERTY = "camel.component.properties.ignore-missing-property";
     private static final String IGNORE_MISSING_PROPERTY_CAMEL_CASE = "camel.component.properties.ignoreMissingProperty";
 
@@ -205,18 +223,8 @@ public class CamelPlaceholderFunctionResolver implements PlaceholderFunctionReso
     }
 
     private static Object vaultTarget(VaultConfiguration configuration, String vault) {
-        return switch (vault) {
-            case "aws" -> configuration.aws();
-            case "azure" -> configuration.azure();
-            case "cyberark" -> configuration.cyberark();
-            case "gcp" -> configuration.gcp();
-            case "hashicorp" -> configuration.hashicorp();
-            case "ibm" -> configuration.ibmSecretsManager();
-            case "kubernetes" -> configuration.kubernetes();
-            case "kubernetescm" -> configuration.kubernetesConfigmaps();
-            case "springconfig" -> configuration.springConfig();
-            default -> null;
-        };
+        Function<VaultConfiguration, Object> vaultConfiguration = VAULTS.get(vault);
+        return vaultConfiguration == null ? null : vaultConfiguration.apply(configuration);
     }
 
     private boolean isLenient() {

@@ -8,9 +8,9 @@ Users write a `forage-policy.properties` file with `forage.route.policy.*` setti
 
 Every step is fully automatable.
 
-### Known limitation
+### Dependency resolution
 
-Route policy modules (`forage-policy-factory`, `forage-policy-flip`, `forage-policy-schedule`) are **not** in the Forage catalog. This means the JBang plugin's catalog-driven dependency resolution does not automatically add them to the classpath. These tests will fail until route policy support is added to the catalog or a manual `--dep` flag is used. See the project issue tracker for status.
+The Route Policy factory and its policies (flip, schedule) are in the Forage catalog, so the Forage plugin adds the modules from the properties alone, with no `--dep` flag: any `forage.route.policy.*` property adds `forage-policy-factory`, and each policy named in `forage.route.policy.<routeId>.name` adds its module (`flip` adds `forage-policy-flip`, `schedule` adds `forage-policy-schedule`). This applies to `camel run`, `camel forage run` and `camel forage export` on every runtime. Phases 1 to 4 rely on it at run time; Phase 5 checks the exported projects.
 
 ## Prerequisites
 
@@ -20,10 +20,11 @@ Route policy modules (`forage-policy-factory`, `forage-policy-flip`, `forage-pol
 |------|-----------------|----------------|
 | `java` | 17+ | `java -version` |
 | `camel` (JBang) | 4.16+ | `camel version` |
+| Forage plugin | — | `camel plugin list` |
 
 No Docker is required. All tests use Camel timer routes and log output verification.
 
-If Camel JBang is not installed, see [common/forage-run.md](common/forage-run.md).
+If Camel JBang or the Forage plugin is not installed, see [common/forage-run.md](common/forage-run.md).
 
 ### Prerequisite check script
 
@@ -38,6 +39,11 @@ for CMD in java camel; do
     echo "PASS: ${CMD} found at $(command -v ${CMD})"
   fi
 done
+
+if command -v camel > /dev/null 2>&1 && ! camel plugin list | grep -q forage; then
+  echo "FAIL: the Forage plugin is not installed"
+  FAIL=1
+fi
 
 if [ "${FAIL}" -ne 0 ]; then
   echo ""
@@ -67,6 +73,11 @@ for CMD in java camel; do
   fi
 done
 
+if command -v camel > /dev/null 2>&1 && ! camel plugin list | grep -q forage; then
+  echo "FAIL: the Forage plugin is not installed"
+  FAIL=1
+fi
+
 if [ "${FAIL}" -ne 0 ]; then
   echo "FAIL: prerequisites not met"
   exit 1
@@ -90,11 +101,10 @@ forage.route.policy.enabled=true
 
 forage.route.policy.route-primary.name=flip
 forage.route.policy.route-primary.flip.initially-active=true
-forage.route.policy.route-primary.flip.enabled=true
 forage.route.policy.route-primary.flip.paired-route=route-secondary
 
 forage.route.policy.route-secondary.name=flip
-forage.route.policy.route-secondary.flip.enabled=true
+forage.route.policy.route-secondary.flip.initially-active=false
 forage.route.policy.route-secondary.flip.paired-route=route-primary
 PROPS
 
@@ -163,7 +173,21 @@ else
 fi
 ```
 
-### Step 1.5: Cleanup
+### Test 1.5: Verify the flip policy was resolved from the properties
+
+The policy factory logs each policy it applies; the log line proves that the plugin added `forage-policy-factory` and `forage-policy-flip` without any `--dep` flag.
+
+```bash
+if grep -q "Applied route policy 'flip' to route 'route-primary'" "${PROJECT_DIR}/output.log" &&
+   grep -q "Applied route policy 'flip' to route 'route-secondary'" "${PROJECT_DIR}/output.log"; then
+  echo "PASS: flip policy applied to both routes"
+else
+  echo "FAIL: flip policy not applied (are forage-policy-factory and forage-policy-flip on the classpath?)"
+  cat "${PROJECT_DIR}/output.log"
+fi
+```
+
+### Step 1.6: Cleanup
 
 ```bash
 kill "${CAMEL_PID}" 2>/dev/null || true
@@ -231,7 +255,18 @@ else
 fi
 ```
 
-### Step 2.4: Cleanup
+### Test 2.4: Verify the schedule policy was resolved from the properties
+
+```bash
+if grep -q "Applied route policy 'schedule' to route 'scheduled-route'" "${PROJECT_DIR}/output.log"; then
+  echo "PASS: schedule policy applied"
+else
+  echo "FAIL: schedule policy not applied (are forage-policy-factory and forage-policy-schedule on the classpath?)"
+  cat "${PROJECT_DIR}/output.log"
+fi
+```
+
+### Step 2.5: Cleanup
 
 ```bash
 kill "${CAMEL_PID}" 2>/dev/null || true
@@ -429,11 +464,107 @@ echo "PASS: Phase 4 cleanup complete"
 
 ---
 
-## Phase 5: Cleanup
+## Phase 5: Exported Projects Declare the Policy Modules
+
+Verify that `camel forage export` adds the policy factory and every policy named in the properties to the exported project, on each runtime. The policy modules have no runtime-specific variant, so the same artifacts are expected everywhere.
+
+### Step 5.1: Create project directory
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+
+cat > "${PROJECT_DIR}/forage-policy.properties" <<'PROPS'
+forage.route.policy.route-primary.name=flip
+forage.route.policy.route-primary.flip.paired-route=route-secondary
+forage.route.policy.route-secondary.name=flip
+forage.route.policy.route-secondary.flip.paired-route=route-primary
+forage.route.policy.route-secondary.flip.initially-active=false
+forage.route.policy.scheduled-route.name=schedule
+forage.route.policy.scheduled-route.schedule.start-time=00:00
+forage.route.policy.scheduled-route.schedule.stop-time=23:59
+PROPS
+
+cat > "${PROJECT_DIR}/route.camel.yaml" <<'ROUTE'
+- route:
+    id: route-primary
+    from:
+      uri: timer:primary?period=2000
+      steps:
+        - log:
+            message: "PRIMARY is running"
+- route:
+    id: route-secondary
+    from:
+      uri: timer:secondary?period=2000
+      steps:
+        - log:
+            message: "SECONDARY is running"
+- route:
+    id: scheduled-route
+    from:
+      uri: timer:scheduled?period=2000
+      steps:
+        - log:
+            message: "SCHEDULED is running"
+ROUTE
+
+echo "PASS: project directory created at ${PROJECT_DIR}"
+```
+
+### Test 5.2: Export to every runtime and check the POM
+
+```bash
+FAIL=0
+
+for RUNTIME in camel-main spring-boot quarkus; do
+  EXPORT_DIR="${PROJECT_DIR}/export-${RUNTIME}"
+  camel forage export "${PROJECT_DIR}/forage-policy.properties" "${PROJECT_DIR}/route.camel.yaml" \
+    --runtime="${RUNTIME}" --gav=org.example:route-policies:1.0.0 --directory="${EXPORT_DIR}" \
+    > "${PROJECT_DIR}/export-${RUNTIME}.log" 2>&1
+
+  for ARTIFACT in forage-policy-factory forage-policy-flip forage-policy-schedule; do
+    if grep -q "<artifactId>${ARTIFACT}</artifactId>" "${EXPORT_DIR}/pom.xml" 2>/dev/null; then
+      echo "PASS: ${RUNTIME} export declares ${ARTIFACT}"
+    else
+      echo "FAIL: ${RUNTIME} export does not declare ${ARTIFACT}"
+      FAIL=1
+    fi
+  done
+done
+
+if [ "${FAIL}" -ne 0 ]; then
+  for LOG in "${PROJECT_DIR}"/export-*.log; do
+    echo "--- ${LOG}"
+    cat "${LOG}"
+  done
+fi
+```
+
+### Test 5.3: Verify the export reported no property validation warnings
+
+```bash
+if grep -q "Forage Property Validation Warnings" "${PROJECT_DIR}"/export-*.log; then
+  echo "FAIL: route policy properties reported as unknown"
+  grep -h -A4 "\[UNKNOWN" "${PROJECT_DIR}"/export-*.log
+else
+  echo "PASS: route policy properties validated without warnings"
+fi
+```
+
+### Step 5.4: Cleanup
+
+```bash
+rm -rf "${PROJECT_DIR}" || true
+echo "PASS: Phase 5 cleanup complete"
+```
+
+---
+
+## Phase 6: Cleanup
 
 Final cleanup in case any earlier phase was interrupted.
 
-### Step 5.1: Kill any remaining Camel process
+### Step 6.1: Kill any remaining Camel process
 
 ```bash
 if [ -n "${CAMEL_PID}" ]; then
@@ -445,7 +576,7 @@ else
 fi
 ```
 
-### Step 5.2: Remove temporary directory
+### Step 6.2: Remove temporary directory
 
 ```bash
 if [ -n "${PROJECT_DIR}" ] && [ -d "${PROJECT_DIR}" ]; then
@@ -462,12 +593,16 @@ fi
 
 | Phase | Test ID | Test Name | Priority |
 |-------|---------|-----------|----------|
-| 0 | 0.1 | Verify prerequisites (java, camel) | High |
+| 0 | 0.1 | Verify prerequisites (java, camel, Forage plugin) | High |
 | 1 | 1.3 | PRIMARY route runs (flip policy, initially-active=true) | Critical |
 | 1 | 1.4 | SECONDARY route stopped (flip policy, initially-active=false) | Critical |
+| 1 | 1.5 | Flip policy applied without `--dep` flags | Critical |
 | 2 | 2.3 | Scheduled route runs within active window (00:00-23:59) | Critical |
+| 2 | 2.4 | Schedule policy applied without `--dep` flags | Critical |
 | 3 | 3.3 | Off-hours route stopped outside schedule window (03:00-03:01) | Critical |
 | 3 | 3.4 | Schedule policy logs its decision | Low |
 | 4 | 4.3 | Both routes run when policies disabled | Critical |
 | 4 | 4.4 | Policy factory logs disabled status | Low |
-| 5 | 5.1-5.2 | Final cleanup | High |
+| 5 | 5.2 | Exports to camel-main, spring-boot and quarkus declare the policy modules | Critical |
+| 5 | 5.3 | Route policy properties validate without warnings | High |
+| 6 | 6.1-6.2 | Final cleanup | High |

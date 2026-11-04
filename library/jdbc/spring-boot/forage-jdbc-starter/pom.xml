@@ -47,6 +47,13 @@
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- CamelContext bean and camel.vault.* auto-configuration, to test placeholder functions -->
+        <dependency>
+            <groupId>org.apache.camel.springboot</groupId>
+            <artifactId>camel-spring-boot</artifactId>
+            <version>${camel-spring-boot.version}</version>
+            <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-test</artifactId>

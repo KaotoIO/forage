@@ -99,7 +99,7 @@ While the configuration is the same, there are a few runtime-specific behaviors 
 | Bean registration | Camel registry | Spring beans + Camel registry | CDI beans + Camel registry |
 | Hot reload | `camel run --dev` | Spring DevTools | Quarkus dev mode |
 {% raw %}
-| Property placeholders | `{{env:KEY}}` | `{{env:KEY}}` + `${KEY}` | `{{env:KEY}}` + `${KEY}` |
+| Property placeholders | `{{env:KEY}}` + `{{secret:...}}`, vaults | `{{env:KEY}}` + `{{secret:...}}`, vaults + `${KEY}` | `{{env:KEY}}` + `${KEY}` |
 {% endraw %}
 
 In Spring Boot, Forage properties are available through Spring's `@Value` and `@ConditionalOnProperty` annotations. In Quarkus, Forage properties are translated to Quarkus-native configuration at build time.
@@ -110,6 +110,8 @@ For most use cases, you don't need to think about these differences — Forage h
 ### Property Placeholders Across Runtimes
 
 Forage resolves `{{env:KEY}}` and `{{sys:KEY}}` placeholders in all runtimes at property-loading time — before values reach any runtime-specific code.
+
+Secret placeholders such as `{{secret:name/key}}` (Kubernetes) and `{{aws:name}}` (vaults) are resolved by Camel when Forage creates the bean, on Camel JBang and Spring Boot. They are not supported on Quarkus, where Forage hands its properties to Quarkus extensions before any CamelContext exists: Forage fails with an explanation instead. See [Secrets](configuration.md#secrets).
 
 Spring Boot and Quarkus also support their own placeholder syntax (`${KEY}`), which is resolved by the respective framework. Both approaches work in Forage property files:
 

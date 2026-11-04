@@ -5,21 +5,33 @@ import java.util.List;
 import java.util.ServiceLoader;
 import org.apache.camel.CamelContext;
 import org.apache.camel.spi.ContextServicePlugin;
+import org.apache.camel.support.LifecycleStrategySupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.kaoto.forage.core.common.BeanFactory;
+import io.kaoto.forage.core.util.config.CamelPlaceholderFunctionResolver;
 import io.kaoto.forage.core.util.config.ConfigStore;
+import io.kaoto.forage.core.util.config.PlaceholderFunctionResolver;
+import io.kaoto.forage.core.util.config.PlaceholderResolutionDeferredException;
+import io.kaoto.forage.core.util.config.PlaceholderResolver;
+import io.kaoto.forage.core.util.config.UnresolvedPlaceholderException;
+import io.kaoto.forage.core.util.config.UnsupportedPlaceholderFunctionResolver;
 
 public class ForageContextServicePlugin implements ContextServicePlugin {
     private static final Logger LOG = LoggerFactory.getLogger(ForageContextServicePlugin.class);
+    private static final String QUARKUS_PACKAGE = "org.apache.camel.quarkus.";
 
     private final List<BeanFactory> factories = new ArrayList<>();
+    private PlaceholderFunctionResolver functionResolver;
 
     @Override
     public void load(CamelContext camelContext) {
+        installPlaceholderFunctionResolver(camelContext);
+
         ServiceLoader<BeanFactory> loader =
                 ServiceLoader.load(BeanFactory.class, camelContext.getApplicationContextClassLoader());
 
+        List<UnresolvedPlaceholderException> unresolved = new ArrayList<>();
         loader.forEach(beanFactory -> {
             try {
                 beanFactory.setCamelContext(camelContext);
@@ -29,12 +41,83 @@ public class ForageContextServicePlugin implements ContextServicePlugin {
                         "Successfully configured bean factory: {}",
                         beanFactory.getClass().getName());
             } catch (Exception e) {
-                LOG.warn(
-                        "Failed to configure bean factory: {}",
-                        beanFactory.getClass().getName(),
-                        e);
+                UnresolvedPlaceholderException placeholder = findCause(e, UnresolvedPlaceholderException.class);
+                if (placeholder != null) {
+                    // A misconfiguration: the bean would get a literal {{...}} value
+                    unresolved.add(placeholder);
+                } else if (findCause(e, PlaceholderResolutionDeferredException.class) != null) {
+                    // The runtime creates the bean later, once the CamelContext is ready (Spring Boot)
+                    LOG.debug(
+                            "Bean factory {} deferred: {}",
+                            beanFactory.getClass().getName(),
+                            e.getMessage());
+                } else {
+                    LOG.warn(
+                            "Failed to configure bean factory: {}",
+                            beanFactory.getClass().getName(),
+                            e);
+                }
             }
         });
+
+        if (!unresolved.isEmpty()) {
+            failStartup(camelContext, unresolved);
+        }
+    }
+
+    /**
+     * Plugins cannot abort the CamelContext build (Camel logs and ignores their exceptions), so the
+     * startup fails when the CamelContext initializes instead, before any route uses a missing bean.
+     */
+    private static void failStartup(CamelContext camelContext, List<UnresolvedPlaceholderException> unresolved) {
+        UnresolvedPlaceholderException failure = unresolved.get(0);
+        for (int i = 1; i < unresolved.size(); i++) {
+            failure.addSuppressed(unresolved.get(i));
+        }
+        camelContext.addLifecycleStrategy(new LifecycleStrategySupport() {
+            @Override
+            public void onContextInitializing(CamelContext context) {
+                throw failure;
+            }
+        });
+    }
+
+    /**
+     * Makes Forage resolve placeholder functions ({@code {{secret:...}}}, {@code {{aws:...}}}, ...) through
+     * this CamelContext. Spring Boot installs its own resolver, backed by the CamelContext bean, before any
+     * CamelContext exists; Quarkus cannot resolve them (see {@link UnsupportedPlaceholderFunctionResolver#QUARKUS}).
+     */
+    private void installPlaceholderFunctionResolver(CamelContext camelContext) {
+        PlaceholderFunctionResolver installed = PlaceholderResolver.installedFunctionResolver();
+        if (isQuarkus(camelContext)) {
+            functionResolver = UnsupportedPlaceholderFunctionResolver.QUARKUS;
+        } else if (installed == null || installed instanceof CamelPlaceholderFunctionResolver) {
+            functionResolver = new CamelPlaceholderFunctionResolver(camelContext);
+        } else {
+            return;
+        }
+        PlaceholderResolver.install(functionResolver);
+    }
+
+    private static boolean isQuarkus(CamelContext camelContext) {
+        for (Class<?> type = camelContext.getClass(); type != null; type = type.getSuperclass()) {
+            if (type.getName().startsWith(QUARKUS_PACKAGE)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static <T extends Throwable> T findCause(Throwable throwable, Class<T> type) {
+        for (Throwable t = throwable; t != null; t = t.getCause()) {
+            if (type.isInstance(t)) {
+                return type.cast(t);
+            }
+            if (t.getCause() == t) {
+                break;
+            }
+        }
+        return null;
     }
 
     /**
@@ -52,6 +135,10 @@ public class ForageContextServicePlugin implements ContextServicePlugin {
             }
         }
         factories.clear();
+        if (functionResolver != null) {
+            PlaceholderResolver.uninstall(functionResolver);
+            functionResolver = null;
+        }
     }
 
     /**

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.kaoto.forage</groupId>
+        <artifactId>security-spring-boot</artifactId>
+        <version>1.6.3-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>forage-security-policy-starter</artifactId>
+    <name>Forage :: Library :: Security :: Policy Spring Boot Starter</name>
+    <description>Registers the configured Forage security policies (Shiro, Keycloak, Spring Security) as Spring beans</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-core-security</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-spring-boot-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Wires the Spring Security policy when forage-security-spring is on the classpath -->
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-spring-security</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-security-shiro</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-security-keycloak</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-security-spring</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel.springboot</groupId>
+            <artifactId>camel-spring-boot-starter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-direct</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>

@@ -1,0 +1,18 @@
+- route:
+    id: keycloak-secured
+    from:
+      uri: direct:secured
+      steps:
+        - doTry:
+            steps:
+              - policy:
+                  ref: keycloakPolicy
+                  steps:
+                    - log:
+                        message: "Keycloak access granted to ${header.caller}"
+            doCatch:
+              - exception:
+                  - org.apache.camel.CamelAuthorizationException
+                steps:
+                  - log:
+                      message: "Keycloak access denied to ${header.caller}"

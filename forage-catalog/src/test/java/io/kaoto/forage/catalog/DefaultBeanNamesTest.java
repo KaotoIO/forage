@@ -23,6 +23,7 @@ import io.kaoto.forage.security.keycloak.KeycloakSecurityPolicyProvider;
 import io.kaoto.forage.security.shiro.ShiroSecurityPolicyProvider;
 import io.kaoto.forage.security.spring.SpringSecurityPolicyProvider;
 import io.kaoto.forage.security.tls.TlsBeanFactory;
+import io.kaoto.forage.security.tls.TlsModuleDescriptor;
 import io.kaoto.forage.websearch.WebSearchBeanFactory;
 
 import org.junit.jupiter.params.ParameterizedTest;
@@ -49,6 +50,7 @@ class DefaultBeanNamesTest {
                         InfluxDB2BeanFactory.class, supply(() -> new InfluxDB2ModuleDescriptor().defaultBeanName())),
                 Arguments.of(SpringRabbitMQBeanFactory.class, supply(() -> SpringRabbitMQConstants.DEFAULT_BEAN_NAME)),
                 Arguments.of(TlsBeanFactory.class, supply(() -> defaultBeanNameConstant(TlsBeanFactory.class))),
+                Arguments.of(TlsBeanFactory.class, supply(() -> new TlsModuleDescriptor().defaultBeanName())),
                 Arguments.of(
                         WebSearchBeanFactory.class, supply(() -> defaultBeanNameConstant(WebSearchBeanFactory.class))));
     }
@@ -60,7 +62,17 @@ class DefaultBeanNamesTest {
                 Arguments.of(
                         ShiroSecurityPolicyProvider.class, supply(() -> new ShiroSecurityPolicyProvider().beanName())),
                 Arguments.of(SpringSecurityPolicyProvider.class, supply(() -> new SpringSecurityPolicyProvider()
-                        .beanName())));
+                        .beanName())),
+                // Name the Spring Boot and Quarkus adapters register the policies under
+                Arguments.of(KeycloakSecurityPolicyProvider.class, supply(() -> new KeycloakSecurityPolicyProvider()
+                        .descriptor()
+                        .defaultBeanName())),
+                Arguments.of(ShiroSecurityPolicyProvider.class, supply(() -> new ShiroSecurityPolicyProvider()
+                        .descriptor()
+                        .defaultBeanName())),
+                Arguments.of(SpringSecurityPolicyProvider.class, supply(() -> new SpringSecurityPolicyProvider()
+                        .descriptor()
+                        .defaultBeanName())));
     }
 
     @ParameterizedTest

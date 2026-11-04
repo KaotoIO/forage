@@ -1,14 +1,17 @@
 package io.kaoto.forage.core;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.Set;
 import org.apache.camel.CamelContext;
 import org.apache.camel.spi.ContextServicePlugin;
 import org.apache.camel.support.LifecycleStrategySupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.kaoto.forage.core.common.BeanFactory;
+import io.kaoto.forage.core.common.RuntimeManagedBeanFactories;
 import io.kaoto.forage.core.util.config.CamelPlaceholderFunctionResolver;
 import io.kaoto.forage.core.util.config.ConfigStore;
 import io.kaoto.forage.core.util.config.PlaceholderFunctionResolver;
@@ -28,12 +31,19 @@ public class ForageContextServicePlugin implements ContextServicePlugin {
     public void load(CamelContext camelContext) {
         installPlaceholderFunctionResolver(camelContext);
 
-        ServiceLoader<BeanFactory> loader =
-                ServiceLoader.load(BeanFactory.class, camelContext.getApplicationContextClassLoader());
+        ClassLoader classLoader = camelContext.getApplicationContextClassLoader();
+        Set<String> runtimeManaged = runtimeManagedFactories(classLoader);
 
         List<UnresolvedPlaceholderException> unresolved = new ArrayList<>();
-        loader.forEach(beanFactory -> {
+        ServiceLoader.load(BeanFactory.class, classLoader).stream().forEach(provider -> {
+            if (runtimeManaged.contains(provider.type().getName())) {
+                LOG.debug(
+                        "Skipping bean factory {}: its beans are registered by the runtime",
+                        provider.type().getName());
+                return;
+            }
             try {
+                BeanFactory beanFactory = provider.get();
                 beanFactory.setCamelContext(camelContext);
                 beanFactory.configure();
                 factories.add(beanFactory);
@@ -47,14 +57,11 @@ public class ForageContextServicePlugin implements ContextServicePlugin {
                     unresolved.add(placeholder);
                 } else if (findCause(e, PlaceholderResolutionDeferredException.class) != null) {
                     // The runtime creates the bean later, once the CamelContext is ready (Spring Boot)
-                    LOG.debug(
-                            "Bean factory {} deferred: {}",
-                            beanFactory.getClass().getName(),
-                            e.getMessage());
+                    LOG.debug("Bean factory {} deferred: {}", provider.type().getName(), e.getMessage());
                 } else {
                     LOG.warn(
                             "Failed to configure bean factory: {}",
-                            beanFactory.getClass().getName(),
+                            provider.type().getName(),
                             e);
                 }
             }
@@ -118,6 +125,14 @@ public class ForageContextServicePlugin implements ContextServicePlugin {
             }
         }
         return null;
+    }
+
+    private static Set<String> runtimeManagedFactories(ClassLoader classLoader) {
+        Set<String> names = new HashSet<>();
+        for (RuntimeManagedBeanFactories managed : ServiceLoader.load(RuntimeManagedBeanFactories.class, classLoader)) {
+            names.addAll(managed.beanFactoryClassNames());
+        }
+        return names;
     }
 
     /**

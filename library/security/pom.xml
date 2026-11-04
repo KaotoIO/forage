@@ -17,6 +17,8 @@
         <module>forage-security-spring</module>
         <module>forage-security-keycloak</module>
         <module>forage-security-tls</module>
+        <module>spring-boot</module>
+        <module>camel-quarkus</module>
     </modules>
 
 </project>

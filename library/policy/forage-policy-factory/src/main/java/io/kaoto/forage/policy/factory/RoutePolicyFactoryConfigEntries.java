@@ -46,11 +46,12 @@ public final class RoutePolicyFactoryConfigEntries extends ConfigEntries {
     public static final ConfigModule POLICY_NAME = ConfigModule.ofBeanName(
             RoutePolicyFactoryConfig.class,
             "forage.route.policy.{routeId}.name",
-            "Route policy to apply to the route, for example flip or schedule. When several policies are listed, comma-separated, the last one is applied",
+            "Route policy to apply to the route, for example flip or schedule. Several policies can be listed, comma-separated, but only the last one is applied to the route",
             "Route Policy",
             false,
             ConfigTag.COMMON,
-            "Route Policy");
+            "Route Policy",
+            true);
 
     static {
         // POLICY_NAME is a catalog template: the runtime reads per-route names through policyNameModule()

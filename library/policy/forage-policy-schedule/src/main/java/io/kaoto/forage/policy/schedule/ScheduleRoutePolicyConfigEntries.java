@@ -91,54 +91,59 @@ public final class ScheduleRoutePolicyConfigEntries extends ConfigEntries {
 
     private ScheduleRoutePolicyConfigEntries() {}
 
+    /*
+     * The per-route factory methods take the config prefix the route policy factory passes to
+     * ScheduleRoutePolicyProvider.create(), forage.route.policy.<routeId>.schedule, like the flip policy.
+     */
+
     /**
-     * Creates a ConfigModule for the start-time configuration with the given routeId.
+     * Creates a ConfigModule for the start-time configuration with the given config prefix.
      *
-     * @param routeId the route ID
+     * @param configPrefix the full config prefix (e.g., forage.route.policy.routeId.schedule)
      * @return a ConfigModule for the start-time configuration
      */
-    public static ConfigModule startTime(String routeId) {
-        return withName(START_TIME, CONFIG_PREFIX + "." + routeId + ".schedule.start-time");
+    public static ConfigModule startTime(String configPrefix) {
+        return withName(START_TIME, configPrefix + ".start-time");
     }
 
     /**
-     * Creates a ConfigModule for the stop-time configuration with the given routeId.
+     * Creates a ConfigModule for the stop-time configuration with the given config prefix.
      *
-     * @param routeId the route ID
+     * @param configPrefix the full config prefix (e.g., forage.route.policy.routeId.schedule)
      * @return a ConfigModule for the stop-time configuration
      */
-    public static ConfigModule stopTime(String routeId) {
-        return withName(STOP_TIME, CONFIG_PREFIX + "." + routeId + ".schedule.stop-time");
+    public static ConfigModule stopTime(String configPrefix) {
+        return withName(STOP_TIME, configPrefix + ".stop-time");
     }
 
     /**
-     * Creates a ConfigModule for the timezone configuration with the given routeId.
+     * Creates a ConfigModule for the timezone configuration with the given config prefix.
      *
-     * @param routeId the route ID
+     * @param configPrefix the full config prefix (e.g., forage.route.policy.routeId.schedule)
      * @return a ConfigModule for the timezone configuration
      */
-    public static ConfigModule timezone(String routeId) {
-        return withName(TIMEZONE, CONFIG_PREFIX + "." + routeId + ".schedule.timezone");
+    public static ConfigModule timezone(String configPrefix) {
+        return withName(TIMEZONE, configPrefix + ".timezone");
     }
 
     /**
-     * Creates a ConfigModule for the cron configuration with the given routeId.
+     * Creates a ConfigModule for the cron configuration with the given config prefix.
      *
-     * @param routeId the route ID
+     * @param configPrefix the full config prefix (e.g., forage.route.policy.routeId.schedule)
      * @return a ConfigModule for the cron configuration
      */
-    public static ConfigModule cron(String routeId) {
-        return withName(CRON, CONFIG_PREFIX + "." + routeId + ".schedule.cron");
+    public static ConfigModule cron(String configPrefix) {
+        return withName(CRON, configPrefix + ".cron");
     }
 
     /**
-     * Creates a ConfigModule for the days-of-week configuration with the given routeId.
+     * Creates a ConfigModule for the days-of-week configuration with the given config prefix.
      *
-     * @param routeId the route ID
+     * @param configPrefix the full config prefix (e.g., forage.route.policy.routeId.schedule)
      * @return a ConfigModule for the days-of-week configuration
      */
-    public static ConfigModule daysOfWeek(String routeId) {
-        return withName(DAYS_OF_WEEK, CONFIG_PREFIX + "." + routeId + ".schedule.days-of-week");
+    public static ConfigModule daysOfWeek(String configPrefix) {
+        return withName(DAYS_OF_WEEK, configPrefix + ".days-of-week");
     }
 
     private static ConfigModule withName(ConfigModule catalogEntry, String name) {
@@ -157,11 +162,11 @@ public final class ScheduleRoutePolicyConfigEntries extends ConfigEntries {
         return Collections.unmodifiableMap(CONFIG_MODULES);
     }
 
-    public static Optional<ConfigModule> find(String routeId, String name) {
-        if (routeId == null) {
+    public static Optional<ConfigModule> find(String configPrefix, String name) {
+        if (configPrefix == null) {
             return Optional.empty();
         }
-        String fullName = CONFIG_PREFIX + "." + routeId + ".schedule." + extractPropertyName(name);
+        String fullName = configPrefix + "." + extractPropertyName(name);
         return CONFIG_MODULES.keySet().stream()
                 .filter(m -> m.name().equals(fullName))
                 .findFirst();
@@ -175,23 +180,23 @@ public final class ScheduleRoutePolicyConfigEntries extends ConfigEntries {
         return name;
     }
 
-    public static void register(String routeId) {
-        if (routeId != null) {
-            CONFIG_MODULES.put(startTime(routeId), ConfigEntry.fromModule());
-            CONFIG_MODULES.put(stopTime(routeId), ConfigEntry.fromModule());
-            CONFIG_MODULES.put(timezone(routeId), ConfigEntry.fromModule());
-            CONFIG_MODULES.put(cron(routeId), ConfigEntry.fromModule());
-            CONFIG_MODULES.put(daysOfWeek(routeId), ConfigEntry.fromModule());
+    public static void register(String configPrefix) {
+        if (configPrefix != null) {
+            CONFIG_MODULES.put(startTime(configPrefix), ConfigEntry.fromModule());
+            CONFIG_MODULES.put(stopTime(configPrefix), ConfigEntry.fromModule());
+            CONFIG_MODULES.put(timezone(configPrefix), ConfigEntry.fromModule());
+            CONFIG_MODULES.put(cron(configPrefix), ConfigEntry.fromModule());
+            CONFIG_MODULES.put(daysOfWeek(configPrefix), ConfigEntry.fromModule());
         }
     }
 
-    public static void loadOverrides(String routeId) {
-        if (routeId != null) {
-            loadForModule(startTime(routeId));
-            loadForModule(stopTime(routeId));
-            loadForModule(timezone(routeId));
-            loadForModule(cron(routeId));
-            loadForModule(daysOfWeek(routeId));
+    public static void loadOverrides(String configPrefix) {
+        if (configPrefix != null) {
+            loadForModule(startTime(configPrefix));
+            loadForModule(stopTime(configPrefix));
+            loadForModule(timezone(configPrefix));
+            loadForModule(cron(configPrefix));
+            loadForModule(daysOfWeek(configPrefix));
         }
     }
 

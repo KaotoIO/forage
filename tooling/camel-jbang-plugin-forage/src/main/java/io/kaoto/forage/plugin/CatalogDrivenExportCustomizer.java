@@ -71,7 +71,8 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
                             String propSuffix = extractPropertySuffix(entry.getName(), factoryTypeKey);
                             if (propSuffix != null) {
                                 // Collect ALL bean kind values across all instances
-                                Set<String> beanKinds = findAllValues(factoryProperties, propSuffix);
+                                Set<String> beanKinds =
+                                        findAllValues(factoryProperties, propSuffix, entry.isMultiValue());
                                 if (beanKinds.isEmpty()
                                         && entry.getDefaultValue() != null
                                         && !entry.getDefaultValue().isEmpty()) {
@@ -263,16 +264,22 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
      * Finds all unique values for properties matching the given suffix.
      * Collects values from all named instances (e.g., both "mysql" and "postgresql"
      * from ds1.jdbc.db.kind=mysql and ds2.jdbc.db.kind=postgresql), from every value
-     * of a placeholder suffix (e.g., "policy.{routeId}.name" for each route), and every
-     * bean of a comma-separated list (e.g., "schedule,flip").
+     * of a placeholder suffix (e.g., "policy.{routeId}.name" for each route) and, for a
+     * multi-value entry, every bean of a comma-separated list (e.g., "schedule,flip").
+     * A single-value entry takes the value as one bean name.
      */
-    private static Set<String> findAllValues(Map<String, List<String>> factoryProperties, String propSuffix) {
+    private static Set<String> findAllValues(
+            Map<String, List<String>> factoryProperties, String propSuffix, boolean multiValue) {
         Set<String> values = new LinkedHashSet<>();
         for (Map.Entry<String, List<String>> entry : factoryProperties.entrySet()) {
             // Match direct property or property within a named instance
             if (PropertyKeys.matches(entry.getKey(), propSuffix)) {
                 for (String value : entry.getValue()) {
-                    values.addAll(PropertyKeys.splitValues(value));
+                    if (multiValue) {
+                        values.addAll(PropertyKeys.splitValues(value));
+                    } else if (value != null && !value.isEmpty()) {
+                        values.add(value);
+                    }
                 }
             }
         }

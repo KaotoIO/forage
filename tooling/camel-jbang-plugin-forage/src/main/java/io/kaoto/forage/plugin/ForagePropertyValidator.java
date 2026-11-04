@@ -345,8 +345,9 @@ public final class ForagePropertyValidator {
     }
 
     /**
-     * Validates a bean-name property value (e.g., db.kind=postgresql), checking each bean of a
-     * comma-separated list (e.g., forage.route.policy.route-a.name=schedule,flip).
+     * Validates a bean-name property value (e.g., db.kind=postgresql). For a multi-value entry, each
+     * bean of a comma-separated list is checked (e.g., forage.route.policy.route-a.name=schedule,flip);
+     * a single-value entry must name exactly one bean, so a list is reported as an unknown bean.
      */
     private static void validateBeanName(
             PropertyOccurrence occurrence,
@@ -367,7 +368,9 @@ public final class ForagePropertyValidator {
         if (feature != null) {
             // Get feature-scoped beans and check if the bean exists within this feature
             List<String> validBeans = getAllBeansForFeature(catalog, feature);
-            for (String beanName : PropertyKeys.splitValues(value)) {
+            List<String> beanNames =
+                    configEntry.isMultiValue() ? PropertyKeys.splitValues(value) : List.of(value.trim());
+            for (String beanName : beanNames) {
                 if (validBeans.contains(beanName)) {
                     continue;
                 }

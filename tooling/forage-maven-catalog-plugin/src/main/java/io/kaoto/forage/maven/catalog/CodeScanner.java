@@ -766,7 +766,7 @@ public class CodeScanner {
 
     /**
      * Extracts bean-name configuration entry from ConfigModule.ofBeanName() call.
-     * Arguments: (config, name, description, label, required, configTag, selectsFrom)
+     * Arguments: (config, name, description, label, required, configTag, selectsFrom[, multiValue])
      */
     private void extractBeanNameConfigEntry(MethodCallExpr methodCall, ConfigEntry configProp) {
         configProp.setType("bean-name");
@@ -800,6 +800,11 @@ public class CodeScanner {
         // SelectsFrom (7th argument)
         if (methodCall.getArguments().size() > 6) {
             extractStringArg(methodCall, 6, configProp::setSelectsFrom);
+        }
+
+        // MultiValue (8th argument): the value may list several beans, comma-separated
+        if (methodCall.getArguments().size() > 7) {
+            extractBooleanArg(methodCall, 7, configProp::setMultiValue);
         }
     }
 

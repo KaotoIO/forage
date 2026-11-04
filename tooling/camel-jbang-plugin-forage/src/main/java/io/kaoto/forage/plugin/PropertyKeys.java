@@ -51,8 +51,9 @@ final class PropertyKeys {
     }
 
     /**
-     * Splits a bean-name value into the bean names it lists. Selectors such as
-     * {@code forage.route.policy.<routeId>.name} accept a comma-separated list (e.g., "schedule,flip").
+     * Splits the value of a multi-value bean-name entry into the bean names it lists, e.g. "schedule,flip"
+     * for {@code forage.route.policy.<routeId>.name}. Only entries marked {@code multiValue} in the catalog
+     * accept a list.
      */
     static List<String> splitValues(String value) {
         if (value == null) {

@@ -355,6 +355,19 @@ class ForagePropertyValidatorTest {
     }
 
     @Test
+    void testCommaSeparatedValueOfSingleValueSelectorIsUnknownBean() throws IOException {
+        // Only multi-value selectors accept a list: db.kind takes exactly one database kind
+        createPropertiesFile("application.properties", "forage.jdbc.db.kind=postgresql,mysql");
+
+        ValidationResult result = ForagePropertyValidator.validate(tempDir.toFile(), catalog);
+
+        assertThat(result.getWarnings()).singleElement().satisfies(warning -> {
+            assertThat(warning.getType()).isEqualTo(ValidationWarning.Type.INVALID_BEAN_VALUE);
+            assertThat(warning.getMessage()).contains("'postgresql,mysql'");
+        });
+    }
+
+    @Test
     void testInMemoryEmbeddingStoreKindIsValid() throws IOException {
         createPropertiesFile(
                 "application.properties",

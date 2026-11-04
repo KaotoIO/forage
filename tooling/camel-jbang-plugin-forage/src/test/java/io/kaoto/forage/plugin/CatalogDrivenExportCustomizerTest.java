@@ -2,8 +2,14 @@ package io.kaoto.forage.plugin;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
+import io.kaoto.forage.catalog.model.ConfigEntry;
+import io.kaoto.forage.catalog.reader.ForageCatalogReader;
 import io.kaoto.forage.core.common.RuntimeType;
 
 import org.junit.jupiter.api.AfterEach;
@@ -242,6 +248,37 @@ class CatalogDrivenExportCustomizerTest {
         assertThat(deps).anyMatch(d -> d.contains("forage-policy-factory:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-policy-schedule:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-policy-flip:"));
+    }
+
+    @Test
+    void testCommaSeparatedValueOfSingleValueSelector_resolvesNoBean() throws Exception {
+        // db.kind is not multi-value: "postgresql,mysql" is one unknown kind, as the runtime sees it
+        CatalogDrivenExportCustomizer customizer = createCustomizer("forage.jdbc.db.kind=postgresql,mysql\n");
+
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
+        assertThat(deps).anyMatch(d -> d.contains("forage-jdbc:"));
+        assertThat(deps).noneMatch(d -> d.contains("forage-jdbc-postgresql:"));
+        assertThat(deps).noneMatch(d -> d.contains("forage-jdbc-mysql:"));
+    }
+
+    @Test
+    void testOnlyRoutePolicyNameIsMultiValue() throws Exception {
+        List<String> multiValueEntries = new ArrayList<>();
+        for (ForageCatalogReader.FactoryMetadata factory :
+                ForageCatalogReader.getInstance().getAllFactories()) {
+            for (ConfigEntry entry : factory.configEntries()) {
+                if (entry.isMultiValue()) {
+                    multiValueEntries.add(entry.getName());
+                }
+            }
+        }
+        assertThat(multiValueEntries).containsExactly("forage.route.policy.{routeId}.name");
+
+        // The flag is only written when true
+        try (InputStream catalog = getClass().getClassLoader().getResourceAsStream("catalog/forage-catalog.json")) {
+            String json = new String(catalog.readAllBytes(), StandardCharsets.UTF_8);
+            assertThat(json).contains("\"multiValue\" : true").doesNotContain("\"multiValue\" : false");
+        }
     }
 
     @Test

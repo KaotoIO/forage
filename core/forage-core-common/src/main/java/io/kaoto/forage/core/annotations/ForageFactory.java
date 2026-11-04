@@ -97,4 +97,22 @@ public @interface ForageFactory {
      * @return array of GAV strings
      */
     String[] runtimeDependencies() default {};
+
+    /**
+     * Whether the factory also creates one bean per named configuration prefix, for example
+     * {@code forage.orders.jdbc.url} for a bean named {@code orders}. Set to {@code false} for
+     * factories that only register their default bean: the catalog then omits the
+     * {@code prefixPattern} so that UIs do not offer to add named instances.
+     *
+     * @return {@code true} if named instances are supported
+     */
+    boolean namedInstances() default true;
+
+    /**
+     * How Camel routes reference the beans of this factory, for the cases the catalog generator
+     * cannot derive from the Camel catalog. See {@link BeanReference}.
+     *
+     * @return the declared bean references
+     */
+    BeanReference[] beanReferences() default {};
 }

@@ -1,5 +1,6 @@
 package io.kaoto.forage.agent.factory;
 
+import io.kaoto.forage.core.annotations.InternalConfig;
 import io.kaoto.forage.core.util.config.ConfigEntries;
 import io.kaoto.forage.core.util.config.ConfigModule;
 import io.kaoto.forage.core.util.config.ConfigTag;
@@ -17,6 +18,7 @@ import io.kaoto.forage.core.util.config.ConfigTag;
  * multi-instance scenarios.
  */
 public final class MultiAgentConfigEntries extends ConfigEntries {
+    @InternalConfig
     public static final ConfigModule MULTI_AGENT_NAMES = ConfigModule.of(
             MultiAgentConfig.class,
             "forage.multi.agent.names",
@@ -26,6 +28,8 @@ public final class MultiAgentConfigEntries extends ConfigEntries {
             ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
+
+    @InternalConfig
     public static final ConfigModule MULTI_AGENT_ID_SOURCE = ConfigModule.of(
             MultiAgentConfig.class,
             "forage.multi.agent.id.source",
@@ -35,6 +39,8 @@ public final class MultiAgentConfigEntries extends ConfigEntries {
             ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
+
+    @InternalConfig
     public static final ConfigModule MULTI_AGENT_ID_SOURCE_HEADER = ConfigModule.of(
             MultiAgentConfig.class,
             "forage.multi.agent.id.source.header",
@@ -44,6 +50,8 @@ public final class MultiAgentConfigEntries extends ConfigEntries {
             ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
+
+    @InternalConfig
     public static final ConfigModule MULTI_AGENT_ID_SOURCE_PROPERTY = ConfigModule.of(
             MultiAgentConfig.class,
             "forage.multi.agent.id.source.property",
@@ -53,6 +61,8 @@ public final class MultiAgentConfigEntries extends ConfigEntries {
             ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
+
+    @InternalConfig
     public static final ConfigModule MULTI_AGENT_ID_SOURCE_VARIABLE = ConfigModule.of(
             MultiAgentConfig.class,
             "forage.multi.agent.id.source.variable",

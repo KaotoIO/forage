@@ -171,6 +171,7 @@ public class CatalogGenerator {
 
         associateBeansWithFactories(data, configMappings.classToConfigName);
         associateConfigEntriesWithFactories(data, configMappings.classToArtifactId);
+        new FactoryUiMetadata(log).enrich(components, data.factoryMap.values());
 
         return new ArrayList<>(data.factoryMap.values());
     }

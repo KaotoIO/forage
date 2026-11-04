@@ -64,7 +64,11 @@ A factory represents a high-level capability (e.g., AI Agent, DataSource, JMS Co
   "variants": { ... },
   "configEntries": [ ... ],
   "beansByFeature": [ ... ],
-  "conditionalBeans": [ ... ]
+  "conditionalBeans": [ ... ],
+  "model": { ... },
+  "prefixPattern": "forage.{name}.{suffix}",
+  "beanReferences": [ ... ],
+  "propertiesSchema": { ... }
 }
 ```
 
@@ -80,6 +84,10 @@ A factory represents a high-level capability (e.g., AI Agent, DataSource, JMS Co
 | `configEntries` | Configuration properties for the factory |
 | `beansByFeature` | Selectable bean providers grouped by feature |
 | `conditionalBeans` | Beans automatically registered when a config flag is enabled |
+| `model` | Display metadata shaped like a camel-catalog `model` block -- see [UI Metadata](#ui-metadata) |
+| `prefixPattern` | How the property keys of a named instance are built; absent when the factory only creates its default bean |
+| `beanReferences` | Where a Camel route references the beans of this factory |
+| `propertiesSchema` | JSON Schema (Draft-07) of the factory's own properties, ready for a JSON Schema form renderer |
 
 ### Variants
 
@@ -130,6 +138,7 @@ Config entries define the properties a user can set. Each entry carries enough m
 | `label` | Human-readable label for the form field |
 | `configTag` | Grouping hint: `COMMON`, `ADVANCED`, or `SECURITY` |
 | `selectsFrom` | For `bean-name` type -- the feature name whose beans populate the dropdown |
+| `hidden` | `true` for internal entries (infrastructure overrides) that a UI should not render; omitted otherwise |
 
 **Supported types:**
 
@@ -137,9 +146,11 @@ Config entries define the properties a user can set. Each entry carries enough m
 |--------|-----------|-------|
 | `string` | Text input | General-purpose text field |
 | `integer` | Number input | Whole numbers |
+| `long` | Number input | Whole numbers |
 | `double` | Number input | Decimal numbers |
 | `boolean` | Toggle / checkbox | True/false flags |
 | `password` | Password input | Masked text field for secrets |
+| `Duration` | Text input | A duration such as `PT30S` |
 | `bean-name` | Dropdown | Options populated from `beansByFeature` matching `selectsFrom` |
 | `map` | Key/value list | `name` is a prefix: each pair is written as `name.key=value`, for example `forage.jdbc.properties.sslConnection=true` |
 
@@ -179,7 +190,7 @@ Beans represent the concrete implementations a user can choose from. They are gr
 
 The link between a factory's `configEntries` and its `beansByFeature` is the **`selectsFrom`** field. When a config entry has `"type": "bean-name"` and `"selectsFrom": "Memory"`, the UI populates its dropdown from the beans in the `"Memory"` feature group. When the user selects a bean (e.g., `redis`), that bean's own `configEntries` are rendered as additional form fields.
 
-Each bean also carries a `gav` field so that tooling can add the correct Maven dependency to the project.
+Each bean also carries a `gav` field so that tooling can add the correct Maven dependency to the project, and a `propertiesSchema` with the JSON Schema of its own properties (see [UI Metadata](#ui-metadata)).
 
 ### Conditional Beans
 
@@ -217,6 +228,140 @@ A conditional bean can have either a fixed `name` or a `nameFromConfig` field th
 }
 ```
 
+## UI Metadata
+
+The catalog carries pre-computed UI metadata so that a UI renders Forage forms the same way it renders [camel-catalog](https://github.com/KaotoIO/camel-catalog) entries, without a Forage specific adapter. All of it is additive: `configEntries` and the rest of the structure are unchanged.
+
+### Properties Schema
+
+Every factory and every bean has a `propertiesSchema`: a JSON Schema (Draft-07) object that a JSON Schema form renderer, such as Kaoto's `KaotoForm`, renders directly. It follows the camel-catalog conventions:
+
+```json
+"propertiesSchema": {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["forage.jms.kind"],
+  "properties": {
+    "forage.jms.kind": {
+      "title": "JMS Kind",
+      "description": "The JMS broker kind/type",
+      "type": "string",
+      "enum": ["artemis", "ibmmq"],
+      "$comment": "group:common"
+    },
+    "forage.jms.password": {
+      "title": "Password",
+      "description": "The JMS broker password",
+      "type": "string",
+      "format": "password",
+      "$comment": "group:security"
+    },
+    "forage.jms.pool.max.connections": {
+      "title": "Max Connections",
+      "description": "Maximum number of connections in the pool",
+      "type": "integer",
+      "default": 10,
+      "$comment": "group:advanced"
+    }
+  }
+}
+```
+
+It is generated from the config entries:
+
+| Config entry | JSON Schema |
+|--------------|-------------|
+| `type: string` | `"type": "string"` |
+| `type: integer`, `int`, `long` | `"type": "integer"` |
+| `type: double` | `"type": "number"` |
+| `type: boolean` | `"type": "boolean"` |
+| `type: password` | `"type": "string", "format": "password"` |
+| `type: Duration` | `"type": "string", "format": "duration"` |
+| `type: map` | `"type": "object", "additionalProperties": {"type": "string"}` |
+| `type: bean-name` + `selectsFrom` | `"type": "string", "enum": [...]` listing the beans of the `selectsFrom` feature |
+| `configTag` | `"$comment": "group:common"`, `group:advanced` or `group:security` (lower case, as in camel-catalog) |
+| `required: true` | The key is listed in the schema level `required` array |
+| `defaultValue` | `"default"`, as a number or boolean for numeric and boolean properties |
+| `label` / `description` | `"title"` / `"description"` |
+| `hidden: true` | Left out of the schema |
+
+**Property keys are the full keys of the default instance** (`forage.jms.broker.url`): the same names as in `configEntries` and in the documentation. A UI writes the form values of the default instance as they are, and applies the `prefixPattern` for a named instance (see below).
+
+A `map` property holds free-form keys: the form value `{"sslConnection": "true"}` of `forage.jdbc.properties` is written as `forage.jdbc.properties.sslConnection=true`.
+
+**Factory and bean schemas do not overlap.** The factory `propertiesSchema` holds the factory's own properties; the properties a bean brings are only in that bean's `propertiesSchema`. A UI renders the factory form, then the form of each bean the user selects (for example the `forage.jms.artemis.*` properties once `artemis` is chosen as `forage.jms.kind`). Together they cover every non-hidden config entry of the factory exactly once.
+
+### Hidden Entries
+
+Some config entries are infrastructure overrides that a configuration wizard should not show, for example the fully qualified class names `forage.provider.*` and the `forage.multi.agent.*` settings of the `MultiAgentFactory`. They are marked with `@InternalConfig` in their `ConfigEntries` class, flagged `"hidden": true` in `configEntries` and left out of `propertiesSchema`. They remain valid, documented properties.
+
+### Named Instances
+
+Factories that create a bean per named configuration prefix carry a `prefixPattern`:
+
+```json
+"prefixPattern": "forage.{name}.{suffix}"
+```
+
+`{suffix}` is a `propertiesSchema` key without its leading `forage.`, and `{name}` is the instance name, which is also the bean name. For the instance `orders`, `forage.jdbc.url` becomes `forage.orders.jdbc.url`. The name may contain dots, but none of its segments may be the module segment of the key (`jdbc` in `forage.jdbc.url`). The matching environment variable is the key in upper case with dots replaced by underscores (`FORAGE_ORDERS_JDBC_URL`).
+
+Factories that only register their default bean, declared with `@ForageFactory(namedInstances = false)`, have no `prefixPattern`: a UI should not offer to add instances for them.
+
+### Bean References
+
+`beanReferences` tells a UI where a Camel route uses a bean of the factory, so that it can generate an example route without per-factory templates. Each reference names an option of a Camel catalog entry and how its value is written, `{beanRef}` standing for the bean name:
+
+```json
+"beanReferences": [
+  {"catalogKind": "component", "name": "sql", "option": "dataSource", "optionKind": "parameter", "valueTemplate": "#{beanRef}"},
+  {"catalogKind": "component", "name": "jdbc", "option": "dataSourceName", "optionKind": "path", "valueTemplate": "{beanRef}"}
+]
+```
+
+| Field | Description |
+|-------|-------------|
+| `catalogKind` | Camel catalog kind: `component`, or `processor` for an EIP such as `policy` |
+| `name` | Component scheme or EIP name |
+| `option` | Option of that Camel catalog entry holding the reference |
+| `optionKind` | Option kind as in the Camel catalog: `parameter` or `path` for endpoints, `attribute` for EIPs |
+| `valueTemplate` | Option value, `{beanRef}` being replaced by the bean name |
+
+For the bean `orders`, the references above give:
+
+```yaml
+- route:
+    from:
+      uri: direct:orders
+      steps:
+        - to:
+            uri: sql
+            parameters:
+              query: select * from orders
+              dataSource: "#orders"
+        - to:
+            uri: jdbc
+            parameters:
+              dataSourceName: orders
+```
+
+The references are derived from the Camel catalog of the Camel version Forage is built with: for every component in the factory `components`, the endpoint parameters whose Java type is the factory bean type (for example `dataSource` on `sql`, `connectionFactory` on `jms`, `agent` on `langchain4j-agent`). Where the bean name goes in the endpoint path (`jdbc`, `influxdb`, `cxf`) or the bean is used by an EIP (`policy` for security policies), the factory declares the reference with `@ForageFactory(beanReferences = @BeanReference(...))`, which replaces the derived one for that component.
+
+### Model
+
+The `model` block holds display metadata in the shape of a camel-catalog `model` block, for catalog tiles:
+
+```json
+"model": {
+  "kind": "forage-factory",
+  "name": "data-source",
+  "title": "DataSource",
+  "description": "Creates JDBC DataSource connections for database operations with transaction and repository support",
+  "label": "database"
+}
+```
+
+`name` is a stable identifier derived from the factory type (it does not change with the display name), `title` is the factory `name`, and `label` collects the Camel catalog labels of the factory components.
+
 ## How the Catalog Powers UI Wizards
 
 The catalog is designed to provide everything a UI tool needs to generate configuration wizards without Forage-specific code. Here is the flow as implemented in [Kaoto](https://kaoto.io):
@@ -237,19 +382,19 @@ The UI reads the `factories` array and renders each factory as a selectable card
 
 ### Step 2: Configuration Form
 
-Once a factory is selected, the UI converts its `configEntries` into form fields:
+Once a factory is selected, the UI renders its `propertiesSchema` with a JSON Schema form renderer:
 
-- Each entry's `type` determines the control (text input, number, password, dropdown, toggle).
-- Entries are grouped into expandable sections by `configTag`.
-- `required` entries are validated before submission.
-- `defaultValue` pre-populates fields.
-- `label` and `description` provide field labels and help text.
+- `type` and `format` determine the control (text input, number, password, dropdown, toggle).
+- Fields are grouped into expandable sections by their `$comment` group (`group:common`, `group:advanced`, `group:security`).
+- `required` properties are validated before submission.
+- `default` pre-populates fields.
+- `title` and `description` provide field labels and help text.
 
-For `bean-name` entries, the UI looks up the `selectsFrom` feature in `beansByFeature` and populates a dropdown. When the user selects a bean, its own `configEntries` appear as additional fields.
+`bean-name` properties are dropdowns whose `enum` lists the beans of the `selectsFrom` feature. When the user selects a bean, its own `propertiesSchema` is rendered as an additional form.
 
 ### Step 3: Multi-Instance Support
 
-The wizard supports creating multiple instances of the same factory (e.g., two DataSources for different databases). Each instance gets a name prefix, and all property keys are prefixed accordingly:
+The wizard supports creating multiple instances of the same factory (e.g., two DataSources for different databases) when the factory has a `prefixPattern`. Each instance gets a name, and all property keys are prefixed accordingly:
 
 ```properties
 # Instance "orders"
@@ -266,7 +411,7 @@ forage.inventory.jdbc.username=admin
 The wizard produces:
 
 - A **properties file** with all configured values.
-- An **example Camel route** (YAML) that uses the configured factory.
+- An **example Camel route** (YAML) that uses the configured factory, built from `beanReferences`.
 - The correct **Maven dependencies** resolved from variants and bean `gav` coordinates.
 
 ## What Drives the Catalog
@@ -283,6 +428,10 @@ The catalog is entirely derived from annotations and configuration classes in th
 | `@ForageBean(feature = "Memory")` | Groups the bean under the `"Memory"` feature |
 | `ConfigModule.of(...)` | Config entry with `name`, `type`, `label`, `description`, `defaultValue`, `configTag` |
 | `ConfigModule.ofBeanName(...)` | Config entry with `type: "bean-name"` and `selectsFrom` linking to a feature |
+| `@InternalConfig` on a `ConfigModule` field | Config entry with `hidden: true`, left out of `propertiesSchema` |
+| `@ForageFactory(namedInstances = false)` | No `prefixPattern` on the factory |
+| `@ForageFactory(beanReferences = ...)` | Declared `beanReferences`, replacing the derived ones for the same component |
+| The Camel catalog | Derived `beanReferences` and the `model` `label` |
 
 ## Configuration Catalog
 
@@ -326,6 +475,9 @@ Key classes in `io.kaoto.forage.catalog.model`:
 | `ForageFactory` | Factory with variants, config entries, beans, conditional beans |
 | `ForageBean` | Bean provider with its own config entries and GAV |
 | `ConfigEntry` | Single configuration property with type, label, tag |
+| `PropertiesSchema` / `PropertySchema` | JSON Schema (Draft-07) of the properties of a factory or bean |
+| `FactoryModel` | Display metadata of a factory |
+| `BeanReference` | Where a Camel route references a factory bean |
 | `FeatureBeans` | Groups beans under a named feature |
 | `FactoryVariants` / `FactoryVariant` | Platform-specific implementation info |
 | `ConditionalBeanGroup` / `ConditionalBeanInfo` | Beans conditionally registered via a config flag |

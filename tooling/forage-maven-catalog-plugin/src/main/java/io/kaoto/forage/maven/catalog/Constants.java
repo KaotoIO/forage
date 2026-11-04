@@ -17,6 +17,11 @@ public final class Constants {
     public static final String FORAGE_FACTORY_FQN = "io.kaoto.forage.core.annotations.ForageFactory";
 
     /**
+     * Fully qualified name of the InternalConfig annotation, which marks a ConfigModule field as hidden.
+     */
+    public static final String INTERNAL_CONFIG_FQN = "io.kaoto.forage.core.annotations.InternalConfig";
+
+    /**
      * Fully qualified name of the ConfigModule class.
      */
     public static final String CONFIG_MODULE_FQN = "io.kaoto.forage.core.util.config.ConfigModule";

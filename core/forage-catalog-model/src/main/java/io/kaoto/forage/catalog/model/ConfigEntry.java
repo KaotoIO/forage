@@ -36,6 +36,13 @@ public class ConfigEntry {
     @JsonProperty("selectsFrom")
     private String selectsFrom;
 
+    /**
+     * Internal entry ({@code @InternalConfig}) that UIs should not render; only written when true.
+     */
+    @JsonProperty("hidden")
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    private boolean hidden;
+
     public ConfigEntry() {}
 
     public ConfigEntry(String name, String type, String description, boolean required) {
@@ -115,5 +122,13 @@ public class ConfigEntry {
 
     public void setSelectsFrom(String selectsFrom) {
         this.selectsFrom = selectsFrom;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 }

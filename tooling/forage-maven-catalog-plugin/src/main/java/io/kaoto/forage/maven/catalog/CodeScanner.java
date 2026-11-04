@@ -226,7 +226,9 @@ public class CodeScanner {
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
                     String dirName = dir.getFileName().toString();
-                    if (SKIP_DIRS.contains(dirName)) {
+                    // Hidden directories never hold modules, but may hold copies of the repository
+                    // (e.g. git worktrees under .claude/worktrees) whose POMs would shadow the real modules
+                    if (SKIP_DIRS.contains(dirName) || (!dir.equals(rootDir) && dirName.startsWith("."))) {
                         return FileVisitResult.SKIP_SUBTREE;
                     }
                     directories.add(dir);

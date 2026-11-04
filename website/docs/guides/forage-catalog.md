@@ -32,7 +32,27 @@ mvn clean compile -f forage-catalog
 The `forage-maven-catalog-plugin` runs during the `process-classes` phase. It scans all Forage module dependencies for `@ForageFactory` and `@ForageBean` annotations, extracts configuration entries from `ConfigEntries` subclasses, and writes the catalog files.
 
 !!! note
-    Adding a new module with the proper annotations automatically extends the catalog -- no manual catalog editing is required.
+    Adding a new module with the proper annotations extends the catalog -- no manual catalog editing is required -- as long as the module is a dependency of `forage-catalog/pom.xml` and each of its beans shares a component with a factory (see [Completeness Checks](#completeness-checks)).
+
+### Completeness Checks
+
+A bean or factory missing from the catalog is invisible to Kaoto, and `camel forage run/export` never resolves its Maven dependency. The build therefore fails instead of dropping it silently:
+
+- **The plugin** fails when a `@ForageBean` is not listed under any `@ForageFactory`. A bean is listed under every factory that declares one of its `components`. It also fails when two factory classes claim the same variant of a factory type, or when two bean classes have the same name in the same feature of a factory.
+- **`CatalogCompletenessTest`** (in `forage-catalog`) scans the `src/main/java` directories of the whole repository and fails when a `@ForageBean` or `@ForageFactory` class is not in `forage-catalog.json`, which covers modules that were never added as dependencies of `forage-catalog`. It also fails when a factory declares components but lists no bean. A factory that creates its bean itself, such as TLS Context, declares no components.
+
+A bean that is deliberately kept out of the catalog, for example because its factory is still being written, is listed with a reason in the plugin configuration in `forage-catalog/pom.xml`:
+
+```xml
+<excludedBeans>
+    <excludedBean>
+        <className>io.kaoto.forage.vectordb.qdrant.QdrantProvider</className>
+        <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
+    </excludedBean>
+</excludedBeans>
+```
+
+The reason is mandatory. An entry that no longer matches a scanned bean, or whose bean is now listed under a factory, also fails the build, so the list only holds the beans that are actually missing from the catalog.
 
 ## Catalog Structure
 
@@ -295,7 +315,7 @@ The catalog is entirely derived from annotations and configuration classes in th
 | `@ForageFactory(variant = ...)` | Populates the `variants` map (base, springboot, quarkus) |
 | `@ForageFactory(conditionalBeans = ...)` | Populates the `conditionalBeans` array |
 | `@ForageFactory(configClass = ...)` | Links the factory to its config entries |
-| `@ForageBean` on a class | Bean entry under the matching factory's `beansByFeature` |
+| `@ForageBean` on a class | Bean entry under the `beansByFeature` of every factory that shares one of its `components` |
 | `@ForageBean(feature = "Memory")` | Groups the bean under the `"Memory"` feature |
 | `@ForageBean(enabledBy = ...)` | Bean `enabledBy`: factory config entries that make the factory use the bean |
 | `ConfigModule.of(...)` | Config entry with `name`, `type`, `label`, `description`, `defaultValue`, `configTag` |

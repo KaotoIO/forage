@@ -30,6 +30,12 @@
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-shiro</artifactId>
         </dependency>
+        <!-- shiro-core excludes commons-logging from commons-beanutils: provide Commons Logging, routed to SLF4J -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
 
         <!-- Test dependencies -->
         <dependency>
@@ -42,11 +48,6 @@
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <version>${assertj-core.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>jcl-over-slf4j</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

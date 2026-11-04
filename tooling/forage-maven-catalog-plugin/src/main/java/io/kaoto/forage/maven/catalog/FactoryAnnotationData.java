@@ -2,6 +2,7 @@ package io.kaoto.forage.maven.catalog;
 
 import java.util.ArrayList;
 import java.util.List;
+import io.kaoto.forage.catalog.model.BeanReference;
 import io.kaoto.forage.catalog.model.ConditionalBeanGroup;
 
 public class FactoryAnnotationData {
@@ -16,6 +17,8 @@ public class FactoryAnnotationData {
     private String variant = "BASE";
     private String configClassName = null;
     private List<String> runtimeDependencies = new ArrayList<>();
+    private boolean namedInstances = true;
+    private List<BeanReference> beanReferences = new ArrayList<>();
 
     public String getName() {
         return name;
@@ -95,5 +98,21 @@ public class FactoryAnnotationData {
 
     public void setRuntimeDependencies(List<String> runtimeDependencies) {
         this.runtimeDependencies = runtimeDependencies;
+    }
+
+    public boolean isNamedInstances() {
+        return namedInstances;
+    }
+
+    public void setNamedInstances(boolean namedInstances) {
+        this.namedInstances = namedInstances;
+    }
+
+    public List<BeanReference> getBeanReferences() {
+        return beanReferences;
+    }
+
+    public void setBeanReferences(List<BeanReference> beanReferences) {
+        this.beanReferences = beanReferences;
     }
 }

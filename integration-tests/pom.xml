@@ -41,6 +41,7 @@
         <module>messaging</module>
         <module>cxf</module>
         <module>influxdb</module>
+        <module>security</module>
     </modules>
 
     <build>
@@ -85,6 +86,7 @@
             <plugin>
                 <groupId>org.codehaus.gmavenplus</groupId>
                 <artifactId>gmavenplus-plugin</artifactId>
+                <version>${gmavenplus-plugin.version}</version>
                 <dependencies>
                     <dependency>
                         <groupId>org.apache.groovy</groupId>

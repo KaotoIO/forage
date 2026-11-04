@@ -47,7 +47,10 @@ import dev.langchain4j.store.embedding.EmbeddingStore;
         value = "defaultRag",
         components = {"camel-langchain4j-agent"},
         feature = "RAG",
-        description = "Default retrieval augmentor for rag scenario")
+        description = "Default retrieval augmentor for rag scenario",
+        // Mirrors AgentConfig#hasEmbeddingConfig(): the agent assembles its RAG pipeline, and so needs a
+        // retrieval augmentor, as soon as one of these is set, even without any forage.agent.rag.* property
+        enabledBy = {"forage.agent.embedding.model.name", "forage.agent.in.memory.store.file.source"})
 public class DefaultRetrievalAugmentorProvider
         implements RetrievalAugmentorProvider, EmbeddingModelAware, EmbeddingStoreAware {
     private static final Logger LOG = LoggerFactory.getLogger(DefaultRetrievalAugmentorProvider.class);

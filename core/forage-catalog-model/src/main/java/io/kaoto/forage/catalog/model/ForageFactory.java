@@ -44,6 +44,18 @@ public class ForageFactory {
     @JsonProperty("conditionalBeans")
     private List<ConditionalBeanGroup> conditionalBeans;
 
+    @JsonProperty("model")
+    private FactoryModel model;
+
+    @JsonProperty("prefixPattern")
+    private String prefixPattern;
+
+    @JsonProperty("beanReferences")
+    private List<BeanReference> beanReferences;
+
+    @JsonProperty("propertiesSchema")
+    private PropertiesSchema propertiesSchema;
+
     public ForageFactory() {}
 
     public ForageFactory(String name, String factoryType, String description) {
@@ -138,6 +150,53 @@ public class ForageFactory {
 
     public void setConditionalBeans(List<ConditionalBeanGroup> conditionalBeans) {
         this.conditionalBeans = conditionalBeans;
+    }
+
+    /**
+     * Display metadata shaped like a camel-catalog {@code model} block.
+     */
+    public FactoryModel getModel() {
+        return model;
+    }
+
+    public void setModel(FactoryModel model) {
+        this.model = model;
+    }
+
+    /**
+     * How the property keys of a named instance are built, for example
+     * {@code forage.{name}.{suffix}} where {@code {suffix}} is a {@link #getPropertiesSchema()}
+     * key without its leading {@code forage.}. Absent when the factory only creates its default bean.
+     */
+    public String getPrefixPattern() {
+        return prefixPattern;
+    }
+
+    public void setPrefixPattern(String prefixPattern) {
+        this.prefixPattern = prefixPattern;
+    }
+
+    /**
+     * Where Camel routes reference the beans of this factory.
+     */
+    public List<BeanReference> getBeanReferences() {
+        return beanReferences;
+    }
+
+    public void setBeanReferences(List<BeanReference> beanReferences) {
+        this.beanReferences = beanReferences;
+    }
+
+    /**
+     * JSON Schema of the factory's own properties; bean specific properties are in the bean's
+     * {@link ForageBean#getPropertiesSchema()}.
+     */
+    public PropertiesSchema getPropertiesSchema() {
+        return propertiesSchema;
+    }
+
+    public void setPropertiesSchema(PropertiesSchema propertiesSchema) {
+        this.propertiesSchema = propertiesSchema;
     }
 
     @Override

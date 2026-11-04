@@ -1,0 +1,80 @@
+{
+  "realm": "forage",
+  "enabled": true,
+  "sslRequired": "none",
+  "roles": {
+    "realm": [
+      { "name": "admin" },
+      { "name": "guest" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "forage-camel",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "camel-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "forage-admin",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "admin-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "forage-camel-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "forage-camel",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "forage-guest",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "guest-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "forage-camel-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "forage-camel",
+            "access.token.claim": "true",
+            "introspection.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-forage-admin",
+      "enabled": true,
+      "serviceAccountClientId": "forage-admin",
+      "realmRoles": ["admin"]
+    },
+    {
+      "username": "service-account-forage-guest",
+      "enabled": true,
+      "serviceAccountClientId": "forage-guest",
+      "realmRoles": ["guest"]
+    }
+  ]
+}

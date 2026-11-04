@@ -1,0 +1,54 @@
+- route:
+    id: shiro-admin
+    from:
+      uri: timer:admin
+      parameters:
+        repeatCount: 1
+        delay: 1000
+      steps:
+        - setHeader:
+            name: CamelShiroSecurityUsername
+            constant: alice
+        - setHeader:
+            name: CamelShiroSecurityPassword
+            constant: secret
+        - to:
+            uri: direct:secured
+        - log:
+            message: "Shiro access granted to alice"
+- route:
+    id: shiro-guest
+    from:
+      uri: timer:guest
+      parameters:
+        repeatCount: 1
+        delay: 1000
+      steps:
+        - setHeader:
+            name: CamelShiroSecurityUsername
+            constant: bob
+        - setHeader:
+            name: CamelShiroSecurityPassword
+            constant: secret
+        - doTry:
+            steps:
+              - to:
+                  uri: direct:secured
+              - log:
+                  message: "Shiro access granted to bob"
+            doCatch:
+              - exception:
+                  - org.apache.camel.CamelAuthorizationException
+                steps:
+                  - log:
+                      message: "Shiro access denied to bob"
+- route:
+    id: shiro-secured
+    from:
+      uri: direct:secured
+      steps:
+        - policy:
+            ref: shiroPolicy
+            steps:
+              - setBody:
+                  constant: secret data

@@ -4,11 +4,16 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.kaoto.forage.core.util.config.AbstractConfig;
+import io.kaoto.forage.core.util.config.ConfigModule;
 import io.kaoto.forage.core.util.config.ConfigStore;
 
 /**
@@ -32,6 +37,12 @@ public class ScheduleRoutePolicyConfig extends AbstractConfig {
         this(null);
     }
 
+    /**
+     * Creates the configuration of one route's schedule policy.
+     *
+     * @param prefix the config prefix the route policy factory passes to the provider,
+     *        {@code forage.route.policy.<routeId>.schedule}
+     */
     public ScheduleRoutePolicyConfig(String prefix) {
         super(prefix, ScheduleRoutePolicyConfigEntries.class);
     }
@@ -47,8 +58,7 @@ public class ScheduleRoutePolicyConfig extends AbstractConfig {
      * @return the start time, or null if not configured
      */
     public LocalTime startTime() {
-        return ConfigStore.getInstance()
-                .get(ScheduleRoutePolicyConfigEntries.startTime(super.prefix()))
+        return value(ScheduleRoutePolicyConfigEntries::startTime)
                 .map(this::parseTime)
                 .orElse(null);
     }
@@ -59,8 +69,7 @@ public class ScheduleRoutePolicyConfig extends AbstractConfig {
      * @return the stop time, or null if not configured
      */
     public LocalTime stopTime() {
-        return ConfigStore.getInstance()
-                .get(ScheduleRoutePolicyConfigEntries.stopTime(super.prefix()))
+        return value(ScheduleRoutePolicyConfigEntries::stopTime)
                 .map(this::parseTime)
                 .orElse(null);
     }
@@ -71,8 +80,7 @@ public class ScheduleRoutePolicyConfig extends AbstractConfig {
      * @return the timezone, or system default if not configured
      */
     public ZoneId timezone() {
-        return ConfigStore.getInstance()
-                .get(ScheduleRoutePolicyConfigEntries.timezone(super.prefix()))
+        return value(ScheduleRoutePolicyConfigEntries::timezone)
                 .map(this::parseZoneId)
                 .orElse(ZoneId.systemDefault());
     }
@@ -83,9 +91,7 @@ public class ScheduleRoutePolicyConfig extends AbstractConfig {
      * @return the cron expression, or null if not configured
      */
     public String cronExpression() {
-        return ConfigStore.getInstance()
-                .get(ScheduleRoutePolicyConfigEntries.cron(super.prefix()))
-                .orElse(null);
+        return value(ScheduleRoutePolicyConfigEntries::cron).orElse(null);
     }
 
     /**
@@ -94,10 +100,24 @@ public class ScheduleRoutePolicyConfig extends AbstractConfig {
      * @return the days of week, or all days if not configured
      */
     public Set<DayOfWeek> daysOfWeek() {
-        return ConfigStore.getInstance()
-                .get(ScheduleRoutePolicyConfigEntries.daysOfWeek(super.prefix()))
+        return value(ScheduleRoutePolicyConfigEntries::daysOfWeek)
                 .map(this::parseDaysOfWeek)
                 .orElse(EnumSet.allOf(DayOfWeek.class));
+    }
+
+    /**
+     * Reads an option of this route's schedule like the flip policy does: from environment variables,
+     * system properties and the runtime configuration, falling back to the per-route properties that
+     * the route policy factory registered from its properties file.
+     */
+    private Optional<String> value(Function<String, ConfigModule> option) {
+        if (super.prefix() == null) {
+            return Optional.empty();
+        }
+        ConfigModule module = option.apply(super.prefix());
+        ConfigStore.getInstance().load(module);
+        return ConfigStore.getInstance().get(module).or(() -> ConfigStore.getInstance()
+                .getDirect(module.propertyName()));
     }
 
     private LocalTime parseTime(String value) {
@@ -121,12 +141,25 @@ public class ScheduleRoutePolicyConfig extends AbstractConfig {
     private Set<DayOfWeek> parseDaysOfWeek(String value) {
         Set<DayOfWeek> days = EnumSet.noneOf(DayOfWeek.class);
         for (String day : value.split(",")) {
-            try {
-                days.add(DayOfWeek.valueOf(day.trim().toUpperCase()));
-            } catch (IllegalArgumentException e) {
+            Optional<DayOfWeek> parsed = parseDayOfWeek(day.trim());
+            if (parsed.isPresent()) {
+                days.add(parsed.get());
+            } else {
                 LOG.warn("Invalid day of week '{}'. Ignoring.", day.trim());
             }
         }
         return days.isEmpty() ? EnumSet.allOf(DayOfWeek.class) : days;
+    }
+
+    /**
+     * Accepts the documented three-letter abbreviations (MON, TUE, ...) and full names (MONDAY, ...),
+     * in any case.
+     */
+    private static Optional<DayOfWeek> parseDayOfWeek(String day) {
+        String name = day.toUpperCase(Locale.ROOT);
+        return Arrays.stream(DayOfWeek.values())
+                .filter(candidate -> candidate.name().equals(name)
+                        || (name.length() == 3 && candidate.name().startsWith(name)))
+                .findFirst();
     }
 }

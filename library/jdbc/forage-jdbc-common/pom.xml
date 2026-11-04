@@ -39,6 +39,12 @@
             <artifactId>spring-tx</artifactId>
             <version>${spring.version}</version>
         </dependency>
+        <!-- JtaTransactionManager (aggregation repository) needs JndiTemplate, which spring-tx does not bring -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>io.agroal</groupId>

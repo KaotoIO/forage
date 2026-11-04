@@ -4,6 +4,7 @@ import org.apache.camel.Endpoint;
 import org.apache.camel.component.influxdb.InfluxDbComponent;
 import org.apache.camel.component.influxdb.InfluxDbEndpoint;
 import org.influxdb.InfluxDB;
+import io.kaoto.forage.core.annotations.BeanReference;
 import io.kaoto.forage.core.annotations.FactoryType;
 import io.kaoto.forage.core.annotations.ForageFactory;
 import io.kaoto.forage.core.common.AbstractClientBeanFactory;
@@ -15,7 +16,8 @@ import io.kaoto.forage.core.common.AbstractClientBeanFactory;
         type = FactoryType.INFLUXDB_CLIENT,
         defaultBeanName = "influxdb",
         autowired = true,
-        configClass = InfluxDBConfig.class)
+        configClass = InfluxDBConfig.class,
+        beanReferences = @BeanReference(name = "influxdb", option = "connectionBean", optionKind = "path"))
 public class InfluxDBBeanFactory extends AbstractClientBeanFactory<InfluxDB> {
     public InfluxDBBeanFactory() {
         super(new InfluxDBModuleDescriptor());

@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.logging.Log;
+import io.kaoto.forage.catalog.model.BeanReference;
 import io.kaoto.forage.catalog.model.ConditionalBeanGroup;
 import io.kaoto.forage.catalog.model.ConditionalBeanInfo;
 import io.kaoto.forage.catalog.model.ConfigEntry;
@@ -226,7 +227,9 @@ public class CodeScanner {
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
                     String dirName = dir.getFileName().toString();
-                    if (SKIP_DIRS.contains(dirName)) {
+                    // Hidden directories never hold modules, but may hold copies of the repository
+                    // (e.g. git worktrees under .claude/worktrees) whose POMs would shadow the real modules
+                    if (SKIP_DIRS.contains(dirName) || (!dir.equals(rootDir) && dirName.startsWith("."))) {
                         return FileVisitResult.SKIP_SUBTREE;
                     }
                     directories.add(dir);
@@ -365,6 +368,8 @@ public class CodeScanner {
         if (!data.getRuntimeDependencies().isEmpty()) {
             factory.setRuntimeDependencies(data.getRuntimeDependencies());
         }
+        factory.setNamedInstances(data.isNamedInstances());
+        factory.setBeanReferences(data.getBeanReferences());
         return factory;
     }
 
@@ -401,9 +406,52 @@ public class CodeScanner {
                 case "configClass" -> data.setConfigClassName(extractClassValue(value, cu));
                 case ATTR_RUNTIME_DEPS ->
                     data.setRuntimeDependencies(extractStringArrayValue(value, "@ForageFactory 'runtimeDependencies'"));
+                case "namedInstances" -> {
+                    if (value instanceof BooleanLiteralExpr booleanLiteral) {
+                        data.setNamedInstances(booleanLiteral.getValue());
+                    }
+                }
+                case "beanReferences" -> data.setBeanReferences(extractBeanReferenceArray(value));
                 default -> {}
             }
         }
+    }
+
+    /**
+     * Extracts the {@code @BeanReference} annotations of {@code @ForageFactory(beanReferences = ...)}.
+     * Accepts a single annotation or an array; references without a name or option are skipped.
+     */
+    private List<BeanReference> extractBeanReferenceArray(Expression value) {
+        List<Expression> elements =
+                value instanceof ArrayInitializerExpr arrayExpr ? arrayExpr.getValues() : List.of(value);
+        List<BeanReference> references = new ArrayList<>();
+        for (Expression element : elements) {
+            if (!(element instanceof NormalAnnotationExpr annotation)) {
+                log.warn("Skipping unsupported @ForageFactory 'beanReferences' element: " + element);
+                continue;
+            }
+            Map<String, String> attributes = new HashMap<>();
+            for (MemberValuePair pair : annotation.getPairs()) {
+                if (pair.getValue() instanceof StringLiteralExpr stringLiteral) {
+                    attributes.put(pair.getNameAsString(), stringLiteral.asString());
+                } else {
+                    log.warn("Skipping non-string-literal @BeanReference '" + pair.getNameAsString() + "': "
+                            + pair.getValue());
+                }
+            }
+            BeanReference reference = FactoryUiMetadata.declaredReference(
+                    attributes.get("catalogKind"),
+                    attributes.get("name"),
+                    attributes.get("option"),
+                    attributes.get("optionKind"),
+                    attributes.get("valueTemplate"));
+            if (reference == null) {
+                log.warn("Skipping @BeanReference without name or option: " + annotation);
+            } else {
+                references.add(reference);
+            }
+        }
+        return references;
     }
 
     /**
@@ -572,6 +620,7 @@ public class CodeScanner {
         String configClassName = null;
         List<String> runtimeDeps = null;
         List<String> repositories = null;
+        List<String> enabledBy = null;
 
         // Extract annotation values
         if (annotation instanceof SingleMemberAnnotationExpr singleMember) {
@@ -605,6 +654,7 @@ public class CodeScanner {
                     case ATTR_RUNTIME_DEPS ->
                         runtimeDeps = extractStringArrayValue(value, "@ForageBean 'runtimeDependencies'");
                     case "repositories" -> repositories = extractStringArrayValue(value, "@ForageBean 'repositories'");
+                    case "enabledBy" -> enabledBy = extractStringArrayValue(value, "@ForageBean 'enabledBy'");
                     default -> {}
                 }
             }
@@ -614,6 +664,9 @@ public class CodeScanner {
         String className = getFullyQualifiedClassName(classDecl, cu);
 
         ScannedBean bean = new ScannedBean(name, components, description, className, feature);
+        if (enabledBy != null && !enabledBy.isEmpty()) {
+            bean.setEnabledBy(enabledBy);
+        }
         bean.setConfigClassName(configClassName);
         bean.setDefaultBeanName(defaultBeanName);
         if (runtimeDeps != null && !runtimeDeps.isEmpty()) {
@@ -644,6 +697,7 @@ public class CodeScanner {
                     if (isConfigModuleField(field)) {
                         ConfigEntry configProp = extractConfigEntry(variable);
                         if (configProp != null) {
+                            configProp.setHidden(isInternalConfig(field));
                             log.debug("Extracted configuration property: " + configProp.getName());
                             configProperties.add(configProp);
                         }
@@ -651,6 +705,15 @@ public class CodeScanner {
                 });
             }
         });
+    }
+
+    /**
+     * Checks if a ConfigModule field is annotated with {@code @InternalConfig}.
+     */
+    private static boolean isInternalConfig(FieldDeclaration field) {
+        return field.getAnnotations().stream()
+                .map(AnnotationExpr::getNameAsString)
+                .anyMatch(name -> "InternalConfig".equals(name) || Constants.INTERNAL_CONFIG_FQN.equals(name));
     }
 
     /**
@@ -761,7 +824,7 @@ public class CodeScanner {
 
     /**
      * Extracts bean-name configuration entry from ConfigModule.ofBeanName() call.
-     * Arguments: (config, name, description, label, required, configTag, selectsFrom)
+     * Arguments: (config, name, description, label, required, configTag, selectsFrom[, multiValue])
      */
     private void extractBeanNameConfigEntry(MethodCallExpr methodCall, ConfigEntry configProp) {
         configProp.setType("bean-name");
@@ -795,6 +858,11 @@ public class CodeScanner {
         // SelectsFrom (7th argument)
         if (methodCall.getArguments().size() > 6) {
             extractStringArg(methodCall, 6, configProp::setSelectsFrom);
+        }
+
+        // MultiValue (8th argument): the value may list several beans, comma-separated
+        if (methodCall.getArguments().size() > 7) {
+            extractBooleanArg(methodCall, 7, configProp::setMultiValue);
         }
     }
 

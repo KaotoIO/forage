@@ -25,6 +25,35 @@ public final class FlipRoutePolicyConfigEntries extends ConfigEntries {
      */
     public static final String CONFIG_PREFIX = "forage.route.policy";
 
+    /*
+     * Catalog entries for the flip options. The route ID is part of the property name, so these modules only
+     * document the properties in the Forage catalog, where tooling resolves the {routeId} placeholder. At
+     * runtime the options are read through pairedRoute(String) and initiallyActive(String), which reuse
+     * their metadata.
+     */
+
+    /** Catalog entry for {@code forage.route.policy.<routeId>.flip.paired-route}. */
+    public static final ConfigModule PAIRED_ROUTE = ConfigModule.of(
+            FlipRoutePolicyConfig.class,
+            "forage.route.policy.{routeId}.flip.paired-route",
+            "ID of the paired route to flip with",
+            "Paired Route",
+            null,
+            "string",
+            true,
+            ConfigTag.COMMON);
+
+    /** Catalog entry for {@code forage.route.policy.<routeId>.flip.initially-active}. */
+    public static final ConfigModule INITIALLY_ACTIVE = ConfigModule.of(
+            FlipRoutePolicyConfig.class,
+            "forage.route.policy.{routeId}.flip.initially-active",
+            "Whether this route should be active initially",
+            "Initially Active",
+            "true",
+            "boolean",
+            false,
+            ConfigTag.COMMON);
+
     private static final Map<ConfigModule, ConfigEntry> CONFIG_MODULES = new ConcurrentHashMap<>();
 
     private FlipRoutePolicyConfigEntries() {}
@@ -36,16 +65,7 @@ public final class FlipRoutePolicyConfigEntries extends ConfigEntries {
      * @return a ConfigModule for the paired-route configuration
      */
     public static ConfigModule pairedRoute(String configPrefix) {
-        String name = configPrefix + ".paired-route";
-        return ConfigModule.of(
-                FlipRoutePolicyConfig.class,
-                name,
-                "ID of the paired route to flip with",
-                "Paired Route",
-                null,
-                "string",
-                true,
-                ConfigTag.COMMON);
+        return withName(PAIRED_ROUTE, configPrefix + ".paired-route");
     }
 
     /**
@@ -55,16 +75,19 @@ public final class FlipRoutePolicyConfigEntries extends ConfigEntries {
      * @return a ConfigModule for the initially-active configuration
      */
     public static ConfigModule initiallyActive(String configPrefix) {
-        String name = configPrefix + ".initially-active";
+        return withName(INITIALLY_ACTIVE, configPrefix + ".initially-active");
+    }
+
+    private static ConfigModule withName(ConfigModule catalogEntry, String name) {
         return ConfigModule.of(
                 FlipRoutePolicyConfig.class,
                 name,
-                "Whether this route should be active initially",
-                "Initially Active",
-                "true",
-                "boolean",
-                false,
-                ConfigTag.COMMON);
+                catalogEntry.description(),
+                catalogEntry.label(),
+                catalogEntry.defaultValue(),
+                catalogEntry.type(),
+                catalogEntry.required(),
+                catalogEntry.configTag());
     }
 
     public static Map<ConfigModule, ConfigEntry> entries() {

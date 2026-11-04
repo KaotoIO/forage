@@ -461,6 +461,36 @@ public class ForageMyModuleProcessor {
 - Config source uses ordinal 275 (below system properties at 400), so `-D` overrides work
 - Use Quarkus recorders (`@Record`) when creating runtime beans that need Quarkus CDI context
 - Produce `CamelRuntimeBeanBuildItem`s for beans that must be in the Camel registry
+- A `ConfigSourceFactory` that does not extend `ForageQuarkusConfigSourceAdapter` must read Forage configuration inside `ConfigHelper.whileBuildingQuarkusConfig(...)`: otherwise the lookups call `ConfigProvider.getConfig()` while the configuration is being built, which registers a second configuration and fails Quarkus tests with `SRCFG00017`
+
+### 5c. Take Over a Plain `BeanFactory`
+
+Camel Quarkus also loads the plain-Camel `BeanFactory` of a module: it starts context service plugins, and with
+them `ForageContextServicePlugin`, while building the CamelContext during static initialization, which runs at image
+build time in native mode. When the Quarkus extension registers the beans itself (`CamelRuntimeBeanBuildItem` from a
+`RUNTIME_INIT` recorder), declare the factory as runtime-managed so that its beans are neither created twice nor
+built into the native image:
+
+```java
+package io.kaoto.forage.quarkus.mymodule;
+
+import java.util.Set;
+import io.kaoto.forage.core.common.RuntimeManagedBeanFactories;
+import io.kaoto.forage.mymodule.MyModuleBeanFactory;
+
+public class ForageMyModuleManagedBeanFactories implements RuntimeManagedBeanFactories {
+
+    @Override
+    public Set<String> beanFactoryClassNames() {
+        return Set.of(MyModuleBeanFactory.class.getName());
+    }
+}
+```
+
+Register it in the runtime module's `META-INF/services/io.kaoto.forage.core.common.RuntimeManagedBeanFactories`.
+
+On Spring Boot no such declaration is needed when the starter registers Spring beans: the plain factory looks the bean
+up in the Camel registry, which sees the Spring context, and skips it.
 
 ---
 
@@ -507,6 +537,23 @@ mvn clean verify -f integration-tests/mymodule -Dit.test=MyModuleTest
 
 ---
 
+## Step 7: Add the Module to the Catalog
+
+Kaoto and `camel forage run/export` only know what is in `forage-catalog.json` (see the [Forage Catalog guide](../website/docs/guides/forage-catalog.md)). To get there:
+
+1. Add every new artifact holding a `@ForageBean` or `@ForageFactory` (provider, factory, Spring Boot starter, Quarkus deployment module) as an `<optional>true</optional>` dependency of `forage-catalog/pom.xml`.
+2. Make sure each `@ForageBean` declares at least one of the `components` of the `@ForageFactory` it belongs to: a bean is only listed under the factories that share one of its components.
+
+The build enforces both. The `forage-maven-catalog-plugin` fails on a bean that no factory picks up, and `CatalogCompletenessTest` in `forage-catalog` fails on any `@ForageBean` or `@ForageFactory` class of the repository that is not in the generated catalog:
+
+```bash
+mvn -pl forage-catalog -am package
+```
+
+If a bean is deliberately kept out of the catalog, for example because its factory is tracked by another issue, add it to `<excludedBeans>` in the plugin configuration of `forage-catalog/pom.xml`, with a `<reason>` that names the issue. Remove the entry once the factory exists: the build fails on entries whose bean is now in the catalog.
+
+---
+
 ## Checklist for Adding a New Module
 
 ### Core (all runtimes)
@@ -531,11 +578,18 @@ mvn clean verify -f integration-tests/mymodule -Dit.test=MyModuleTest
 - [ ] `ForageXxxConfigSourceFactory extends ForageQuarkusConfigSourceAdapter<C>`
 - [ ] `META-INF/services/io.smallrye.config.ConfigSourceFactory`
 - [ ] `@BuildStep` deployment processor with `@ForageFactory(variant = QUARKUS)`
+- [ ] `RuntimeManagedBeanFactories` registration if the extension replaces a plain `BeanFactory`
+- [ ] Native image: `NativeImageResourceBuildItem` for the `forage-xxx.properties` file and the classpath resources the beans load at runtime, `ServiceProviderBuildItem` for providers looked up with `ServiceLoader` at runtime
 
 ### Integration Tests
 - [ ] Citrus test class implementing `ForageIntegrationTest`
 - [ ] Test properties and route files
 - [ ] Test passes on plain, Spring Boot, and Quarkus runtimes
+
+### Catalog
+- [ ] Every new artifact with a `@ForageBean` or `@ForageFactory` is an optional dependency of `forage-catalog/pom.xml`
+- [ ] Each `@ForageBean` shares a component with a `@ForageFactory`, or is listed in `<excludedBeans>` with a reason
+- [ ] `mvn -pl forage-catalog -am package` passes (catalog plugin checks and `CatalogCompletenessTest`)
 
 ---
 

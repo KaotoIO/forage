@@ -557,6 +557,36 @@
             <version>${project.version}</version>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-security-policy-starter</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-quarkus-security-policy-deployment</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.camel.quarkus</groupId>
+                    <artifactId>camel-quarkus-core-deployment</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-quarkus-security-tls-deployment</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.camel.quarkus</groupId>
+                    <artifactId>camel-quarkus-core-deployment</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
 
         <!-- Route Policy Modules -->
         <dependency>
@@ -590,6 +620,23 @@
             <version>${assertj-core.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Validate the generated propertiesSchema and bean references -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${json-schema-validator.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-catalog</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -602,6 +649,67 @@
                 <configuration>
                     <outputDirectory>${project.build.directory}/generated-catalog</outputDirectory>
                     <format>all</format>
+                    <!--
+                        Every @ForageBean must be listed under a @ForageFactory that shares one of its
+                        components, otherwise the build fails: a bean missing from the catalog is
+                        invisible to Kaoto and camel forage run/export never resolves its dependency.
+                        Only beans deliberately kept out of the catalog go here, each with a reason.
+                        An entry whose bean is now listed under a factory fails the build: remove it.
+                        CatalogCompletenessTest reads this list too.
+                    -->
+                    <excludedBeans>
+                        <!-- Vector databases: the standalone EmbeddingStore factory is tracked by #538 -->
+                        <excludedBean>
+                            <className>io.kaoto.forage.vectordb.chroma.ChromaProvider</className>
+                            <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
+                        </excludedBean>
+                        <excludedBean>
+                            <className>io.kaoto.forage.vectordb.infinispan.InfinispanProvider</className>
+                            <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
+                        </excludedBean>
+                        <excludedBean>
+                            <className>io.kaoto.forage.vectordb.mariadb.MariaDbProvider</className>
+                            <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
+                        </excludedBean>
+                        <excludedBean>
+                            <className>io.kaoto.forage.vectordb.milvus.MilvusProvider</className>
+                            <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
+                        </excludedBean>
+                        <excludedBean>
+                            <className>io.kaoto.forage.vectordb.neo4j.Neo4jProvider</className>
+                            <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
+                        </excludedBean>
+                        <excludedBean>
+                            <className>io.kaoto.forage.vectordb.pgvector.PgVectorProvider</className>
+                            <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
+                        </excludedBean>
+                        <excludedBean>
+                            <className>io.kaoto.forage.vectordb.pinecone.PineconeProvider</className>
+                            <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
+                        </excludedBean>
+                        <excludedBean>
+                            <className>io.kaoto.forage.vectordb.qdrant.QdrantProvider</className>
+                            <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
+                        </excludedBean>
+                        <excludedBean>
+                            <className>io.kaoto.forage.vectordb.redis.RedisProvider</className>
+                            <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
+                        </excludedBean>
+                        <excludedBean>
+                            <className>io.kaoto.forage.vectordb.weaviate.WeaviateProvider</className>
+                            <reason>Pending #538: no factory declares camel-langchain4j-embeddings yet</reason>
+                        </excludedBean>
+
+                        <!-- Providers that are only usable programmatically, not from the Kaoto wizard -->
+                        <excludedBean>
+                            <className>io.kaoto.forage.cloud.eventhubs.AzureEventHubsProvider</className>
+                            <reason>Not wizard-ready, no factory on any runtime: the provider only authenticates with DefaultAzureCredential (no connection string, so it cannot be tested against the Event Hubs emulator) and applies consumer-only options to a producer client, while camel-azure-eventhubs already builds that client from its endpoint options</reason>
+                        </excludedBean>
+                        <excludedBean>
+                            <className>io.kaoto.forage.vertx.DefaultVertxProvider</className>
+                            <reason>Not a wizard bean: camel-vertx creates its own Vert.x instance and Camel Quarkus injects the Quarkus-managed one, so registering another Vertx would start a second event loop; its config entries have no label, description or type</reason>
+                        </excludedBean>
+                    </excludedBeans>
                 </configuration>
                 <executions>
                     <execution>
@@ -656,6 +764,7 @@
                         <enabled>
                             <option>DEFINITIONS_FOR_ALL_OBJECTS</option>
                             <option>EXTRA_OPEN_API_FORMAT_VALUES</option>
+                            <option>MAP_VALUES_AS_ADDITIONAL_PROPERTIES</option>
                         </enabled>
                     </options>
                     <modules>

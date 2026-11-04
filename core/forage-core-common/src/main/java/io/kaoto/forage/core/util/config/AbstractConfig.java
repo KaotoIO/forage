@@ -3,6 +3,7 @@ package io.kaoto.forage.core.util.config;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +14,7 @@ public abstract class AbstractConfig implements Config {
 
     private final String prefix;
     private final Class<? extends ConfigEntries> entriesClass;
+    private final Map<String, ResolvedValue> resolvedValues = new ConcurrentHashMap<>();
 
     protected AbstractConfig(String prefix, Class<? extends ConfigEntries> entriesClass) {
         this.prefix = prefix;
@@ -101,9 +103,46 @@ public abstract class AbstractConfig implements Config {
         return previous[b.length()];
     }
 
+    /**
+     * Returns the value of the module for this config's prefix, with its placeholders resolved
+     * (see {@link #resolvePlaceholders(String, String)}).
+     *
+     * @throws UnresolvedPlaceholderException if a placeholder in the value cannot be resolved
+     */
     protected Optional<String> get(ConfigModule module) {
-        return ConfigStore.getInstance().get(module.asNamed(prefix));
+        ConfigModule named = module.asNamed(prefix);
+        return ConfigStore.getInstance().get(named).map(value -> resolvePlaceholders(named.propertyName(), value));
     }
+
+    /**
+     * Resolves the placeholders of a value about to be used: this is the single point where Forage applies
+     * placeholder functions other than {@code env}/{@code sys} (e.g. {@code {{secret:name/key}}}), through
+     * the {@link PlaceholderFunctionResolver} the runtime installed. Results are cached per config instance,
+     * so a secret store is queried once per property and bean.
+     *
+     * @param propertyName the property name, used in error messages instead of the value
+     * @param value the stored value
+     * @return the value with its placeholders resolved
+     * @throws UnresolvedPlaceholderException if a placeholder cannot be resolved
+     */
+    protected String resolvePlaceholders(String propertyName, String value) {
+        if (value == null || !value.contains("{{")) {
+            return value;
+        }
+        PlaceholderFunctionResolver resolver = PlaceholderResolver.currentFunctionResolver();
+        if (resolver == null) {
+            return PlaceholderResolver.resolveFunctions(propertyName, value);
+        }
+        ResolvedValue cached = resolvedValues.get(propertyName);
+        if (cached != null && cached.resolver() == resolver && cached.raw().equals(value)) {
+            return cached.resolved();
+        }
+        String resolved = PlaceholderResolver.resolveFunctions(propertyName, value);
+        resolvedValues.put(propertyName, new ResolvedValue(resolver, value, resolved));
+        return resolved;
+    }
+
+    private record ResolvedValue(PlaceholderFunctionResolver resolver, String raw, String resolved) {}
 
     protected String getRequired(ConfigModule module, String errorMessage) {
         return get(module).orElseThrow(() -> new MissingConfigException(errorMessage));

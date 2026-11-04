@@ -38,13 +38,24 @@ import io.kaoto.forage.core.security.SecurityPolicyProvider;
         defaultBeanName = "shiroPolicy",
         components = {"camel-shiro"},
         feature = "Security Policy",
-        description = "Apache Shiro security authorization policy")
+        description = "Apache Shiro security authorization policy",
+        runtimeDependencies = {"quarkus:mvn:org.apache.camel.quarkus:camel-quarkus-shiro"})
 public class ShiroSecurityPolicyProvider implements SecurityPolicyProvider {
     private static final Logger LOG = LoggerFactory.getLogger(ShiroSecurityPolicyProvider.class);
 
     @Override
     public String name() {
         return "shiro";
+    }
+
+    @Override
+    public String beanName() {
+        return ShiroSecurityPolicyModuleDescriptor.DEFAULT_BEAN_NAME;
+    }
+
+    @Override
+    public ShiroSecurityPolicyModuleDescriptor descriptor() {
+        return new ShiroSecurityPolicyModuleDescriptor();
     }
 
     @Override

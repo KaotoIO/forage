@@ -82,4 +82,14 @@ forage.tls.cipher.suites=TLS_AES_256_GCM_SHA384, TLS_AES_128_GCM_SHA256
 
 ## Runtime Support
 
-`SSLContextParameters` is a core Camel class (`org.apache.camel.support.jsse`) — it works identically on plain Camel, Spring Boot, and Quarkus with no runtime-specific adapters needed.
+The beans are the same on every runtime: `sslContextParameters` for the default profile, or one bean per named profile. `camel forage run` and `camel forage export` add the right artifact for the chosen runtime.
+
+| Runtime | Artifact | How the beans are created |
+|---|---|---|
+| Plain Camel / JBang | `forage-security-tls` | When the CamelContext is built |
+| Spring Boot | `forage-security-tls` | When the CamelContext is built: Camel Spring Boot loads the same factory as plain Camel |
+| Quarkus | `forage-quarkus-security-tls` | At runtime initialization, by the Forage Quarkus extension |
+
+On Spring Boot, set the properties in `forage-security-tls.properties`, `application.properties`, environment variables or system properties. `application.yaml` and profile-specific files are only read when the application also uses a Forage Spring Boot starter.
+
+On Quarkus, the build decides which profiles exist, so declare them in the application configuration; their values are read again when the application starts, so environment variables set at runtime (for example `FORAGE_TLS_KEYSTORE_PASSWORD`) apply, also in native mode. Native images automatically include the keystores and truststores loaded from the classpath, and `forage-security-tls.properties`.

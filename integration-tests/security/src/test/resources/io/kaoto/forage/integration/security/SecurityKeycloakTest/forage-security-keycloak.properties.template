@@ -1,0 +1,5 @@
+forage.keycloak.server.url=http://localhost:8080
+forage.keycloak.realm=forage
+forage.keycloak.client.id=forage-camel
+forage.keycloak.client.secret=camel-secret
+forage.keycloak.required.roles=admin

@@ -35,7 +35,10 @@ public enum FactoryType {
     SSL_CONTEXT_PARAMETERS("org.apache.camel.support.jsse.SSLContextParameters", "forage-security-tls"),
 
     /** Factory that creates Camel authorization policy beans */
-    SECURITY_POLICY("org.apache.camel.spi.AuthorizationPolicy", "forage-core-security");
+    SECURITY_POLICY("org.apache.camel.spi.AuthorizationPolicy", "forage-core-security"),
+
+    /** Factory that applies route policies (for example flip or schedule) to the configured routes */
+    ROUTE_POLICY("org.apache.camel.spi.RoutePolicyFactory", "forage-policy-factory");
 
     private final String displayName;
 

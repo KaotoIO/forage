@@ -9,6 +9,7 @@ import org.citrusframework.actions.camel.CamelIntegrationRunCustomizedActionBuil
 import org.citrusframework.context.TestContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.kaoto.forage.core.common.RuntimeType;
 import io.kaoto.forage.plugin.ExportHelper;
 
 /**
@@ -48,6 +49,11 @@ public class ForageTestCaseRunner extends DefaultTestCaseRunner {
                 System.getenv(IntegrationTestSetupExtension.RUNTIME_PROPERTY));
         if (runtime != null) {
             builder.withArg("--runtime=" + runtime);
+            if (RuntimeType.fromValue(runtime) != RuntimeType.main) {
+                // Camel JBang defaults the exported project to Java 21, which fails to compile
+                // on older JDKs; target the running JDK instead, capped at that default.
+                builder.withArg("--java-version=" + Math.min(Runtime.version().feature(), 21));
+            }
         }
         logTextInBox(runtime);
     }

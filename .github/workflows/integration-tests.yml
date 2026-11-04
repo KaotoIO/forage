@@ -51,7 +51,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [ jdbc, jms, messaging, cxf, influxdb ]
+        module: [ jdbc, jms, messaging, cxf, influxdb, security ]
         runtime: [ main, quarkus, spring-boot ]
     env:
       INTEGRATION_TEST_RUNTIME: ${{ matrix.runtime }}

@@ -7,6 +7,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.CamelContextAware;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.kaoto.forage.core.annotations.BeanReference;
 import io.kaoto.forage.core.annotations.FactoryType;
 import io.kaoto.forage.core.annotations.ForageFactory;
 import io.kaoto.forage.core.common.BeanFactory;
@@ -24,7 +25,9 @@ import io.kaoto.forage.cxf.common.CxfConfig;
         type = FactoryType.CXF_ENDPOINT,
         defaultBeanName = "cxfEndpoint",
         autowired = true,
-        configClass = CxfConfig.class)
+        configClass = CxfConfig.class,
+        beanReferences =
+                @BeanReference(name = "cxf", option = "beanId", optionKind = "path", valueTemplate = "bean:{beanRef}"))
 public class CxfBeanFactory implements BeanFactory {
     private final Logger LOG = LoggerFactory.getLogger(CxfBeanFactory.class);
 

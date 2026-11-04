@@ -3,6 +3,7 @@ package io.kaoto.forage.influxdb2;
 import org.apache.camel.Endpoint;
 import org.apache.camel.component.influxdb2.InfluxDb2Component;
 import org.apache.camel.component.influxdb2.InfluxDb2Endpoint;
+import io.kaoto.forage.core.annotations.BeanReference;
 import io.kaoto.forage.core.annotations.FactoryType;
 import io.kaoto.forage.core.annotations.ForageFactory;
 import io.kaoto.forage.core.common.AbstractClientBeanFactory;
@@ -15,7 +16,8 @@ import com.influxdb.client.InfluxDBClient;
         type = FactoryType.INFLUXDB2_CLIENT,
         defaultBeanName = "influxdb2",
         autowired = true,
-        configClass = InfluxDB2Config.class)
+        configClass = InfluxDB2Config.class,
+        beanReferences = @BeanReference(name = "influxdb2", option = "connectionBean", optionKind = "path"))
 public class InfluxDB2BeanFactory extends AbstractClientBeanFactory<InfluxDBClient> {
     public InfluxDB2BeanFactory() {
         super(new InfluxDB2ModuleDescriptor());

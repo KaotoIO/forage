@@ -22,6 +22,7 @@ import io.kaoto.forage.core.common.BeanFactory;
                 "Applies route policies, such as flip or schedule, to the routes configured in forage.route.policy properties",
         type = FactoryType.ROUTE_POLICY,
         autowired = true,
+        namedInstances = false,
         configClass = RoutePolicyFactoryConfig.class)
 public class DefaultCamelForageRoutePolicyFactoryBean implements BeanFactory {
     private static final Logger LOG = LoggerFactory.getLogger(DefaultCamelForageRoutePolicyFactoryBean.class);

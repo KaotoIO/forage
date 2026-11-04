@@ -405,7 +405,7 @@ public class YourProvider implements ProviderInterface {
 
 **Annotation Parameters:**
 - `value`: Unique identifier for the bean (e.g., "milvus", "azure-openai", "message-window")
-- `components`: Supported Camel components (String array)
+- `components`: Supported Camel components (String array). The catalog lists the bean under every `@ForageFactory` that declares one of these components; the catalog build fails if no factory does, unless the bean is listed in `<excludedBeans>` in `forage-catalog/pom.xml` with a reason
 - `description`: Human-readable description of what the provider does
 - `feature`: Feature group (e.g., "Chat Model", "Memory") — optional
 - `configClass`: Config class for properties file association — optional

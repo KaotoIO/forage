@@ -26,7 +26,4 @@ forage.jms.transaction.object.store.table.prefix=TABLE_PREFIX_PLACEHOLDER
 # file store, the restarted run could not see it and recovery would fail.
 forage.jms.transaction.object.store.directory=OBJECT_STORE_DIR_PLACEHOLDER
 
-# Consumed by the route: the first run creates this file right before crashing; the restarted run
-# gets a pre-created marker of its own and skips the crash-producer route.
-crash.marker.file=CRASH_MARKER_PLACEHOLDER
 recovery.queue=recovery.jdbc.output

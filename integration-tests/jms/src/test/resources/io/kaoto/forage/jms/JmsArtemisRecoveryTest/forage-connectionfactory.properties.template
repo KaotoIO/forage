@@ -19,7 +19,3 @@ forage.jms.transaction.recovery.period.seconds=5
 forage.jms.transaction.recovery.backoff.seconds=1
 forage.jms.transaction.object.store.directory=OBJECT_STORE_DIR_PLACEHOLDER
 forage.jms.transaction.object.store.type=file-system
-
-# Consumed by the route: the first run creates this file right before crashing, the
-# restarted run sees it and skips the crash-producer route.
-crash.marker.file=CRASH_MARKER_PLACEHOLDER

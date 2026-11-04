@@ -6,6 +6,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.spi.AuthorizationPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.kaoto.forage.core.annotations.BeanReference;
 import io.kaoto.forage.core.annotations.FactoryType;
 import io.kaoto.forage.core.annotations.ForageFactory;
 import io.kaoto.forage.core.common.BeanFactory;
@@ -22,7 +23,10 @@ import io.kaoto.forage.core.common.BeanFactory;
         components = {"camel-keycloak", "camel-shiro", "camel-spring-security"},
         description = "Creates Camel authorization policies for configured security providers",
         type = FactoryType.SECURITY_POLICY,
-        autowired = true)
+        autowired = true,
+        namedInstances = false,
+        beanReferences =
+                @BeanReference(catalogKind = "processor", name = "policy", option = "ref", optionKind = "attribute"))
 public class SecurityPolicyBeanFactory implements BeanFactory {
     private static final Logger LOG = LoggerFactory.getLogger(SecurityPolicyBeanFactory.class);
 

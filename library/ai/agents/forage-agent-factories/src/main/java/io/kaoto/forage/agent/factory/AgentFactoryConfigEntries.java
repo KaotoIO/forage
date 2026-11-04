@@ -1,5 +1,6 @@
 package io.kaoto.forage.agent.factory;
 
+import io.kaoto.forage.core.annotations.InternalConfig;
 import io.kaoto.forage.core.util.config.ConfigEntries;
 import io.kaoto.forage.core.util.config.ConfigModule;
 import io.kaoto.forage.core.util.config.ConfigTag;
@@ -16,6 +17,8 @@ import io.kaoto.forage.core.util.config.ConfigTag;
  */
 public final class AgentFactoryConfigEntries extends ConfigEntries {
     public static final String FEATURE_MEMORY = "memory";
+
+    @InternalConfig
     public static final ConfigModule PROVIDER_MODEL_FACTORY_CLASS = ConfigModule.of(
             AgentFactoryConfig.class,
             "forage.provider.model.factory.class",
@@ -25,6 +28,8 @@ public final class AgentFactoryConfigEntries extends ConfigEntries {
             ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
+
+    @InternalConfig
     public static final ConfigModule PROVIDER_FEATURES = ConfigModule.of(
             AgentFactoryConfig.class,
             "forage.provider.features",
@@ -34,6 +39,8 @@ public final class AgentFactoryConfigEntries extends ConfigEntries {
             ConfigModule.TYPE_STRING,
             false,
             ConfigTag.COMMON);
+
+    @InternalConfig
     public static final ConfigModule PROVIDER_FEATURES_MEMORY_FACTORY_CLASS = ConfigModule.of(
             AgentFactoryConfig.class,
             "forage.provider.features.memory.factory.class",
@@ -43,6 +50,8 @@ public final class AgentFactoryConfigEntries extends ConfigEntries {
             ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
+
+    @InternalConfig
     public static final ConfigModule PROVIDER_AGENT_CLASS = ConfigModule.of(
             AgentFactoryConfig.class,
             "forage.provider.agent.class",
@@ -52,6 +61,7 @@ public final class AgentFactoryConfigEntries extends ConfigEntries {
             ConfigModule.TYPE_STRING,
             false,
             ConfigTag.ADVANCED);
+
     public static final ConfigModule GUARDRAILS_INPUT = ConfigModule.of(
             AgentFactoryConfig.class,
             "forage.guardrails.input",

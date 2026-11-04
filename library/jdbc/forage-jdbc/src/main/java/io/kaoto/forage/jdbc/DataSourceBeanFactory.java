@@ -8,6 +8,7 @@ import java.util.Set;
 import org.apache.camel.CamelContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.kaoto.forage.core.annotations.BeanReference;
 import io.kaoto.forage.core.annotations.ConditionalBean;
 import io.kaoto.forage.core.annotations.ConditionalBeanGroup;
 import io.kaoto.forage.core.annotations.FactoryType;
@@ -41,6 +42,10 @@ import io.kaoto.forage.jdbc.common.idempotent.ForageJdbcMessageIdRepository;
         defaultBeanName = "dataSource",
         autowired = true,
         configClass = DataSourceFactoryConfig.class,
+        beanReferences = {
+            @BeanReference(name = "jdbc", option = "dataSourceName", optionKind = "path"),
+            @BeanReference(name = "spring-jdbc", option = "dataSourceName", optionKind = "path")
+        },
         conditionalBeans = {
             @ConditionalBeanGroup(
                     id = "jta-transaction-policies",

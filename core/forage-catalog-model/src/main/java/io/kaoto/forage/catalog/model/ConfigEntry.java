@@ -37,6 +37,13 @@ public class ConfigEntry {
     private String selectsFrom;
 
     /**
+     * Internal entry ({@code @InternalConfig}) that UIs should not render; only written when true.
+     */
+    @JsonProperty("hidden")
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    private boolean hidden;
+
+    /**
      * Whether the value may list several entries, comma-separated (e.g., several beans for a bean-name
      * entry). Only written to the catalog when true.
      */
@@ -123,6 +130,14 @@ public class ConfigEntry {
 
     public void setSelectsFrom(String selectsFrom) {
         this.selectsFrom = selectsFrom;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
     }
 
     public boolean isMultiValue() {

@@ -39,6 +39,9 @@ public class ForageBean {
     @JsonProperty("repositories")
     private List<String> repositories;
 
+    @JsonProperty("propertiesSchema")
+    private PropertiesSchema propertiesSchema;
+
     @JsonProperty("enabledBy")
     private List<String> enabledBy;
 
@@ -121,6 +124,17 @@ public class ForageBean {
 
     public void setRepositories(List<String> repositories) {
         this.repositories = repositories;
+    }
+
+    /**
+     * JSON Schema of the properties specific to this bean.
+     */
+    public PropertiesSchema getPropertiesSchema() {
+        return propertiesSchema;
+    }
+
+    public void setPropertiesSchema(PropertiesSchema propertiesSchema) {
+        this.propertiesSchema = propertiesSchema;
     }
 
     /**

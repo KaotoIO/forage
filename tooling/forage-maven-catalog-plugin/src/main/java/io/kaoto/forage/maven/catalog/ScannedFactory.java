@@ -1,6 +1,7 @@
 package io.kaoto.forage.maven.catalog;
 
 import java.util.List;
+import io.kaoto.forage.catalog.model.BeanReference;
 import io.kaoto.forage.catalog.model.ConditionalBeanGroup;
 import io.kaoto.forage.catalog.model.ForageFactory;
 
@@ -17,6 +18,8 @@ public class ScannedFactory {
     private String variant;
     private String configClassName;
     private List<String> runtimeDependencies;
+    private boolean namedInstances = true;
+    private List<BeanReference> beanReferences = List.of();
 
     public ScannedFactory() {
         this.factory = new ForageFactory();
@@ -141,6 +144,25 @@ public class ScannedFactory {
 
     public void setRuntimeDependencies(List<String> runtimeDependencies) {
         this.runtimeDependencies = runtimeDependencies;
+    }
+
+    public boolean isNamedInstances() {
+        return namedInstances;
+    }
+
+    public void setNamedInstances(boolean namedInstances) {
+        this.namedInstances = namedInstances;
+    }
+
+    /**
+     * Bean references declared with {@code @ForageFactory(beanReferences = ...)}.
+     */
+    public List<BeanReference> getBeanReferences() {
+        return beanReferences;
+    }
+
+    public void setBeanReferences(List<BeanReference> beanReferences) {
+        this.beanReferences = beanReferences;
     }
 
     @Override

@@ -26,7 +26,10 @@ public enum FactoryType {
             "org.springframework.amqp.rabbit.connection.ConnectionFactory", "forage-spring-rabbitmq"),
 
     /** Factory that creates SSLContextParameters beans for TLS */
-    SSL_CONTEXT_PARAMETERS("org.apache.camel.support.jsse.SSLContextParameters", "forage-security-tls");
+    SSL_CONTEXT_PARAMETERS("org.apache.camel.support.jsse.SSLContextParameters", "forage-security-tls"),
+
+    /** Factory that applies route policies (for example flip or schedule) to the configured routes */
+    ROUTE_POLICY("org.apache.camel.spi.RoutePolicyFactory", "forage-policy-factory");
 
     private final String displayName;
 

@@ -18,7 +18,8 @@ import dev.langchain4j.web.search.WebSearchEngine;
         description = "Creates web search engine beans for LangChain4j integration",
         type = FactoryType.WEB_SEARCH_ENGINE,
         defaultBeanName = "web-search-engine",
-        autowired = true)
+        autowired = true,
+        namedInstances = false)
 public class WebSearchBeanFactory implements BeanFactory {
     private static final Logger LOG = LoggerFactory.getLogger(WebSearchBeanFactory.class);
     static final String DEFAULT_BEAN_NAME = "web-search-engine";

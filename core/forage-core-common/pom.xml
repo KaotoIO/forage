@@ -50,6 +50,23 @@
             <version>${assertj-core.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- Camel Main bootstrap, to test placeholder resolution in the plain Camel lifecycle -->
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-main</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Captures log events to check that resolved secrets are never logged -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

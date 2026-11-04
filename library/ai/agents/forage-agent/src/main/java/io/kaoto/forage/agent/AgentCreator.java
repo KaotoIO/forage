@@ -516,7 +516,8 @@ public final class AgentCreator {
                     : "forage." + providerPrefix + "." + key;
             previousValues.put(fullKey, System.getProperty(fullKey));
             System.setProperty(fullKey, String.valueOf(value));
-            LOG.trace("Set system property: {}={}", fullKey, value);
+            // Never log the value: it may be an API key resolved from a secret store
+            LOG.trace("Set system property: {}", fullKey);
         }
     }
 

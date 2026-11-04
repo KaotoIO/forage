@@ -39,6 +39,23 @@ class ForagePropertyScannerTest {
     }
 
     @Test
+    void routePolicyPropertiesGroupedUnderRoutePolicyFactory() throws Exception {
+        writeFile(
+                "forage-policy.properties",
+                "forage.route.policy.enabled=true\n"
+                        + "forage.route.policy.route-a.name=flip\n"
+                        + "forage.route.policy.route-a.flip.paired-route=route-b\n");
+
+        Map<String, Map<String, List<String>>> result = ForagePropertyScanner.scanProperties(tempDir, catalog);
+
+        assertThat(result).containsOnlyKeys("route");
+        assertThat(result.get("route"))
+                .containsEntry("policy.enabled", List.of("true"))
+                .containsEntry("policy.route-a.name", List.of("flip"))
+                .containsEntry("policy.route-a.flip.paired-route", List.of("route-b"));
+    }
+
+    @Test
     void profilePropertiesDiscoveredViaSysProp() throws Exception {
         writeFile("application-dev.properties", "forage.jdbc.db.kind=postgresql\n");
         System.setProperty("camel.main.profile", "dev");

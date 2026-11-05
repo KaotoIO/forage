@@ -53,7 +53,7 @@ class ConfigWriteCommandTest {
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "input", jsonInput);
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode = command.doCall();
 
@@ -112,7 +112,7 @@ class ConfigWriteCommandTest {
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "input", jsonInput);
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode = command.doCall();
 
@@ -163,7 +163,7 @@ class ConfigWriteCommandTest {
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "input", jsonInput);
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode = command.doCall();
 
@@ -210,7 +210,7 @@ class ConfigWriteCommandTest {
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "input", jsonInput);
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode = command.doCall();
 
@@ -264,7 +264,7 @@ class ConfigWriteCommandTest {
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "input", jsonInput);
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode = command.doCall();
 
@@ -330,7 +330,7 @@ class ConfigWriteCommandTest {
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "input", jsonInput);
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode = command.doCall();
         assertThat(exitCode).isEqualTo(0);
@@ -402,7 +402,7 @@ class ConfigWriteCommandTest {
         ConfigWriteCommand geminiCommand = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(geminiCommand, "input", geminiInput);
         setField(geminiCommand, "directory", tempDir);
-        setField(geminiCommand, "strategy", "application");
+        setStrategy(geminiCommand, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode1 = geminiCommand.doCall();
         assertThat(exitCode1).isEqualTo(0);
@@ -451,7 +451,7 @@ class ConfigWriteCommandTest {
         ConfigWriteCommand jmsCommand = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(jmsCommand, "input", jmsInput);
         setField(jmsCommand, "directory", tempDir);
-        setField(jmsCommand, "strategy", "application");
+        setStrategy(jmsCommand, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode2 = jmsCommand.doCall();
         assertThat(exitCode2).isEqualTo(0);
@@ -507,7 +507,7 @@ class ConfigWriteCommandTest {
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "input", "");
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode = command.doCall();
 
@@ -525,7 +525,7 @@ class ConfigWriteCommandTest {
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "input", "{}");
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode = command.doCall();
 
@@ -540,6 +540,12 @@ class ConfigWriteCommandTest {
     /**
      * Helper method to set private fields on the command object using reflection.
      */
+    private static void setStrategy(Object command, PropertiesFileStrategyType type) throws Exception {
+        Field field = command.getClass().getDeclaredField("strategyOption");
+        field.setAccessible(true);
+        ((PropertiesFileStrategyOption) field.get(command)).type = type;
+    }
+
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);

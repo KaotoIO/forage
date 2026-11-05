@@ -66,7 +66,7 @@ class ConfigReadCommandTest {
         // Create and execute the command - following Camel JBang test pattern
         ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode = command.doCall();
 
@@ -249,7 +249,7 @@ class ConfigReadCommandTest {
         // Create and execute the command with filter
         ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "filter", "jdbc");
 
         int exitCode = command.doCall();
@@ -332,7 +332,7 @@ class ConfigReadCommandTest {
 
         ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         assertThat(command.doCall()).isEqualTo(0);
 
@@ -375,7 +375,7 @@ class ConfigReadCommandTest {
 
         ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         assertThat(command.doCall()).isEqualTo(0);
 
@@ -430,7 +430,7 @@ class ConfigReadCommandTest {
 
         ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         assertThat(command.doCall()).isEqualTo(0);
 
@@ -455,7 +455,7 @@ class ConfigReadCommandTest {
         // Create an empty temp directory (no properties files)
         ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode = command.doCall();
 
@@ -472,6 +472,12 @@ class ConfigReadCommandTest {
     /**
      * Helper method to set private fields on the command object using reflection.
      */
+    private static void setStrategy(Object command, PropertiesFileStrategyType type) throws Exception {
+        Field field = command.getClass().getDeclaredField("strategyOption");
+        field.setAccessible(true);
+        ((PropertiesFileStrategyOption) field.get(command)).type = type;
+    }
+
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);

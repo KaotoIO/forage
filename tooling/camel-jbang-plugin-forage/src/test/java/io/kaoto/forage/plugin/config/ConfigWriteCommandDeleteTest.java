@@ -58,7 +58,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "myPG");
 
@@ -124,7 +124,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command for PostgreSQL only
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "myPG");
 
@@ -194,7 +194,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "myOllama");
 
@@ -270,7 +270,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command for PostgreSQL
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "myPG");
 
@@ -328,7 +328,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "myPG");
 
@@ -363,7 +363,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command for non-existent instance
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "nonExistent");
 
@@ -393,7 +393,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command without instance name
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         // Not setting instanceName
 
@@ -415,7 +415,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "myPG");
 
@@ -433,6 +433,12 @@ class ConfigWriteCommandDeleteTest {
     /**
      * Helper method to set private fields on the command object using reflection.
      */
+    private static void setStrategy(Object command, PropertiesFileStrategyType type) throws Exception {
+        Field field = command.getClass().getDeclaredField("strategyOption");
+        field.setAccessible(true);
+        ((PropertiesFileStrategyOption) field.get(command)).type = type;
+    }
+
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);

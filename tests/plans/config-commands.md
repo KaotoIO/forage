@@ -1257,7 +1257,107 @@ rm -rf "${PROJECT_DIR}"
 
 ---
 
-## Phase 11: Cleanup
+## Phase 11: Forage Strategy (`--strategy forage`)
+
+The `forage` strategy writes each factory to its own catalog-defined file (for JDBC,
+`forage-datasource-factory.properties`, named after the module's `Config.name()`), keeps
+dependencies in `application.properties`, and reads/deletes from the catalog file names plus any
+`forage-*.properties` file in the top level of the directory.
+
+### Test 11.1: Write uses the catalog file, read and delete use the same files
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+fail() { echo "FAIL: $1"; [ -n "$2" ] && echo "$2"; rm -rf "${PROJECT_DIR}"; exit 1; }
+
+FORAGE_FILE="${PROJECT_DIR}/forage-datasource-factory.properties"
+
+JSON_INPUT='{"forage.jdbc.db.kind":"postgresql","forage.jdbc.url":"jdbc:postgresql://localhost:5432/","kind":"postgresql","forage.bean.name":"foragePG"}'
+OUTPUT=$(camel forage config write --input "${JSON_INPUT}" --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "config write --strategy forage failed" "${OUTPUT}"
+
+grep -q '^forage.foragePG.jdbc.db.kind=postgresql' "${FORAGE_FILE}" 2>/dev/null \
+  || fail "forage-datasource-factory.properties not written" "${OUTPUT}"
+echo "PASS: forage strategy wrote forage-datasource-factory.properties"
+
+grep -q '^camel.jbang.dependencies=.*forage-jdbc-postgresql' "${PROJECT_DIR}/application.properties" \
+  || fail "dependencies missing from application.properties"
+echo "PASS: dependencies written to application.properties"
+
+# A file matched only by the forage-*.properties wildcard
+echo 'forage.customPG.jdbc.db.kind=postgresql' > "${PROJECT_DIR}/forage-custom.properties"
+
+OUTPUT=$(camel forage config read --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "config read --strategy forage failed" "${OUTPUT}"
+NAMES=$(echo "${OUTPUT}" | jq -r '[.beans[].name] | sort | join(",")')
+[ "${NAMES}" = "customPG,foragePG" ] || fail "expected 'customPG,foragePG', got '${NAMES}'" "${OUTPUT}"
+echo "PASS: read lists beans from catalog and wildcard files"
+
+OUTPUT=$(camel forage config write --delete --name customPG --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "config write --delete customPG failed" "${OUTPUT}"
+[ "$(echo "${OUTPUT}" | jq -r '.success')" = "true" ] || fail "delete did not return success" "${OUTPUT}"
+! grep -q 'customPG' "${PROJECT_DIR}/forage-custom.properties" || fail "customPG still present after delete"
+echo "PASS: delete removes an instance that read listed from a wildcard file"
+
+rm -rf "${PROJECT_DIR}"
+```
+
+### Test 11.2: Delete keeps dependencies needed by the other file family
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+fail() { echo "FAIL: $1"; [ -n "$2" ] && echo "$2"; rm -rf "${PROJECT_DIR}"; exit 1; }
+
+FORAGE_FILE="${PROJECT_DIR}/forage-datasource-factory.properties"
+
+APP_JSON='{"forage.jdbc.db.kind":"postgresql","forage.jdbc.url":"jdbc:postgresql://localhost:5432/","kind":"postgresql","forage.bean.name":"appPG"}'
+FORAGE_JSON='{"forage.jdbc.db.kind":"postgresql","forage.jdbc.url":"jdbc:postgresql://localhost:5432/","kind":"postgresql","forage.bean.name":"foragePG"}'
+
+OUTPUT=$(camel forage config write --input "${APP_JSON}" --dir "${PROJECT_DIR}" --strategy application 2>&1) \
+  || fail "config write --strategy application failed" "${OUTPUT}"
+OUTPUT=$(camel forage config write --input "${FORAGE_JSON}" --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "config write --strategy forage failed" "${OUTPUT}"
+grep -q '^forage.foragePG.jdbc.db.kind=postgresql' "${FORAGE_FILE}" 2>/dev/null \
+  || fail "foragePG not written to forage-datasource-factory.properties"
+
+OUTPUT=$(camel forage config write --delete --name foragePG --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "config write --delete foragePG failed" "${OUTPUT}"
+[ "$(echo "${OUTPUT}" | jq -r '.success')" = "true" ] || fail "delete did not return success" "${OUTPUT}"
+! grep -q 'foragePG' "${FORAGE_FILE}" || fail "foragePG still present after delete"
+echo "PASS: foragePG removed from forage-datasource-factory.properties"
+
+# appPG (in application.properties) still needs the PostgreSQL dependency
+grep -q '^forage.appPG.jdbc.db.kind=postgresql' "${PROJECT_DIR}/application.properties" \
+  || fail "appPG was removed by deleting foragePG"
+grep -q '^camel.jbang.dependencies=.*forage-jdbc-postgresql' "${PROJECT_DIR}/application.properties" \
+  || fail "dependency removed although appPG still needs it"
+echo "PASS: dependency kept for appPG defined in application.properties"
+
+rm -rf "${PROJECT_DIR}"
+```
+
+### Test 11.3: Unknown strategy is rejected
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+fail() { echo "FAIL: $1"; [ -n "$2" ] && echo "$2"; rm -rf "${PROJECT_DIR}"; exit 1; }
+
+OUTPUT=$(camel forage config read --dir "${PROJECT_DIR}" --strategy app 2>&1) \
+  && fail "unknown strategy 'app' was accepted" "${OUTPUT}"
+echo "${OUTPUT}" | grep -qi "strategy" || fail "error does not mention the strategy option" "${OUTPUT}"
+echo "PASS: unknown strategy 'app' rejected"
+
+OUTPUT=$(camel forage config read --dir "${PROJECT_DIR}" --strategy FORAGE 2>&1) \
+  || fail "--strategy FORAGE rejected" "${OUTPUT}"
+[ "$(echo "${OUTPUT}" | jq -r '.success')" = "true" ] || fail "--strategy FORAGE did not return success" "${OUTPUT}"
+echo "PASS: strategy value is case-insensitive"
+
+rm -rf "${PROJECT_DIR}"
+```
+
+---
+
+## Phase 12: Cleanup
 
 No persistent state is created. All tests use `mktemp -d` and clean up via `rm -rf "${PROJECT_DIR}"`.
 
@@ -1282,4 +1382,5 @@ echo "PASS: all temporary directories cleaned up by individual tests"
 | 8 | 8.1-8.6 | Delete instance, preserves others, error cases | Critical |
 | 9 | 9.1-9.3 | Delete dependency cleanup | High |
 | 10 | 10.1-10.2 | Round-trip write-read, write-delete-read | Critical |
-| 11 | 11 | Cleanup | Low |
+| 11 | 11.1-11.3 | Forage strategy write/read/delete, cross-family dependencies, invalid values | High |
+| 12 | 12 | Cleanup | Low |

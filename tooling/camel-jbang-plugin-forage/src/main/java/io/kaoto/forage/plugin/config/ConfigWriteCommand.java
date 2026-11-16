@@ -7,16 +7,17 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
+import io.kaoto.forage.catalog.model.ForageBean;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
-import io.kaoto.forage.plugin.ForageDependencyResolver;
-import io.kaoto.forage.plugin.ForageDependencyResolver.Dependencies;
 import io.kaoto.forage.plugin.ForagePropertyParser;
 import io.kaoto.forage.plugin.ForagePropertyParser.ParsedProperty;
 import io.kaoto.forage.plugin.ForagePropertyScanner;
@@ -165,33 +166,14 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
             results.put(factoryTypeKey, result);
         }
 
-        // Collect and write dependencies to application.properties
-        Dependencies dependencies = collectDependencies(factoryConfigs);
-        if (!dependencies.isEmpty()) {
-            File appPropertiesFile = new File(directory, ForagePropertyScanner.APPLICATION_PROPERTIES);
-            updateDependencies(appPropertiesFile, dependencies);
-
-            // Add dependency info to results
-            Map<String, Object> depResult = new LinkedHashMap<>();
-            depResult.put("baseDependencies", dependencies.base());
-            depResult.put("mainDependencies", dependencies.main());
-            depResult.put("springBootDependencies", dependencies.springBoot());
-            depResult.put("quarkusDependencies", dependencies.quarkus());
-            results.put("dependencies", depResult);
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put(KEY_SUCCESS, true);
+        output.put("factories", results);
+        Map<String, Object> dependencyCleanup = removeForageDependencies();
+        if (!dependencyCleanup.isEmpty()) {
+            output.put("dependencyCleanup", dependencyCleanup);
         }
-
-        // Output result
-        if (results.size() == 1) {
-            printer()
-                    .println(OBJECT_MAPPER
-                            .writerWithDefaultPrettyPrinter()
-                            .writeValueAsString(results.values().iterator().next()));
-        } else {
-            Map<String, Object> output = new LinkedHashMap<>();
-            output.put(KEY_SUCCESS, true);
-            output.put("factories", results);
-            printer().println(OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(output));
-        }
+        printer().println(OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(output));
 
         return 0;
     }
@@ -373,51 +355,6 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
     }
 
     /**
-     * Collects dependencies from the catalog for all factory configs.
-     * For each factory, collects:
-     * - Bean GAV (e.g., forage-jdbc-postgresql) -> base dependencies
-     * - Factory variant GAVs for each runtime (base, springboot, quarkus)
-     */
-    private Dependencies collectDependencies(Map<String, FactoryConfig> factoryConfigs) {
-        ForageDependencyResolver resolver = new ForageDependencyResolver(catalog);
-        Dependencies dependencies = new Dependencies();
-
-        for (Map.Entry<String, FactoryConfig> entry : factoryConfigs.entrySet()) {
-            FactoryConfig factoryConfig = entry.getValue();
-            // The factory itself, even when only its name property was given
-            resolver.addFactory(dependencies, entry.getKey());
-            // The kind given as metadata (e.g. "kind": "postgresql")
-            resolver.addBean(dependencies, factoryConfig.kind());
-            // Everything the written properties need, using the same rule as the delete cleanup
-            dependencies.addAll(resolver.resolve(factoryConfig.properties()));
-        }
-
-        return dependencies;
-    }
-
-    // Dependency property keys
-    private static final String CAMEL_JBANG_DEPENDENCIES = "camel.jbang.dependencies";
-    private static final String CAMEL_JBANG_DEPENDENCIES_MAIN = "camel.jbang.dependencies.main";
-    private static final String CAMEL_JBANG_DEPENDENCIES_SPRING_BOOT = "camel.jbang.dependencies.spring-boot";
-    private static final String CAMEL_JBANG_DEPENDENCIES_QUARKUS = "camel.jbang.dependencies.quarkus";
-
-    /**
-     * Updates the application.properties file with dependencies.
-     * Merges new forage dependencies with existing ones without removing existing dependencies.
-     */
-    private void updateDependencies(File propertiesFile, Dependencies newDeps) throws IOException {
-        PropertiesDocument document = PropertiesDocument.read(propertiesFile);
-        Map<String, Set<String>> dependencies = readDependencies(document);
-
-        dependencies.get(CAMEL_JBANG_DEPENDENCIES).addAll(newDeps.base());
-        dependencies.get(CAMEL_JBANG_DEPENDENCIES_MAIN).addAll(newDeps.main());
-        dependencies.get(CAMEL_JBANG_DEPENDENCIES_SPRING_BOOT).addAll(newDeps.springBoot());
-        dependencies.get(CAMEL_JBANG_DEPENDENCIES_QUARKUS).addAll(newDeps.quarkus());
-
-        PropertiesDocument.write(propertiesFile, document.withValues(toPropertyValues(dependencies)));
-    }
-
-    /**
      * Reads the GAVs of every {@code camel.jbang.dependencies*} property, whichever separator and line layout they
      * were written with.
      */
@@ -444,6 +381,12 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
         dependencies.forEach((key, gavs) -> values.put(key, gavs.isEmpty() ? null : String.join(",", gavs)));
         return values;
     }
+
+    // Dependency property keys
+    private static final String CAMEL_JBANG_DEPENDENCIES = "camel.jbang.dependencies";
+    private static final String CAMEL_JBANG_DEPENDENCIES_MAIN = "camel.jbang.dependencies.main";
+    private static final String CAMEL_JBANG_DEPENDENCIES_SPRING_BOOT = "camel.jbang.dependencies.spring-boot";
+    private static final String CAMEL_JBANG_DEPENDENCIES_QUARKUS = "camel.jbang.dependencies.quarkus";
 
     private static Map<String, Set<String>> newDependencyMap() {
         Map<String, Set<String>> existingDeps = new LinkedHashMap<>();
@@ -478,46 +421,28 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
         }
 
         ForagePropertyParser parser = new ForagePropertyParser(catalog);
-        ForageDependencyResolver resolver = new ForageDependencyResolver(catalog, parser);
 
-        // Read every file before modifying any: the files to delete from (the ones `config read` lists for this
-        // strategy, plus the files overriding them) and every file whose instances may still need dependencies,
-        // whatever the active profile
-        Set<File> deletionFiles = new LinkedHashSet<>(strategy.findDeletionFiles(directory));
-        Set<File> files = new LinkedHashSet<>(ForagePropertyScanner.findAllConfigurationFiles(directory, catalog));
-        files.addAll(deletionFiles);
+        // Read every file to delete from before modifying any: the ones `config read` lists for this strategy,
+        // plus the files overriding them
         Map<File, PropertiesDocument> documents = new LinkedHashMap<>();
-        for (File file : files) {
+        for (File file : strategy.findDeletionFiles(directory)) {
             documents.put(file, PropertiesDocument.read(file));
         }
 
-        // Each entry is parsed once, to tell whether it belongs to the instance and which dependencies it needs.
-        // Entries are kept per file, since the same key can have another value in another file.
         Map<File, List<PropertiesDocument.Entry>> deletedByFile = new LinkedHashMap<>();
-        Dependencies deletedDependencies = new Dependencies();
-        Dependencies remainingDependencies = new Dependencies();
         for (Map.Entry<File, PropertiesDocument> document : documents.entrySet()) {
             for (PropertiesDocument.Entry entry : document.getValue().entries()) {
-                Optional<ParsedProperty> parsed = parser.parse(entry.key());
-                boolean deleted = deletionFiles.contains(document.getKey())
-                        && belongsToInstance(parser, entry.key(), parsed, instanceName);
-                if (deleted) {
+                if (belongsToInstance(parser, entry.key(), parser.parse(entry.key()), instanceName)) {
                     deletedByFile
                             .computeIfAbsent(document.getKey(), file -> new ArrayList<>())
                             .add(entry);
                 }
-                Dependencies dependencies = deleted ? deletedDependencies : remainingDependencies;
-                parsed.ifPresent(property -> resolver.add(dependencies, property, entry.value()));
             }
         }
 
         if (deletedByFile.isEmpty()) {
             return outputError("No configuration found for instance '" + instanceName + "'");
         }
-
-        // Dependencies the deleted instance needed, minus those still needed by what remains in any file
-        Set<String> gavsToRemove = deletedDependencies.all();
-        gavsToRemove.removeAll(remainingDependencies.all());
 
         Map<String, Object> results = new LinkedHashMap<>();
         for (Map.Entry<File, List<PropertiesDocument.Entry>> entry : deletedByFile.entrySet()) {
@@ -537,12 +462,9 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
                             "Deleted configuration for instance '" + instanceName + "'"));
         }
 
-        File appPropertiesFile = new File(directory, ForagePropertyScanner.APPLICATION_PROPERTIES);
-        if (!gavsToRemove.isEmpty() && appPropertiesFile.exists()) {
-            Map<String, Object> dependencyCleanupResult = removeDependencies(appPropertiesFile, gavsToRemove);
-            if (!dependencyCleanupResult.isEmpty()) {
-                results.put("dependencyCleanup", dependencyCleanupResult);
-            }
+        Map<String, Object> dependencyCleanup = removeForageDependencies();
+        if (!dependencyCleanup.isEmpty()) {
+            results.put("dependencyCleanup", dependencyCleanup);
         }
 
         Map<String, Object> output = new LinkedHashMap<>();
@@ -583,25 +505,64 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
     }
 
     /**
-     * Removes specified GAVs from all dependency properties in the application.properties file.
+     * Removes the Forage dependencies older versions of this command wrote to the {@code camel.jbang.dependencies*}
+     * properties of application.properties. The Forage plugin resolves them from the configuration whenever the
+     * project runs or is exported, so a stored copy is redundant and can pin an outdated Forage version. Other
+     * dependencies are kept.
+     *
+     * @return the removed dependencies, empty if there were none
+     */
+    private Map<String, Object> removeForageDependencies() throws IOException {
+        File appPropertiesFile = new File(directory, ForagePropertyScanner.APPLICATION_PROPERTIES);
+        if (!appPropertiesFile.isFile()) {
+            return Map.of();
+        }
+        Set<String> forageArtifacts = findForageArtifacts();
+        return removeDependencies(appPropertiesFile, gav -> forageArtifacts.contains(groupAndArtifact(gav)));
+    }
+
+    /**
+     * The {@code groupId:artifactId} of every factory variant and bean the catalog knows, whatever their version.
+     */
+    private Set<String> findForageArtifacts() {
+        Set<String> artifacts = new HashSet<>();
+        for (ForageCatalogReader.FactoryMetadata factory : catalog.getAllFactories()) {
+            for (String variant : List.of("base", "springboot", "quarkus")) {
+                catalog.getFactoryVariantGav(factory.factoryTypeKey(), variant)
+                        .map(ConfigWriteCommand::groupAndArtifact)
+                        .ifPresent(artifacts::add);
+            }
+            catalog.getAllBeansForFactory(factory.factoryTypeKey()).stream()
+                    .map(ForageBean::getGav)
+                    .filter(gav -> gav != null && !gav.isBlank())
+                    .map(ConfigWriteCommand::groupAndArtifact)
+                    .forEach(artifacts::add);
+        }
+        return artifacts;
+    }
+
+    private static String groupAndArtifact(String gav) {
+        String coordinates = gav.startsWith("mvn:") ? gav.substring("mvn:".length()) : gav;
+        String[] parts = coordinates.split(":");
+        return parts.length >= 2 ? parts[0] + ":" + parts[1] : coordinates;
+    }
+
+    /**
+     * Removes the matching GAVs from all dependency properties in the application.properties file.
      *
      * @param appPropertiesFile the application.properties file
-     * @param gavsToRemove the GAVs to remove
+     * @param toRemove which GAVs to remove
      * @return result map with information about removed dependencies
      */
-    private Map<String, Object> removeDependencies(File appPropertiesFile, Set<String> gavsToRemove)
+    private Map<String, Object> removeDependencies(File appPropertiesFile, Predicate<String> toRemove)
             throws IOException {
         PropertiesDocument document = PropertiesDocument.read(appPropertiesFile);
         Map<String, Set<String>> dependencies = readDependencies(document);
 
         Set<String> removedGavs = new LinkedHashSet<>();
         for (Set<String> gavs : dependencies.values()) {
-            for (String gav : gavs) {
-                if (gavsToRemove.contains(gav)) {
-                    removedGavs.add(gav);
-                }
-            }
-            gavs.removeAll(gavsToRemove);
+            gavs.stream().filter(toRemove).forEach(removedGavs::add);
+            gavs.removeIf(toRemove);
         }
 
         if (removedGavs.isEmpty()) {

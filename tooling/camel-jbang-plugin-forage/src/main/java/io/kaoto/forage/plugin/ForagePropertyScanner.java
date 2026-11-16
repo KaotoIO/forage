@@ -187,7 +187,7 @@ public final class ForagePropertyScanner {
      * The property name the scan groups values under: relative to the factory for factory properties
      * (e.g. {@code db.kind}), and including the bean prefix for bean properties (e.g. {@code ollama.model.name}).
      */
-    static String scannedPropertyName(ForagePropertyParser.ParsedProperty parsed) {
+    private static String scannedPropertyName(ForagePropertyParser.ParsedProperty parsed) {
         return parsed.beanType() != null ? parsed.entryKey() : parsed.propertyName();
     }
 

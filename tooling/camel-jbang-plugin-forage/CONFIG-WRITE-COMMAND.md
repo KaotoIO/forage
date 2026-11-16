@@ -142,26 +142,25 @@ OUTPUT
 DELETE MODE
 ═══════════
 ┌──────────────────────────────────────────────────────────┐
-│ handleDelete()                                           │
+│ handleDelete() → ForageConfigurationEditor.delete()      │
 │                                                          │
 │ 1. Requires --name parameter                             │
-│ 2. Scans the same files `config read` lists for the      │
-│    strategy (top level of --dir only); the application   │
-│    strategy also scans every application-*.properties,   │
-│    so profile overrides of the instance are deleted too  │
-│ 3. Reads every file before modifying any                 │
-│ 4. Removes the keys that belong to the instance, parsed  │
-│    like `config read` does (ForagePropertyParser):       │
-│    forage.my.ds.* is instance "my.ds", not "my"; a key   │
-│    under forage.<name>. whose rest reads as a default    │
-│    key belongs to <name> (forage.azure.openai.api.key    │
-│    for an OpenAI instance named "azure")                 │
-│ 5. Finds entries like Properties.load does               │
-│    (PropertiesDocument): '=', ':' or whitespace          │
-│    separators, continuation lines                        │
-│ 6. Removes the Forage dependencies older versions wrote  │
+│ 2. Looks for the instance in the files `config read`     │
+│    lists for the strategy (top level of --dir only);     │
+│    fails if it is not there                              │
+│ 3. Removes its keys from those files and from the files  │
+│    that override them: application-*.properties for the  │
+│    application strategy, application.properties and      │
+│    application-*.properties for the forage strategy      │
+│ 4. Removes its name from forage.multi.agent.names        │
+│ 5. Resolves keys like `config read` does                 │
+│    (ForageConfiguration): forage.my.ds.* is instance     │
+│    "my.ds", not "my"; an ambiguous key goes to the       │
+│    instance the files show, never to the name deleted    │
+│ 6. Finds entries like Properties.load does, keeps the    │
+│    file encoding and the other lines                     │
+│ 7. Removes the Forage dependencies older versions wrote  │
 │    (see Dependencies)                                    │
-│ 7. Preserves comments and other properties               │
 │                                                          │
 │ Returns JSON with the deleted properties per file        │
 └──────────────────────────────────────────────────────────┘
@@ -177,8 +176,11 @@ turns the Kaoto JSON input into the factory, instance name and properties of eac
   be the start of Forage property keys (a factory key such as `jdbc`, a bean prefix such as `ollama` or `azure`):
   the keys of such an instance would also read as keys of the default instance. Existing instances keep working
   whatever their name.
-- **Delete** also removes the instance from the lists of instance names that refer to it
-  (`forage.multi.agent.names`), and removes such a list once empty (`updatedProperties` in the output).
+- **Delete** removes an instance the strategy's files list, together with its overrides in
+  `application*.properties`, and removes it from the lists of instance names that refer to it
+  (`forage.multi.agent.names`), removing such a list once empty (`updatedProperties` in the output).
+- **Files keep their encoding**: a file is read as UTF-8 when it is valid UTF-8 and as ISO-8859-1 otherwise, and
+  written back in the same encoding; written keys and values escape non-ASCII characters as `\uXXXX`.
 - **`--strategy forage`** writes a bean property to the bean's own file when the catalog records one (e.g.
   `forage-model-bedrock.properties`), and to the factory's file otherwise. A bean property outside the factory's
   namespace (e.g. `forage.myOllama.ollama.model.name` for the agent factory) in the factory's file is only read on

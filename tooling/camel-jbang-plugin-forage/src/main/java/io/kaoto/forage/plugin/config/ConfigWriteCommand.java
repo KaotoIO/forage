@@ -140,38 +140,10 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
         // Process each factory type
         Map<String, Object> results = new LinkedHashMap<>();
         for (Map.Entry<String, FactoryConfig> entry : factoryConfigs.entrySet()) {
-            String factoryTypeKey = entry.getKey();
             FactoryConfig factoryConfig = entry.getValue();
-
-            EditResult written = editor.write(factoryTypeKey, factoryConfig.beanName(), factoryConfig.properties());
+            EditResult written = editor.write(entry.getKey(), factoryConfig.beanName(), factoryConfig.properties());
             written.write();
-
-            FileChange first = written.changes().get(0);
-            String operation = first.created() ? "create" : "update";
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put(KEY_SUCCESS, true);
-            result.put("propertiesFile", first.file().getAbsolutePath());
-            if (written.changes().size() > 1) {
-                result.put(
-                        "propertiesFiles",
-                        written.changes().stream()
-                                .map(change -> change.file().getAbsolutePath())
-                                .toList());
-            }
-            result.put("operation", operation);
-            result.put(
-                    "message",
-                    "Successfully " + operation + "d configuration for " + getFactoryDisplayName(factoryTypeKey));
-            if (factoryConfig.beanName() != null) {
-                result.put("beanName", factoryConfig.beanName());
-            }
-            if (factoryConfig.kind() != null) {
-                result.put("kind", factoryConfig.kind());
-            }
-            if (!written.warnings().isEmpty()) {
-                result.put("warnings", written.warnings());
-            }
-            results.put(factoryTypeKey, result);
+            results.put(entry.getKey(), toFactoryResult(entry.getKey(), factoryConfig, written));
         }
 
         Map<String, Object> output = new LinkedHashMap<>();
@@ -184,6 +156,39 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
         printer().println(OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(output));
 
         return 0;
+    }
+
+    /**
+     * The JSON result of writing the configuration of one factory.
+     */
+    private Map<String, Object> toFactoryResult(
+            String factoryTypeKey, FactoryConfig factoryConfig, EditResult written) {
+        FileChange first = written.changes().get(0);
+        String operation = first.created() ? "create" : "update";
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put(KEY_SUCCESS, true);
+        result.put("propertiesFile", first.file().getAbsolutePath());
+        if (written.changes().size() > 1) {
+            result.put(
+                    "propertiesFiles",
+                    written.changes().stream()
+                            .map(change -> change.file().getAbsolutePath())
+                            .toList());
+        }
+        result.put("operation", operation);
+        result.put(
+                "message",
+                "Successfully " + operation + "d configuration for " + getFactoryDisplayName(factoryTypeKey));
+        if (factoryConfig.beanName() != null) {
+            result.put("beanName", factoryConfig.beanName());
+        }
+        if (factoryConfig.kind() != null) {
+            result.put("kind", factoryConfig.kind());
+        }
+        if (!written.warnings().isEmpty()) {
+            result.put("warnings", written.warnings());
+        }
+        return result;
     }
 
     // Property keys that contain the bean name (not written to output, used for prefixing)

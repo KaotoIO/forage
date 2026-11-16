@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import io.kaoto.forage.catalog.model.ConditionalBeanGroup;
 import io.kaoto.forage.catalog.model.ConfigEntry;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
+import io.kaoto.forage.config.editor.ForagePropertyParser;
+import io.kaoto.forage.config.editor.PropertyKeys;
 import io.kaoto.forage.core.common.ExportCustomizer;
 import io.kaoto.forage.core.common.RuntimeType;
 

@@ -18,10 +18,10 @@ import java.util.function.Predicate;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import io.kaoto.forage.catalog.model.ForageBean;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
-import io.kaoto.forage.plugin.ForagePropertyParser;
-import io.kaoto.forage.plugin.ForagePropertyParser.ParsedProperty;
-import io.kaoto.forage.plugin.ForagePropertyScanner;
-import io.kaoto.forage.plugin.PropertiesDocument;
+import io.kaoto.forage.config.editor.ForageConfigurationFiles;
+import io.kaoto.forage.config.editor.ForagePropertyParser;
+import io.kaoto.forage.config.editor.ForagePropertyParser.ParsedProperty;
+import io.kaoto.forage.config.editor.PropertiesDocument;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import picocli.CommandLine;
@@ -513,7 +513,7 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
      * @return the removed dependencies, empty if there were none
      */
     private Map<String, Object> removeForageDependencies() throws IOException {
-        File appPropertiesFile = new File(directory, ForagePropertyScanner.APPLICATION_PROPERTIES);
+        File appPropertiesFile = new File(directory, ForageConfigurationFiles.APPLICATION_PROPERTIES);
         if (!appPropertiesFile.isFile()) {
             return Map.of();
         }

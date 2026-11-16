@@ -1,4 +1,4 @@
-package io.kaoto.forage.plugin;
+package io.kaoto.forage.config.editor;
 
 import java.io.File;
 import java.io.StringReader;
@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import io.kaoto.forage.plugin.PropertiesDocument.Entry;
+import io.kaoto.forage.config.editor.PropertiesDocument.Entry;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

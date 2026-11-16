@@ -1,4 +1,4 @@
-package io.kaoto.forage.plugin.config;
+package io.kaoto.forage.config.editor;
 
 import java.util.Arrays;
 import java.util.Locale;

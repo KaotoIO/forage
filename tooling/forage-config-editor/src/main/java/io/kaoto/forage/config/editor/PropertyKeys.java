@@ -1,4 +1,4 @@
-package io.kaoto.forage.plugin;
+package io.kaoto.forage.config.editor;
 
 import java.util.Arrays;
 import java.util.List;
@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Matches the property keys found by {@link ForagePropertyScanner} against catalog config entry names.
+ * Matches Forage property keys against catalog config entry names.
  *
  * <p>Scanned keys are relative to their factory and may start with an instance name, for example
  * {@code ds1.jdbc.url} or {@code ollama.agent.rag.max.results}. A catalog entry name can contain
@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
  * parts of a property name that the user chooses; a placeholder matches one or more segments, since a
  * route ID may contain dots.
  */
-final class PropertyKeys {
+public final class PropertyKeys {
 
     private static final String ANY_SEGMENTS = "[^.]+(?:\\.[^.]+)*";
 
@@ -26,7 +26,7 @@ final class PropertyKeys {
      * @param key a scanned property key (e.g., "ds1.jdbc.url", "policy.route-a.name")
      * @param entry a catalog entry name relative to the same level (e.g., "jdbc.url", "policy.{routeId}.name")
      */
-    static boolean matches(String key, String entry) {
+    public static boolean matches(String key, String entry) {
         if (isTemplate(entry)) {
             return Pattern.matches("(?:.+\\.)?" + toRegex(entry), key);
         }
@@ -36,7 +36,7 @@ final class PropertyKeys {
     /**
      * Whether the key is exactly the entry, with any placeholder resolved, and no instance name.
      */
-    static boolean matchesExactly(String key, String entry) {
+    public static boolean matchesExactly(String key, String entry) {
         if (isTemplate(entry)) {
             return Pattern.matches(toRegex(entry), key);
         }
@@ -46,7 +46,7 @@ final class PropertyKeys {
     /**
      * Whether the entry name has a placeholder segment, such as {@code {routeId}}.
      */
-    static boolean isTemplate(String entry) {
+    public static boolean isTemplate(String entry) {
         return Arrays.stream(entry.split("\\.")).anyMatch(PropertyKeys::isPlaceholder);
     }
 
@@ -55,7 +55,7 @@ final class PropertyKeys {
      * for {@code forage.route.policy.<routeId>.name}. Only entries marked {@code multiValue} in the catalog
      * accept a list.
      */
-    static List<String> splitValues(String value) {
+    public static List<String> splitValues(String value) {
         if (value == null) {
             return List.of();
         }

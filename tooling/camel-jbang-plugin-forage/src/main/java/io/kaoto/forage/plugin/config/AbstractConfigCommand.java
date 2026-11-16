@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.apache.camel.dsl.jbang.core.commands.CamelCommand;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
+import io.kaoto.forage.config.editor.PropertiesFileStrategy;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import picocli.CommandLine;

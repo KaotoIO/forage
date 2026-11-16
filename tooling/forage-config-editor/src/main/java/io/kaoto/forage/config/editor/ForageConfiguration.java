@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -103,9 +104,26 @@ public final class ForageConfiguration {
      */
     public static ForageConfiguration read(
             ForageCatalogReader catalog, Collection<File> files, Set<String> knownInstanceNames) throws IOException {
+        return read(catalog, files, knownInstanceNames, DocumentSource.DISK);
+    }
+
+    /**
+     * Reads the given properties files from a document source (e.g. the open documents of an IDE). Missing files are
+     * read as empty.
+     *
+     * @param catalog the catalog the keys are resolved against
+     * @param files the files to read
+     * @param knownInstanceNames instance names known to exist besides those the files show
+     * @param source the content of the files
+     * @return the configuration
+     * @throws IOException if a file cannot be read
+     */
+    public static ForageConfiguration read(
+            ForageCatalogReader catalog, Collection<File> files, Set<String> knownInstanceNames, DocumentSource source)
+            throws IOException {
         Map<File, PropertiesDocument> documents = new LinkedHashMap<>();
         for (File file : files) {
-            documents.put(file, PropertiesDocument.read(file));
+            documents.put(file, source.load(file).orElseGet(() -> PropertiesDocument.of(List.of())));
         }
         return new Resolver(new ForagePropertyParser(catalog), knownInstanceNames).resolve(documents);
     }
@@ -177,14 +195,19 @@ public final class ForageConfiguration {
         }
 
         ForageConfiguration resolve(Map<File, PropertiesDocument> documents) {
-            // First pass: the candidate readings of every key, and the instance names they make known
+            // First pass: the candidate readings of every key, and the instance names they make known. Only the last
+            // occurrence of a key in a file counts for the names, since it overrides the earlier ones
             Map<PendingKey, List<ParsedProperty>> candidates = new LinkedHashMap<>();
             for (Map.Entry<File, PropertiesDocument> document : documents.entrySet()) {
+                Map<String, PropertiesDocument.Entry> effective = new HashMap<>();
+                document.getValue().entries().forEach(line -> effective.put(line.key(), line));
                 for (PropertiesDocument.Entry line : document.getValue().entries()) {
                     if (line.key().startsWith(FORAGE_PREFIX)) {
                         List<ParsedProperty> keyCandidates = parser.candidates(line.key());
                         candidates.put(new PendingKey(document.getKey(), line), keyCandidates);
-                        learn(line, keyCandidates);
+                        if (line.equals(effective.get(line.key()))) {
+                            learn(line, keyCandidates);
+                        }
                     }
                 }
             }

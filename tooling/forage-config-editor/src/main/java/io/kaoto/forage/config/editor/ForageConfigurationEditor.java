@@ -2,6 +2,8 @@ package io.kaoto.forage.config.editor;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,6 +49,7 @@ public final class ForageConfigurationEditor {
      * @param lines the content of the file once edited
      * @param removedEntries how many entries the change removes
      * @param writtenEntries how many entries the change adds or updates
+     * @param charset the encoding of the file, which the edited content is written in
      */
     public record FileChange(
             File file,
@@ -54,13 +57,14 @@ public final class ForageConfigurationEditor {
             List<TextEdit> edits,
             List<String> lines,
             int removedEntries,
-            int writtenEntries) {
+            int writtenEntries,
+            Charset charset) {
 
         /**
-         * Writes the edited content to the file.
+         * Writes the edited content to the file, in its encoding.
          */
         public void write() throws IOException {
-            PropertiesDocument.write(file, lines);
+            PropertiesDocument.write(file, lines, charset);
         }
     }
 
@@ -93,20 +97,40 @@ public final class ForageConfigurationEditor {
         }
     }
 
+    private static final EditResult NO_CHANGE = new EditResult(List.of(), List.of(), List.of());
+
     private final ForageCatalogReader catalog;
     private final File directory;
     private final PropertiesFileStrategy strategy;
+    private final DocumentSource source;
     private final ForagePropertyParser parser;
 
     /**
+     * An editor that reads the files from disk.
+     *
      * @param catalog the catalog of the Forage version the configuration is for
      * @param directory the directory holding the properties files
      * @param strategy which files the configuration is read from and written to
      */
     public ForageConfigurationEditor(ForageCatalogReader catalog, File directory, PropertiesFileStrategy strategy) {
+        this(catalog, directory, strategy, DocumentSource.DISK);
+    }
+
+    /**
+     * An editor that reads the files from a document source, such as the open documents of an IDE with their unsaved
+     * changes: the edits it computes then apply to that content.
+     *
+     * @param catalog the catalog of the Forage version the configuration is for
+     * @param directory the directory holding the properties files
+     * @param strategy which files the configuration is read from and written to
+     * @param source the current content of the files
+     */
+    public ForageConfigurationEditor(
+            ForageCatalogReader catalog, File directory, PropertiesFileStrategy strategy, DocumentSource source) {
         this.catalog = catalog;
         this.directory = directory;
         this.strategy = strategy;
+        this.source = source;
         this.parser = new ForagePropertyParser(catalog);
     }
 
@@ -114,7 +138,7 @@ public final class ForageConfigurationEditor {
      * Reads the configuration of the files the strategy manages.
      */
     public ForageConfiguration read() throws IOException {
-        return ForageConfiguration.read(catalog, strategy.findPropertiesFiles(directory), Set.of());
+        return ForageConfiguration.read(catalog, strategy.findPropertiesFiles(directory), Set.of(), source);
     }
 
     /**
@@ -218,40 +242,44 @@ public final class ForageConfigurationEditor {
     }
 
     /**
-     * Deletes an instance: its entries in the files the strategy deletes from (see
-     * {@link PropertiesFileStrategy#findDeletionFiles(File)}), and its name in the lists of instance names that refer
-     * to it (e.g. {@code forage.multi.agent.names}), whose entry is removed once empty.
+     * Deletes an instance found in the files the strategy manages: its entries there and in the files that override
+     * them (see {@link PropertiesFileStrategy#findOverrideFiles(File)}), and its name in the lists of instance names
+     * that refer to it (e.g. {@code forage.multi.agent.names}), whose entry is removed once empty.
+     *
+     * <p>The name to delete is not taken as evidence that an instance exists: a key that reads in several ways goes to
+     * the instance the files show, so deleting a name no instance has never removes the default instance's keys.
      *
      * @param instanceName the instance name
      * @return the changes
-     * @throws ConfigurationEditException if the files have no configuration for the instance
+     * @throws ConfigurationEditException if the files of the strategy have no configuration for the instance
      */
     public EditResult delete(String instanceName) throws IOException {
-        List<File> deletionFiles = strategy.findDeletionFiles(directory);
+        List<File> instanceFiles = strategy.findPropertiesFiles(directory);
+        Set<File> editableFiles = new LinkedHashSet<>(instanceFiles);
+        editableFiles.addAll(strategy.findOverrideFiles(directory));
         Set<File> files = new LinkedHashSet<>(ForageConfigurationFiles.all(directory, catalog));
-        files.addAll(deletionFiles);
-        ForageConfiguration configuration = ForageConfiguration.read(catalog, files, Set.of(instanceName));
+        files.addAll(editableFiles);
+        ForageConfiguration configuration = ForageConfiguration.read(catalog, files, Set.of(), source);
+
+        List<ForageConfiguration.Entry> instanceEntries = configuration.entries().stream()
+                .filter(entry -> editableFiles.contains(entry.file()) && belongsTo(entry, instanceName))
+                .toList();
+        if (instanceEntries.stream().noneMatch(entry -> instanceFiles.contains(entry.file()))) {
+            throw new ConfigurationEditException("No configuration found for instance '" + instanceName + "'");
+        }
 
         Map<File, Map<PropertiesDocument.Entry, String>> newValues = new LinkedHashMap<>();
         Map<File, int[]> counts = new HashMap<>();
-        for (ForageConfiguration.Entry entry : configuration.entriesOf(instanceName)) {
-            if (deletionFiles.contains(entry.file())) {
-                newValues.computeIfAbsent(entry.file(), f -> new HashMap<>()).put(entry.line(), null);
-                counts.computeIfAbsent(entry.file(), f -> new int[2])[0]++;
-            }
+        for (ForageConfiguration.Entry entry : instanceEntries) {
+            newValues.computeIfAbsent(entry.file(), f -> new HashMap<>()).put(entry.line(), null);
+            counts.computeIfAbsent(entry.file(), f -> new int[2])[0]++;
         }
         for (ForageConfiguration.Entry entry : configuration.entries()) {
-            if (deletionFiles.contains(entry.file()) && refersTo(entry, instanceName)) {
-                List<String> names = new ArrayList<>(PropertyKeys.splitValues(entry.value()));
-                names.remove(instanceName);
-                newValues
-                        .computeIfAbsent(entry.file(), f -> new HashMap<>())
-                        .put(entry.line(), names.isEmpty() ? null : String.join(",", names));
-                counts.computeIfAbsent(entry.file(), f -> new int[2])[names.isEmpty() ? 0 : 1]++;
+            if (editableFiles.contains(entry.file()) && refersTo(entry, instanceName)) {
+                String remaining = withoutName(entry.value(), instanceName);
+                newValues.computeIfAbsent(entry.file(), f -> new HashMap<>()).put(entry.line(), remaining);
+                counts.computeIfAbsent(entry.file(), f -> new int[2])[remaining == null ? 0 : 1]++;
             }
-        }
-        if (newValues.isEmpty()) {
-            throw new ConfigurationEditException("No configuration found for instance '" + instanceName + "'");
         }
 
         List<FileChange> changes = new ArrayList<>();
@@ -259,7 +287,8 @@ public final class ForageConfigurationEditor {
             PropertiesDocument document = configuration.documents().get(file);
             List<TextEdit> edits = document.edits(values, Map.of());
             int[] count = counts.get(file);
-            changes.add(new FileChange(file, false, edits, document.apply(edits), count[0], count[1]));
+            changes.add(
+                    new FileChange(file, false, edits, document.apply(edits), count[0], count[1], document.charset()));
         });
         return new EditResult(List.copyOf(changes), List.of(), List.of());
     }
@@ -274,51 +303,83 @@ public final class ForageConfigurationEditor {
      * @return the changes, with the removed dependencies
      */
     public EditResult removeStoredForageDependencies() throws IOException {
-        File file = ForageConfigurationFiles.applicationProperties(directory);
-        if (file == null) {
-            return new EditResult(List.of(), List.of(), List.of());
+        File file = new File(directory, ForageConfigurationFiles.APPLICATION_PROPERTIES);
+        Optional<PropertiesDocument> loaded = source.load(file);
+        if (loaded.isEmpty()) {
+            return NO_CHANGE;
         }
-        PropertiesDocument document = PropertiesDocument.read(file);
+        PropertiesDocument document = loaded.get();
         Set<String> forageArtifacts = forageArtifacts();
         Map<PropertiesDocument.Entry, String> newValues = new HashMap<>();
         List<String> removed = new ArrayList<>();
         for (PropertiesDocument.Entry entry : document.entries()) {
             if (DEPENDENCY_PROPERTIES.contains(entry.key())) {
-                List<String> kept = new ArrayList<>();
-                for (String gav : PropertyKeys.splitValues(entry.value())) {
-                    if (forageArtifacts.contains(groupAndArtifact(gav))) {
-                        removed.add(gav);
-                    } else {
-                        kept.add(gav);
-                    }
-                }
-                if (kept.size() != PropertyKeys.splitValues(entry.value()).size()) {
-                    newValues.put(entry, kept.isEmpty() ? null : String.join(",", kept));
-                }
+                withoutForageDependencies(entry.value(), forageArtifacts, removed)
+                        .ifPresent(kept -> newValues.put(entry, kept.isEmpty() ? null : kept));
             }
         }
         if (newValues.isEmpty()) {
-            return new EditResult(List.of(), List.of(), List.of());
+            return NO_CHANGE;
         }
         List<TextEdit> edits = document.edits(newValues, Map.of());
-        FileChange change = new FileChange(file, false, edits, document.apply(edits), removed.size(), 0);
+        FileChange change =
+                new FileChange(file, false, edits, document.apply(edits), removed.size(), 0, document.charset());
         return new EditResult(List.of(change), List.copyOf(removed), List.of());
     }
 
+    /**
+     * The value of a dependency property without its Forage dependencies, empty if it has none. The removed
+     * dependencies are added to {@code removed}.
+     */
+    private static Optional<String> withoutForageDependencies(
+            String value, Set<String> forageArtifacts, List<String> removed) {
+        List<String> gavs = PropertyKeys.splitValues(value);
+        List<String> kept = gavs.stream()
+                .filter(gav -> !forageArtifacts.contains(groupAndArtifact(gav)))
+                .toList();
+        if (kept.size() == gavs.size()) {
+            return Optional.empty();
+        }
+        gavs.stream().filter(gav -> !kept.contains(gav)).forEach(removed::add);
+        return Optional.of(String.join(",", kept));
+    }
+
     private FileChange setValues(File file, Map<String, String> values, List<String> header) throws IOException {
-        if (file.isFile()) {
-            PropertiesDocument document = PropertiesDocument.read(file);
+        Optional<PropertiesDocument> existing = source.load(file);
+        if (existing.isPresent()) {
+            PropertiesDocument document = existing.get();
             List<TextEdit> edits = document.editsSettingValues(values);
-            return new FileChange(file, false, edits, document.apply(edits), 0, values.size());
+            return new FileChange(file, false, edits, document.apply(edits), 0, values.size(), document.charset());
         }
         List<String> lines = PropertiesDocument.of(header).withValues(values);
-        return new FileChange(file, true, List.of(new TextEdit(0, 0, lines)), lines, 0, values.size());
+        return new FileChange(
+                file, true, List.of(new TextEdit(0, 0, lines)), lines, 0, values.size(), StandardCharsets.UTF_8);
     }
 
     private ForageConfiguration allFiles() throws IOException {
         Set<File> files = new LinkedHashSet<>(ForageConfigurationFiles.all(directory, catalog));
         files.addAll(strategy.findPropertiesFiles(directory));
-        return ForageConfiguration.read(catalog, files, Set.of());
+        return ForageConfiguration.read(catalog, files, Set.of(), source);
+    }
+
+    /**
+     * Whether an entry belongs to the instance: assigned to it, or recognised by nothing and under its prefix (e.g. the
+     * typo {@code forage.myPG.jdbcc.url}).
+     */
+    private static boolean belongsTo(ForageConfiguration.Entry entry, String instanceName) {
+        return instanceName.equals(entry.instanceName())
+                || (entry.property() == null
+                        && entry.instanceName() == null
+                        && entry.key().startsWith(FORAGE_PREFIX + instanceName + "."));
+    }
+
+    /**
+     * A list of instance names without the given one, {@code null} once empty.
+     */
+    private static String withoutName(String names, String instanceName) {
+        List<String> remaining = new ArrayList<>(PropertyKeys.splitValues(names));
+        remaining.remove(instanceName);
+        return remaining.isEmpty() ? null : String.join(",", remaining);
     }
 
     private static boolean refersTo(ForageConfiguration.Entry entry, String instanceName) {

@@ -39,9 +39,17 @@ for (FileChange change : result.changes()) {
     change.edits();   // line range + new lines, for the current content of the file
 }
 
-// Delete an instance, and its name from forage.multi.agent.names
+// Delete an instance, its overrides in application*.properties, and its name from forage.multi.agent.names
 editor.delete("ordersDb").write();
+
+// In an IDE, read the open documents, unsaved changes included, so that the edits apply to them
+ForageConfigurationEditor ideEditor = new ForageConfigurationEditor(catalog, projectDir, strategy,
+        file -> openDocument(file).map(PropertiesDocument::of).or(() -> DocumentSource.DISK.load(file)));
 ```
+
+Files keep their encoding: a file is read as UTF-8 when it is valid UTF-8 and as ISO-8859-1 otherwise (what
+`Properties.load(InputStream)` expects), and `FileChange.write()` writes it back in the same encoding. Written keys
+and values escape non-ASCII characters as `\uXXXX`, so they read the same whatever the encoding.
 
 Edit operations throw `ConfigurationEditException`, with the message to show, when they cannot be made: a new
 instance with an ambiguous name, a factory without a properties file under the `forage` strategy, an instance to
@@ -58,6 +66,10 @@ two passes:
    names listed in `forage.multi.agent.names` make the known instance names.
 2. A key with several readings goes to the known instance it can belong to, or else to the default instance. A key no
    catalog entry matches belongs to the known instance it starts with.
+
+Only the last occurrence of a key in a file counts for the known names, since it overrides the earlier ones. Deleting
+an instance does not count its name as known: an ambiguous key goes to the instance the files show, so deleting a name
+no instance has never removes keys of the default instance.
 
 `ForageConfigurationEditor.validateNewInstanceName` rejects the names that make keys ambiguous, so instances created
 through the editor never need the second pass.

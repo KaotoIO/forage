@@ -90,6 +90,7 @@ class PropertiesDocumentTest {
         values.put("multi", "a\nb");
         values.put("lead", " x");
         values.put("key with spaces#!", "a=b:c#d!e");
+        values.put("caf\u00e9", "na\u00efve \u20ac");
 
         Properties reloaded = load(document.withValues(values));
 
@@ -131,6 +132,20 @@ class PropertiesDocumentTest {
                         new PropertiesDocument.TextEdit(4, 5, List.of()),
                         new PropertiesDocument.TextEdit(5, 5, List.of("d=4")));
         assertThat(document.apply(edits)).containsExactly("# header", "a=one", "b=two", "d=4");
+    }
+
+    @Test
+    void readDetectsTheEncoding() throws Exception {
+        File utf8 = new File(tempDir, "utf8.properties");
+        java.nio.file.Files.write(utf8.toPath(), "a=caf\u00e9\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        File latin1 = new File(tempDir, "latin1.properties");
+        java.nio.file.Files.write(
+                latin1.toPath(), "a=caf\u00e9\n".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1));
+
+        assertThat(PropertiesDocument.read(utf8).charset()).isEqualTo(java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(PropertiesDocument.read(utf8).entries().get(0).value()).isEqualTo("caf\u00e9");
+        assertThat(PropertiesDocument.read(latin1).charset()).isEqualTo(java.nio.charset.StandardCharsets.ISO_8859_1);
+        assertThat(PropertiesDocument.read(latin1).entries().get(0).value()).isEqualTo("caf\u00e9");
     }
 
     @Test

@@ -150,9 +150,9 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
     /**
      * A bean is configured when one of its own config entries, or one of the factory config entries listed
-     * in its {@code enabledBy}, is set in any instance.
+     * in its {@code enabledBy}, is set in any instance. {@link ForageDependencyResolver} uses the same rule.
      */
-    private static boolean isConfigured(
+    static boolean isConfigured(
             io.kaoto.forage.catalog.model.ForageBean bean,
             String factoryTypeKey,
             Map<String, List<String>> factoryProperties) {
@@ -166,10 +166,12 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
     }
 
     /**
-     * Whether a config entry is set in any instance. The scanner drops the factory key, and an instance name
-     * in front of it, from the keys it groups under the factory ({@code forage.myAgent.agent.rag.max.results}
-     * becomes {@code rag.max.results}), but keeps the whole key when the instance name is also a bean name
-     * ({@code forage.ollama.agent.rag.max.results} stays {@code ollama.agent.rag.max.results}).
+     * Whether a config entry is set in any instance. The scanner groups keys without their instance name (see
+     * {@link ForagePropertyParser}): factory properties relative to the factory key
+     * ({@code forage.myAgent.agent.rag.max.results} and {@code forage.ollama.agent.rag.max.results} both become
+     * {@code rag.max.results}), bean properties with their bean prefix ({@code forage.a1.ollama.model.name}
+     * becomes {@code ollama.model.name}), and factory properties outside the factory prefix whole
+     * ({@code forage.multi.agent.names} becomes {@code multi.agent.names}).
      */
     private static boolean isSet(String entryName, String factoryTypeKey, Map<String, List<String>> factoryProperties) {
         String entryKey = entryName.substring(FORAGE_PREFIX.length());

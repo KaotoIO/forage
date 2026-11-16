@@ -3,6 +3,8 @@ package io.kaoto.forage.plugin.config;
 import java.util.Arrays;
 import java.util.Iterator;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
+import io.kaoto.forage.config.editor.PropertiesFileStrategy;
+import io.kaoto.forage.config.editor.PropertiesFileStrategyType;
 import picocli.CommandLine;
 
 /**

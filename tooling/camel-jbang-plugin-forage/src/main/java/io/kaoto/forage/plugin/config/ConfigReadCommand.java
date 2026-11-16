@@ -14,8 +14,8 @@ import io.kaoto.forage.catalog.model.ConditionalBeanGroup;
 import io.kaoto.forage.catalog.model.ConditionalBeanInfo;
 import io.kaoto.forage.catalog.model.ConfigEntry;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
-import io.kaoto.forage.plugin.ForagePropertyParser;
-import io.kaoto.forage.plugin.ForagePropertyParser.ParsedProperty;
+import io.kaoto.forage.config.editor.ForagePropertyParser;
+import io.kaoto.forage.config.editor.ForagePropertyParser.ParsedProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import picocli.CommandLine;
 

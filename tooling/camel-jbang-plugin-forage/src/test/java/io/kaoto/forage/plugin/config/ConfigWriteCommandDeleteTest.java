@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.util.Properties;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.common.StringPrinter;
+import io.kaoto.forage.config.editor.PropertiesFileStrategyType;
 import io.kaoto.forage.core.common.VersionHelper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

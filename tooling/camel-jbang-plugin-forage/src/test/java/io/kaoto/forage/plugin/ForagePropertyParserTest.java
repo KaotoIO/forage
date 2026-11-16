@@ -105,6 +105,13 @@ class ForagePropertyParserTest {
         assertThat(ollama.main()).anyMatch(gav -> gav.contains("forage-agent:"));
 
         assertThat(resolver.resolve(Map.of("camel.main.name", "x")).isEmpty()).isTrue();
+
+        // Beans a factory property turns on, as export resolves them
+        ForageDependencyResolver.Dependencies fileSource =
+                resolver.resolve(Map.of("forage.b.agent.in.memory.store.file.source", "kb.txt"));
+        assertThat(fileSource.base())
+                .anyMatch(gav -> gav.contains("forage-in-memory-store:"))
+                .anyMatch(gav -> gav.contains("forage-default-retrieval-augmentor:"));
     }
 
     private static List<String> selectedBeans(String key, String value) {

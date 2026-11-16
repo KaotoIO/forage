@@ -150,9 +150,9 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
     /**
      * A bean is configured when one of its own config entries, or one of the factory config entries listed
-     * in its {@code enabledBy}, is set in any instance.
+     * in its {@code enabledBy}, is set in any instance. {@link ForageDependencyResolver} uses the same rule.
      */
-    private static boolean isConfigured(
+    static boolean isConfigured(
             io.kaoto.forage.catalog.model.ForageBean bean,
             String factoryTypeKey,
             Map<String, List<String>> factoryProperties) {

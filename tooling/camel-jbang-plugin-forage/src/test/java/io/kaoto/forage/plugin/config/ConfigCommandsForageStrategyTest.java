@@ -475,6 +475,60 @@ class ConfigCommandsForageStrategyTest {
         assertThat(appProps.getProperty("camel.jbang.dependencies.main")).isNull();
     }
 
+    @Test
+    void deleteRemovesTypoKeysOfAnInstanceNamedLikeABean() throws Exception {
+        // An agent named "ollama" with a typo in one key, next to a default Ollama chat model
+        File appFile = new File(tempDir, "application.properties");
+        Files.writeString(
+                appFile.toPath(),
+                """
+                forage.ollama.agent.model.kind=ollama
+                forage.ollama.agent.modle.nmae=llama3
+                forage.ollama.model.name=llama3
+                """);
+
+        JsonNode result =
+                delete("ollama", PropertiesFileStrategyType.APPLICATION).json();
+
+        assertThat(result.get("success").asBoolean()).isTrue();
+        assertThat(Files.readString(appFile.toPath())).isEqualTo("forage.ollama.model.name=llama3\n");
+    }
+
+    @Test
+    void deleteKeepsBeansAnotherInstanceTurnsOn() throws Exception {
+        // a selects the in-memory store, b only sets its file source, which needs the store too (as for export)
+        for (String json : List.of(
+                "{\"forage.agent.embedding.store.kind\": \"in-memory-store\", \"forage.bean.name\": \"a\"}",
+                "{\"forage.agent.in.memory.store.file.source\": \"kb.txt\", \"forage.bean.name\": \"b\"}")) {
+            assertThat(write(PropertiesFileStrategyType.APPLICATION, json).exitCode())
+                    .isZero();
+        }
+        File appFile = new File(tempDir, "application.properties");
+        assertThat(load(appFile).getProperty("camel.jbang.dependencies")).contains("forage-in-memory-store:");
+
+        assertThat(delete("a", PropertiesFileStrategyType.APPLICATION).exitCode())
+                .isZero();
+
+        Properties appProps = load(appFile);
+        assertThat(appProps.getProperty("forage.b.agent.in.memory.store.file.source"))
+                .isEqualTo("kb.txt");
+        assertThat(appProps.getProperty("camel.jbang.dependencies")).contains("forage-in-memory-store:");
+    }
+
+    @Test
+    void writeEscapesKeysAndValues() throws Exception {
+        String json = "{\"forage.jdbc.url\": \"jdbc:h2:file:C:\\\\data\\\\db\", \"forage.bean.name\": \"ds1\"}";
+
+        assertThat(write(PropertiesFileStrategyType.APPLICATION, json).exitCode())
+                .isZero();
+        // Written again, to go through the update path too
+        assertThat(write(PropertiesFileStrategyType.APPLICATION, json).exitCode())
+                .isZero();
+
+        assertThat(load(new File(tempDir, "application.properties")).getProperty("forage.ds1.jdbc.url"))
+                .isEqualTo("jdbc:h2:file:C:\\data\\db");
+    }
+
     private void writeAgents() throws Exception {
         assertThat(write(
                                 PropertiesFileStrategyType.APPLICATION,

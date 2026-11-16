@@ -206,6 +206,7 @@ Write and delete compute dependencies with the same `ForageDependencyResolver`, 
 ### PropertiesDocument
 - A properties file kept as its lines, so entries can be updated or removed in place
 - Finds entries with the rules of `Properties.load`, so anything `config read` lists can be edited
+- Escapes the keys and values it writes, so they read back unchanged
 
 ## Usage Examples
 
@@ -433,8 +434,10 @@ When deleting a configuration with `--delete --name <instanceName>`, the command
 1. **Delete Properties**: Remove the properties of the instance from the strategy's files (for the application
    strategy, `application.properties` and every `application-<profile>.properties` override)
 2. **Deleted Dependencies**: Compute the dependencies the deleted keys need: their factory variant GAVs, the bean
-   each key configures (e.g. `forage.myOllama.ollama.model.name` → `forage-model-ollama`) and the beans their values
-   select (e.g. `jdbc.db.kind=postgresql`, `agent.model.kind=ollama`, `agent.memory.kind=redis`)
+   each key configures (e.g. `forage.myOllama.ollama.model.name` → `forage-model-ollama`), the beans their values
+   select (e.g. `jdbc.db.kind=postgresql`, `agent.model.kind=ollama`, `agent.memory.kind=redis`) and the beans they
+   turn on, resolved like `camel forage run` and `export` do (e.g. `agent.in.memory.store.file.source` →
+   `forage-in-memory-store`)
 3. **Remaining Dependencies**: Compute the dependencies every remaining key needs, in `application.properties`,
    every `application-<profile>.properties` (whatever the active profile, since the dependency lists are shared by
    all profiles) and the `forage-*.properties` files

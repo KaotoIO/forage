@@ -7,8 +7,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -98,35 +98,68 @@ public final class PropertiesDocument {
     /**
      * Returns the lines with the given values set: the first entry of a key is replaced, in place, by a single
      * {@code key=value} line, further entries of the same key are removed, and keys not in the document are
-     * appended in the given order. A {@code null} value removes every entry of its key.
+     * appended in the given order. A {@code null} value removes every entry of its key. Keys and values are
+     * escaped as {@link Properties} expects, so they read back unchanged.
      */
     public List<String> withValues(Map<String, String> values) {
-        Map<Integer, Entry> entriesByFirstLine = new LinkedHashMap<>();
+        Set<Integer> replacedLines = new HashSet<>();
+        Map<Integer, String> replacements = new HashMap<>();
+        Set<String> written = new HashSet<>();
         for (Entry entry : entries) {
             if (values.containsKey(entry.key())) {
-                entriesByFirstLine.put(entry.firstLine(), entry);
+                for (int line = entry.firstLine(); line <= entry.lastLine(); line++) {
+                    replacedLines.add(line);
+                }
+                String value = values.get(entry.key());
+                if (value != null && written.add(entry.key())) {
+                    replacements.put(entry.firstLine(), format(entry.key(), value));
+                }
             }
         }
-        Set<String> written = new HashSet<>();
         List<String> result = new ArrayList<>();
         for (int i = 0; i < lines.size(); i++) {
-            Entry entry = entriesByFirstLine.get(i);
-            if (entry == null) {
+            if (replacements.containsKey(i)) {
+                result.add(replacements.get(i));
+            } else if (!replacedLines.contains(i)) {
                 result.add(lines.get(i));
-                continue;
             }
-            String value = values.get(entry.key());
-            if (value != null && written.add(entry.key())) {
-                result.add(entry.key() + "=" + value);
-            }
-            i = entry.lastLine();
         }
         values.forEach((key, value) -> {
             if (value != null && !written.contains(key)) {
-                result.add(key + "=" + value);
+                // A last line ending with a continuation would swallow the appended entry: end it with a blank line
+                if (!result.isEmpty() && isContinued(result.get(result.size() - 1))) {
+                    result.add("");
+                }
+                result.add(format(key, value));
             }
         });
         return result;
+    }
+
+    /**
+     * Formats an entry as a {@code key=value} line, escaping the key and the value as {@link Properties} expects.
+     * Characters outside ASCII are kept as they are, since the files are written in UTF-8.
+     */
+    static String format(String key, String value) {
+        return escape(key, true) + "=" + escape(value, false);
+    }
+
+    private static String escape(String text, boolean isKey) {
+        StringBuilder escaped = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            switch (c) {
+                case '\\' -> escaped.append("\\\\");
+                case '\t' -> escaped.append("\\t");
+                case '\n' -> escaped.append("\\n");
+                case '\r' -> escaped.append("\\r");
+                case '\f' -> escaped.append("\\f");
+                case ' ' -> escaped.append(isKey || i == 0 ? "\\ " : " ");
+                case '=', ':', '#', '!' -> escaped.append(isKey ? "\\" + c : String.valueOf(c));
+                default -> escaped.append(c);
+            }
+        }
+        return escaped.toString();
     }
 
     /**
@@ -188,16 +221,9 @@ public final class PropertiesDocument {
     private static Map.Entry<String, String> splitOnSeparator(String logicalLine) {
         String line = logicalLine.stripLeading();
         int separator = 0;
-        while (separator < line.length()) {
-            char c = line.charAt(separator);
-            if (c == '\\') {
-                separator += 2;
-                continue;
-            }
-            if (c == '=' || c == ':' || Character.isWhitespace(c)) {
-                break;
-            }
-            separator++;
+        while (separator < line.length() && !isSeparator(line.charAt(separator))) {
+            // An escaped character, such as \=, is part of the key
+            separator += line.charAt(separator) == '\\' ? 2 : 1;
         }
         String key = line.substring(0, Math.min(separator, line.length()));
         String rest = separator < line.length() ? line.substring(separator + 1).strip() : "";
@@ -205,5 +231,9 @@ public final class PropertiesDocument {
             rest = rest.substring(1).strip();
         }
         return Map.entry(key, rest);
+    }
+
+    private static boolean isSeparator(char c) {
+        return c == '=' || c == ':' || Character.isWhitespace(c);
     }
 }

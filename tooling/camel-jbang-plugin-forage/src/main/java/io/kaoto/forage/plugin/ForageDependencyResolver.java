@@ -1,9 +1,11 @@
 package io.kaoto.forage.plugin;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import io.kaoto.forage.catalog.model.ForageBean;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
 import io.kaoto.forage.plugin.ForagePropertyParser.ParsedProperty;
 
@@ -12,7 +14,9 @@ import io.kaoto.forage.plugin.ForagePropertyParser.ParsedProperty;
  * (base, Spring Boot, Quarkus) and the GAVs of the beans they configure, taken from the bean the key belongs to
  * (e.g. {@code ollama} for {@code forage.ollama.model.name}) and from the beans a value selects (e.g.
  * {@code db.kind=postgresql}, {@code agent.model.kind=ollama}; see
- * {@link ForagePropertyParser#selectedBeans(ParsedProperty, String)}).
+ * {@link ForagePropertyParser#selectedBeans(ParsedProperty, String)}), plus the beans a property turns on with the
+ * same rule as {@link CatalogDrivenExportCustomizer} (e.g. {@code agent.in.memory.store.file.source} turns on the
+ * in-memory store and the default RAG).
  *
  * <p>This class has no CLI dependencies, so it can be reused outside the {@code config} commands.
  */
@@ -83,7 +87,8 @@ public final class ForageDependencyResolver {
     }
 
     /**
-     * Adds the dependencies of one property: its factory, the bean it configures and the beans its value selects.
+     * Adds the dependencies of one property: its factory, the bean it configures, the beans its value selects and
+     * the beans it turns on.
      *
      * @param dependencies the dependencies to add to
      * @param parsed the parsed property key
@@ -95,6 +100,23 @@ public final class ForageDependencyResolver {
             addBean(dependencies, parsed.beanType());
         }
         parser.selectedBeans(parsed, value).forEach(bean -> addBean(dependencies, bean));
+        addConfiguredBeans(dependencies, parsed, value);
+    }
+
+    /**
+     * Adds the beans the property turns on, as {@code camel forage run} and {@code export} resolve them: beans with
+     * the property among their own config entries or their {@code enabledBy} entries.
+     */
+    private void addConfiguredBeans(Dependencies dependencies, ParsedProperty parsed, String value) {
+        Map<String, List<String>> scanned =
+                Map.of(ForagePropertyScanner.scannedPropertyName(parsed), List.of(value != null ? value : ""));
+        for (ForageBean bean : catalog.getAllBeansForFactory(parsed.factoryType())) {
+            if (bean.getGav() != null
+                    && !bean.getGav().isBlank()
+                    && CatalogDrivenExportCustomizer.isConfigured(bean, parsed.factoryType(), scanned)) {
+                dependencies.base().add(bean.getGav());
+            }
+        }
     }
 
     /**

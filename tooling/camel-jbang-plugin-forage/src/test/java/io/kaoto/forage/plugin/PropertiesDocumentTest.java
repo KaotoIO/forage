@@ -1,9 +1,11 @@
 package io.kaoto.forage.plugin;
 
 import java.io.File;
+import java.io.StringReader;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import io.kaoto.forage.plugin.PropertiesDocument.Entry;
 
 import org.junit.jupiter.api.Test;
@@ -77,6 +79,39 @@ class PropertiesDocumentTest {
         values.put("e", null);
 
         assertThat(document.withValues(values)).containsExactly("# header", "a=10", "b=2", "d=4");
+    }
+
+    @Test
+    void withValuesEscapesKeysAndValues() throws Exception {
+        PropertiesDocument document = PropertiesDocument.of(List.of("e\\:f=4"));
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put("e:f", "5");
+        values.put("path", "C:\\data");
+        values.put("multi", "a\nb");
+        values.put("lead", " x");
+        values.put("key with spaces#!", "a=b:c#d!e");
+
+        Properties reloaded = load(document.withValues(values));
+
+        assertThat(reloaded).hasSize(values.size());
+        values.forEach(
+                (key, value) -> assertThat(reloaded.getProperty(key)).as(key).isEqualTo(value));
+    }
+
+    @Test
+    void appendingEndsADanglingContinuation() throws Exception {
+        PropertiesDocument document = PropertiesDocument.of(List.of("a=one\\"));
+
+        Properties reloaded = load(document.withValues(Map.of("b", "2")));
+
+        assertThat(reloaded.getProperty("a")).isEqualTo("one");
+        assertThat(reloaded.getProperty("b")).isEqualTo("2");
+    }
+
+    private static Properties load(List<String> lines) throws Exception {
+        Properties properties = new Properties();
+        properties.load(new StringReader(String.join("\n", lines) + "\n"));
+        return properties;
     }
 
     @Test

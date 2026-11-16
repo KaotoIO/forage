@@ -73,6 +73,20 @@ class ForagePropertyParserTest {
     }
 
     @Test
+    void candidatesListEveryCatalogReading() {
+        // Both the default Azure OpenAI entry and the openai.api.key entry of an instance named "azure"
+        assertThat(parser.candidates("forage.azure.openai.api.key"))
+                .extracting(ParsedProperty::instanceName, ParsedProperty::beanType)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(null, "azure-openai"),
+                        org.assertj.core.groups.Tuple.tuple("azure", "openai"));
+        assertThat(parser.candidates("forage.ds1.jdbc.url")).hasSize(1);
+        assertThat(parser.candidates("forage.ds1.jdbc.urll")).isEmpty();
+        assertThat(parser.parseHeuristically("forage.ds1.jdbc.urll"))
+                .hasValue(new ParsedProperty("jdbc", "ds1", null, "urll", "jdbc.urll"));
+    }
+
+    @Test
     void configEntries() {
         assertThat(parser.isConfigEntry("forage.jdbc.url")).isTrue();
         assertThat(parser.isConfigEntry("forage.openai.api.key")).isTrue();

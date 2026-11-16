@@ -167,6 +167,24 @@ DELETE MODE
 └──────────────────────────────────────────────────────────┘
 ```
 
+## Library
+
+`config write` is a thin wrapper around `ForageConfigurationEditor` from the `forage-config-editor` library
+(`tooling/forage-config-editor`), which has no CLI dependency so that Kaoto Kompanion can reuse it. The command only
+turns the Kaoto JSON input into the factory, instance name and properties of each instance, and formats the result.
+
+- **New instance names** must start with a letter or a digit, contain only letters, digits, `-` and `_`, and must not
+  be the start of Forage property keys (a factory key such as `jdbc`, a bean prefix such as `ollama` or `azure`):
+  the keys of such an instance would also read as keys of the default instance. Existing instances keep working
+  whatever their name.
+- **Delete** also removes the instance from the lists of instance names that refer to it
+  (`forage.multi.agent.names`), and removes such a list once empty (`updatedProperties` in the output).
+- **`--strategy forage`** writes a bean property to the bean's own file when the catalog records one (e.g.
+  `forage-model-bedrock.properties`), and to the factory's file otherwise. A bean property outside the factory's
+  namespace (e.g. `forage.myOllama.ollama.model.name` for the agent factory) in the factory's file is only read on
+  Spring Boot, so the output then has a `warnings` entry. A factory written to several files lists them under
+  `propertiesFiles`.
+
 ## Key Components
 
 ### ForageCatalog (Singleton)

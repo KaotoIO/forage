@@ -4,6 +4,8 @@
 
 `ConfigReadCommand` is a Camel JBang plugin command that reads Forage configuration properties from properties files and generates a JSON list of beans that would be created at runtime. It's designed to support the Kaoto VSCode extension by providing a machine-readable view of configured beans.
 
+The parsing lives in the `forage-config-editor` library (`tooling/forage-config-editor`, `ForageConfiguration`), which has no CLI dependency so that Kaoto Kompanion can reuse it; the command only formats its result.
+
 ## Architecture Diagram
 
 ```
@@ -338,6 +340,14 @@ The command parses property keys following these patterns:
 | `forage.ollama.model.name` | factoryType=multi, beanType=ollama, propertyName=model.name |
 | `forage.test.ollama.model.name` | factoryType=multi, beanType=ollama, instanceName=test, propertyName=model.name |
 | `forage.myMemory.infinispan.server-list` | factoryType=multi, beanType=infinispan, instanceName=myMemory, propertyName=server-list |
+| `forage.my.ds.jdbc.url` | factoryType=jdbc, instanceName=my.ds, propertyName=url |
+
+Keys are resolved against all the files together, in two passes. Keys that read in a single way (as a catalog
+config entry with an instance prefix), and the names listed in `forage.multi.agent.names`, make the known instance
+names. A key that reads in several ways then goes to the known instance it can belong to, or else to the default
+instance: `forage.azure.openai.api.key` belongs to an OpenAI instance named `azure` when
+`forage.azure.openai.model.name` shows that one exists, and to the default Azure OpenAI bean otherwise. A key no
+catalog entry matches (e.g. a typo) belongs to the known instance it starts with.
 
 ## Bean Name Determination
 

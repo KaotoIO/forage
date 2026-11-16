@@ -106,6 +106,7 @@ forage/
 │   └── route-policies.md          # Flip and schedule route policies
 ├── tooling/                        # Build tooling
 │   ├── camel-jbang-plugin-forage/ # Camel JBang plugin
+│   ├── forage-config-editor/      # Reads/edits Forage properties files (no CLI deps; for config commands and Kaoto Kompanion)
 │   └── forage-maven-catalog-plugin/ # Catalog generation plugin
 ├── forage-catalog/                 # Generated catalog
 └── docs/                          # Documentation

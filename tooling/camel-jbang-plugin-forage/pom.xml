@@ -38,6 +38,21 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- provide the QuarkusConfigHook implementations -->
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-jdbc-common</artifactId>
+            <version>${project.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-jms-common</artifactId>
+            <version>${project.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>

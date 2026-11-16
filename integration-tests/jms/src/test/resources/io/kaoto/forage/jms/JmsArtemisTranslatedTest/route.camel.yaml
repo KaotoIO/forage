@@ -1,0 +1,30 @@
+- route:
+    id: translated-producer
+    from:
+      id: translated-timer
+      uri: timer
+      parameters:
+        period: "1000"
+        timerName: translated
+      steps:
+        - setBody:
+            id: translated-body
+            constant: Translated message
+        - to:
+            id: translated-send
+            uri: jms
+            parameters:
+              destinationName: translated.queue
+              destinationType: queue
+- route:
+    id: translated-consumer
+    from:
+      id: translated-receive
+      uri: jms
+      parameters:
+        destinationName: translated.queue
+        destinationType: queue
+      steps:
+        - log:
+            id: translated-log
+            message: "Received: ${body}"

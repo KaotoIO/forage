@@ -492,6 +492,16 @@ Register it in the runtime module's `META-INF/services/io.kaoto.forage.core.comm
 On Spring Boot no such declaration is needed when the starter registers Spring beans: the plain factory looks the bean
 up in the Camel registry, which sees the Spring context, and skips it.
 
+### 5d. Quarkus Configuration Export (optional)
+
+On `camel export --runtime=quarkus`, a module is written as `quarkus.*` properties only if its own module
+(e.g. `forage-<module>-common`) has a `io.kaoto.forage.core.common.QuarkusConfigHook`, registered in its
+`META-INF/services/io.kaoto.forage.core.common.QuarkusConfigHook`, and is on the plugin's runtime classpath.
+Without one the module stays `forage.*`. The keys come from `descriptor().translateProperties`; return a reason from
+`unsupported(name, config)` to keep a configuration on `forage.*`, and use `adjust` to tweak keys or enable catalog
+groups. `covered()` must list every key `translateProperties` fully covers: any other key present keeps the whole
+module on `forage.*`, so the export never drops configuration. See `JdbcQuarkusConfigHook` and `JmsQuarkusConfigHook`.
+
 ---
 
 ## Step 6: Integration Tests

@@ -4,6 +4,16 @@ This guide covers both version-to-version upgrade notes and migrating from frame
 
 ---
 
+## Upgrading to 1.6.3
+
+### Breaking Changes
+
+#### Quarkus export writes JDBC and JMS configuration as Quarkus properties
+
+`camel export --runtime=quarkus` now writes plain JDBC datasources and the default Artemis connection factory as `quarkus.*` properties, without the Forage artifacts. For these configurations, `FORAGE_*` / `-Dforage.*` values set at export or at runtime are no longer read: use the `QUARKUS_*` names the export prints. JMS pooling (on by default) adds `quarkus-pooled-jms`. A module is translated only when every one of its `forage.*` keys has a Quarkus translation; otherwise it stays `forage.*` with the Forage artifacts, and the export names the keys that blocked it.
+
+---
+
 ## Upgrading to 1.5.0
 
 ### Breaking Changes

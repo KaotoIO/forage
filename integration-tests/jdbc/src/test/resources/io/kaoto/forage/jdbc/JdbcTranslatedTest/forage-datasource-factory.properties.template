@@ -1,0 +1,6 @@
+# Plain datasource: on Quarkus, the export translates all its properties to quarkus.datasource."ds1".*
+forage.ds1.jdbc.db.kind=postgresql
+forage.ds1.jdbc.url=jdbc:postgresql://localhost:5432/postgres  # Overridden by test with testcontainer URL
+forage.ds1.jdbc.username=test
+forage.ds1.jdbc.password=test
+forage.ds1.jdbc.pool.max.size=5

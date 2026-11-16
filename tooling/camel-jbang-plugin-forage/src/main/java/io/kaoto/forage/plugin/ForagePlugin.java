@@ -1,5 +1,7 @@
 package io.kaoto.forage.plugin;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -8,6 +10,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.common.CamelJBangPlugin;
+import org.apache.camel.dsl.jbang.core.common.CommandLineHelper;
 import org.apache.camel.dsl.jbang.core.common.Plugin;
 import org.apache.camel.dsl.jbang.core.common.PluginExporter;
 import org.apache.camel.dsl.jbang.core.common.PluginRunCustomizer;
@@ -55,6 +58,9 @@ public class ForagePlugin implements Plugin {
         return Optional.of(new PluginExporter() {
             @Override
             public Set<String> getDependencies(org.apache.camel.dsl.jbang.core.common.RuntimeType runtimeType) {
+                if (RuntimeType.fromValue(runtimeType.name()) == RuntimeType.QUARKUS) {
+                    exportQuarkusProperties();
+                }
                 // gather dependencies across all (enabled) export customizers for the specific runtime
                 return ExportHelper.getAllCustomizers()
                         .filter(ExportCustomizer::isEnabled)
@@ -74,6 +80,27 @@ public class ForagePlugin implements Plugin {
                 // This exporter contributes only runtime dependencies, not source files.
             }
         });
+    }
+
+    /**
+     * Writes the Forage configurations Quarkus extensions cover as {@code quarkus.*} properties into the project being
+     * exported. Camel JBang calls {@code getDependencies} after it has written the exported resources, and it has no
+     * hook for the exported properties.
+     */
+    private static void exportQuarkusProperties() {
+        Path resources = CommandLineHelper.getWorkDir().resolve("work/src/main/resources");
+        if (!Files.isDirectory(resources)) {
+            return;
+        }
+        try {
+            QuarkusConfigExport.Result result = QuarkusConfigExport.translate(QuarkusConfigExport.load(
+                    CatalogDrivenExportCustomizer.workingDir().toPath()));
+            QuarkusConfigExport.write(result, resources);
+            Printer printer = new Printer.SystemOutPrinter();
+            result.messages().forEach(printer::println);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to write the Quarkus properties of the exported project", e);
+        }
     }
 
     private void beforeRun(KameletMain main, List<String> files) {

@@ -24,6 +24,7 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
     private static final Logger LOG = LoggerFactory.getLogger(CatalogDrivenExportCustomizer.class);
     private static final String FORAGE_PREFIX = "forage.";
+    private static final String FORAGE_GAV_PREFIX = "mvn:io.kaoto.forage:";
 
     private Map<String, Map<String, List<String>>> scannedProperties;
     private Boolean enabled;
@@ -43,24 +44,27 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
         Map<String, Map<String, List<String>>> properties = getScannedProperties();
 
         String variantName = mapRuntimeToVariant(runtime);
+        QuarkusConfigExport.Result quarkusExport = runtime == RuntimeType.QUARKUS ? quarkusConfigExport() : null;
+        Set<String> quarkusModules = quarkusExport != null ? quarkusExport.modules() : Set.of();
 
         for (String factoryTypeKey : properties.keySet()) {
             Map<String, List<String>> factoryProperties = properties.get(factoryTypeKey);
+            Set<String> factoryDependencies = new LinkedHashSet<>();
 
             // 1. Add the factory variant GAV (or fall back to base if variant doesn't exist)
             var variantGav = catalog.getFactoryVariantGav(factoryTypeKey, variantName);
             if (variantGav.isPresent()) {
-                dependencies.add(toMvnGav(variantGav.get()));
+                factoryDependencies.add(toMvnGav(variantGav.get()));
             } else {
                 // No variant-specific module; use base
                 catalog.getFactoryVariantGav(factoryTypeKey, "base")
                         .map(CatalogDrivenExportCustomizer::toMvnGav)
-                        .ifPresent(dependencies::add);
+                        .ifPresent(factoryDependencies::add);
             }
 
             // 2. Add variant additional dependencies (e.g., camel-quarkus-sql)
             List<String> additionalDeps = catalog.getVariantAdditionalDependencies(factoryTypeKey, variantName);
-            additionalDeps.stream().map(CatalogDrivenExportCustomizer::toMvnGav).forEach(dependencies::add);
+            additionalDeps.stream().map(CatalogDrivenExportCustomizer::toMvnGav).forEach(factoryDependencies::add);
 
             // 3. Find bean-name config entries and resolve bean GAVs
             catalog.getFactoryMetadata(factoryTypeKey).ifPresent(metadata -> {
@@ -83,13 +87,13 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
                                     Collection<String> beanGavs = catalog.getBeanGavs(kind);
                                     beanGavs.stream()
                                             .map(CatalogDrivenExportCustomizer::toMvnGav)
-                                            .forEach(dependencies::add);
+                                            .forEach(factoryDependencies::add);
 
                                     // Add bean runtime dependencies for this variant
                                     List<String> beanDeps = catalog.getBeanRuntimeDependencies(kind, variantName);
                                     beanDeps.stream()
                                             .map(CatalogDrivenExportCustomizer::toMvnGav)
-                                            .forEach(dependencies::add);
+                                            .forEach(factoryDependencies::add);
                                 }
                             }
                         }
@@ -103,19 +107,27 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
             // turns their feature on (for example the agent RAG pipeline). Add each bean artifact
             // whose configuration, or one of whose enabledBy entries, is present in the scanned
             // properties.
-            addConfiguredBeanDependencies(catalog, factoryTypeKey, factoryProperties, variantName, dependencies);
+            addConfiguredBeanDependencies(catalog, factoryTypeKey, factoryProperties, variantName, factoryDependencies);
 
             // 4. Check conditional beans for runtime dependencies
             List<ConditionalBeanGroup> conditionalGroups = catalog.getConditionalBeans(factoryTypeKey);
             for (ConditionalBeanGroup group : conditionalGroups) {
-                if (isConditionMet(group.getConfigEntry(), factoryProperties)) {
+                if (isConditionMet(group.getConfigEntry(), factoryProperties)
+                        || (quarkusModules.contains(factoryTypeKey)
+                                && quarkusExport.groups().contains(group.getId()))) {
                     List<String> conditionalDeps =
                             catalog.getConditionalRuntimeDependencies(factoryTypeKey, group.getId(), variantName);
                     conditionalDeps.stream()
                             .map(CatalogDrivenExportCustomizer::toMvnGav)
-                            .forEach(dependencies::add);
+                            .forEach(factoryDependencies::add);
                 }
             }
+
+            // A configuration exported as Quarkus configuration needs no Forage artifact
+            if (quarkusModules.contains(factoryTypeKey)) {
+                factoryDependencies.removeIf(dependency -> dependency.startsWith(FORAGE_GAV_PREFIX));
+            }
+            dependencies.addAll(factoryDependencies);
         }
 
         LOG.debug("Resolved {} dependencies for runtime {}", dependencies.size(), runtime);
@@ -199,13 +211,26 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
         return repositories;
     }
 
+    private static QuarkusConfigExport.Result quarkusConfigExport() {
+        try {
+            return QuarkusConfigExport.translate(
+                    QuarkusConfigExport.load(workingDir().toPath()));
+        } catch (IOException e) {
+            LOG.warn("Failed to read forage properties: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    static File workingDir() {
+        String configDir = System.getProperty("forage.config.dir");
+        return configDir != null ? new File(configDir) : new File(System.getProperty("user.dir"));
+    }
+
     private Map<String, Map<String, List<String>>> getScannedProperties() {
         if (scannedProperties == null) {
             try {
-                String configDir = System.getProperty("forage.config.dir");
-                File workingDir = configDir != null ? new File(configDir) : new File(System.getProperty("user.dir"));
                 ForageCatalogReader catalog = ForageCatalogReader.getInstance();
-                scannedProperties = ForagePropertyScanner.scanProperties(workingDir, catalog);
+                scannedProperties = ForagePropertyScanner.scanProperties(workingDir(), catalog);
             } catch (IOException e) {
                 LOG.warn("Failed to scan for forage properties: {}", e.getMessage());
                 scannedProperties = Map.of();

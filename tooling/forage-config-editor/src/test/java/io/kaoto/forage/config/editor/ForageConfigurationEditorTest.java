@@ -1,10 +1,13 @@
 package io.kaoto.forage.config.editor;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Properties;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
 import io.kaoto.forage.config.editor.ForageConfigurationEditor.ConfigurationEditException;
 import io.kaoto.forage.config.editor.ForageConfigurationEditor.EditResult;
@@ -157,6 +160,90 @@ class ForageConfigurationEditorTest {
         // The last name removes the list
         editor.delete("a2").write();
         assertThat(read("application.properties")).isEmpty();
+    }
+
+    @Test
+    void deleteOfANameNoInstanceHasKeepsTheDefaultInstance() throws Exception {
+        // Only the default Azure OpenAI bean: api.key could also read as the OpenAI api.key of an instance "azure"
+        write("application.properties", "forage.azure.openai.api.key=k", "forage.azure.openai.endpoint=https://e");
+
+        assertThatThrownBy(() -> editor(PropertiesFileStrategyType.APPLICATION).delete("azure"))
+                .isInstanceOf(ConfigurationEditException.class)
+                .hasMessage("No configuration found for instance 'azure'");
+        assertThat(read("application.properties"))
+                .isEqualTo("forage.azure.openai.api.key=k\nforage.azure.openai.endpoint=https://e\n");
+    }
+
+    @Test
+    void deleteRemovesUnrecognisedKeysUnderTheInstancePrefix() throws Exception {
+        write(
+                "application.properties",
+                "forage.myPG.jdbc.url=x",
+                "forage.myPG.jdbcc.typo=y",
+                "forage.other.jdbc.url=z");
+
+        editor(PropertiesFileStrategyType.APPLICATION).delete("myPG").write();
+
+        assertThat(read("application.properties")).isEqualTo("forage.other.jdbc.url=z\n");
+    }
+
+    @Test
+    void deleteUnderTheForageStrategyIncludesApplicationOverrides() throws Exception {
+        write("forage-datasource-factory.properties", "forage.ds1.jdbc.url=x");
+        write("application.properties", "forage.ds1.jdbc.username=sa", "forage.ds2.jdbc.url=y");
+        write("application-prod.properties", "forage.ds1.jdbc.url=prod");
+
+        EditResult result = editor(PropertiesFileStrategyType.FORAGE).delete("ds1");
+
+        assertThat(result.changes())
+                .extracting(change -> change.file().getName())
+                .containsExactlyInAnyOrder(
+                        "forage-datasource-factory.properties",
+                        "application.properties",
+                        "application-prod.properties");
+        result.write();
+        assertThat(read("application.properties")).isEqualTo("forage.ds2.jdbc.url=y\n");
+
+        // An instance only in the override files is not one the forage strategy lists
+        assertThatThrownBy(() -> editor(PropertiesFileStrategyType.FORAGE).delete("ds2"))
+                .isInstanceOf(ConfigurationEditException.class);
+    }
+
+    @Test
+    void editsApplyToTheDocumentsOfTheSource() throws Exception {
+        write("application.properties", "forage.ds1.jdbc.url=old");
+        // The open document has an unsaved comment above the entry
+        File file = new File(tempDir, "application.properties");
+        DocumentSource openDocuments = f -> f.equals(file)
+                ? Optional.of(PropertiesDocument.of(List.of("# unsaved", "forage.ds1.jdbc.url=old")))
+                : DocumentSource.DISK.load(f);
+
+        EditResult result = new ForageConfigurationEditor(
+                        CATALOG, tempDir, PropertiesFileStrategyType.APPLICATION.create(CATALOG), openDocuments)
+                .write("jdbc", "ds1", properties("jdbc.url", "new"));
+
+        assertThat(result.changes().get(0).edits())
+                .containsExactly(new TextEdit(1, 2, List.of("forage.ds1.jdbc.url=new")));
+        assertThat(result.changes().get(0).lines()).containsExactly("# unsaved", "forage.ds1.jdbc.url=new");
+    }
+
+    @Test
+    void writeKeepsTheEncodingOfTheFile() throws Exception {
+        // An ISO-8859-1 file, as Properties.load(InputStream) reads it
+        File file = new File(tempDir, "application.properties");
+        Files.write(file.toPath(), "forage.ds1.jdbc.username=caf\u00e9\n".getBytes(StandardCharsets.ISO_8859_1));
+
+        editor(PropertiesFileStrategyType.APPLICATION)
+                .write("jdbc", "ds1", properties("jdbc.password", "s\u00e9cret"))
+                .write();
+
+        assertThat(new String(Files.readAllBytes(file.toPath()), StandardCharsets.ISO_8859_1))
+                .isEqualTo("forage.ds1.jdbc.username=caf\u00e9\nforage.ds1.jdbc.password=s\\u00E9cret\n");
+        Properties properties = new Properties();
+        try (var in = Files.newInputStream(file.toPath())) {
+            properties.load(in);
+        }
+        assertThat(properties.getProperty("forage.ds1.jdbc.password")).isEqualTo("s\u00e9cret");
     }
 
     @Test

@@ -1261,7 +1261,8 @@ rm -rf "${PROJECT_DIR}"
 The `forage` strategy writes each factory to its own catalog-defined file (for JDBC,
 `forage-datasource-factory.properties`, named after the module's `Config.name()`), writes no
 dependencies, and reads/deletes from the catalog file names plus any
-`forage-*.properties` file in the top level of the directory.
+`forage-*.properties` file in the top level of the directory. Deleting an instance found there also removes its
+overrides from `application.properties` and the `application-<profile>.properties` files.
 
 ### Test 11.1: Write uses the catalog file, read and delete use the same files
 
@@ -1300,7 +1301,7 @@ echo "PASS: delete removes an instance that read listed from a wildcard file"
 rm -rf "${PROJECT_DIR}"
 ```
 
-### Test 11.2: Delete only touches the files of its strategy
+### Test 11.2: Delete under one strategy keeps the instances of the other
 
 ```bash
 PROJECT_DIR=$(mktemp -d)

@@ -164,6 +164,20 @@ class ConfigCommandsForageStrategyTest {
     }
 
     @Test
+    void deleteUnderTheForageStrategyRemovesApplicationOverrides() throws Exception {
+        assertThat(write(PropertiesFileStrategyType.FORAGE, PG_JSON.formatted("myPG"))
+                        .exitCode())
+                .isZero();
+        File appFile = new File(tempDir, "application.properties");
+        Files.writeString(appFile.toPath(), "forage.myPG.jdbc.username=sa\ncamel.main.name=app\n");
+
+        JsonNode result = delete("myPG", PropertiesFileStrategyType.FORAGE).json();
+
+        assertThat(result.get("results").has("application.properties")).isTrue();
+        assertThat(Files.readString(appFile.toPath())).isEqualTo("camel.main.name=app\n");
+    }
+
+    @Test
     void deleteDoesNotScanFilesOfTheOtherStrategy() throws Exception {
         File appFile = new File(tempDir, "application.properties");
         Files.writeString(appFile.toPath(), "forage.myPG.jdbc.db.kind=postgresql\n");

@@ -3,6 +3,10 @@ package io.kaoto.forage.config.editor;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -40,28 +44,51 @@ public final class PropertiesDocument {
     public record Entry(String key, String value, int firstLine, int lastLine) {}
 
     private final List<String> lines;
+    private final Charset charset;
     private final List<Entry> entries;
 
-    private PropertiesDocument(List<String> lines) {
+    private PropertiesDocument(List<String> lines, Charset charset) {
         this.lines = List.copyOf(lines);
+        this.charset = charset;
         this.entries = parseEntries(this.lines);
     }
 
     /**
-     * Reads a properties file, or returns an empty document if it does not exist.
+     * Reads a properties file, or returns an empty document if it does not exist. The file is decoded as UTF-8 when
+     * it is valid UTF-8, and as ISO-8859-1 otherwise, the encoding {@link Properties#load(java.io.InputStream)}
+     * expects, so that any file reads.
      */
     public static PropertiesDocument read(File file) throws IOException {
         if (!file.isFile()) {
-            return new PropertiesDocument(List.of());
+            return new PropertiesDocument(List.of(), StandardCharsets.UTF_8);
         }
-        return new PropertiesDocument(Files.readAllLines(file.toPath(), StandardCharsets.UTF_8));
+        byte[] bytes = Files.readAllBytes(file.toPath());
+        try {
+            String content = StandardCharsets.UTF_8
+                    .newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(bytes))
+                    .toString();
+            return new PropertiesDocument(content.lines().toList(), StandardCharsets.UTF_8);
+        } catch (CharacterCodingException e) {
+            return new PropertiesDocument(
+                    new String(bytes, StandardCharsets.ISO_8859_1).lines().toList(), StandardCharsets.ISO_8859_1);
+        }
     }
 
     /**
-     * Creates a document from the lines of a properties file.
+     * Creates a document from the lines of a properties file, to be written in UTF-8.
      */
     public static PropertiesDocument of(List<String> lines) {
-        return new PropertiesDocument(lines);
+        return new PropertiesDocument(lines, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * @return the encoding the document was read in, which it should be written back in
+     */
+    public Charset charset() {
+        return charset;
     }
 
     /**
@@ -188,7 +215,8 @@ public final class PropertiesDocument {
 
     /**
      * Formats an entry as a {@code key=value} line, escaping the key and the value as {@link Properties} expects.
-     * Characters outside ASCII are kept as they are, since the files are written in UTF-8.
+     * Characters outside printable ASCII are written as {@code \\uXXXX} escapes, so the entry reads the same whether
+     * the file is loaded as UTF-8 or as ISO-8859-1.
      */
     static String format(String key, String value) {
         return escape(key, true) + "=" + escape(value, false);
@@ -206,21 +234,28 @@ public final class PropertiesDocument {
                 case '\f' -> escaped.append("\\f");
                 case ' ' -> escaped.append(isKey || i == 0 ? "\\ " : " ");
                 case '=', ':', '#', '!' -> escaped.append(isKey ? "\\" + c : String.valueOf(c));
-                default -> escaped.append(c);
+                default -> escaped.append(c < 0x20 || c > 0x7e ? String.format("\\u%04X", (int) c) : String.valueOf(c));
             }
         }
         return escaped.toString();
     }
 
     /**
-     * Writes lines to a file, each followed by a line feed.
+     * Writes lines to a file in UTF-8, each followed by a line feed.
      */
     public static void write(File file, List<String> lines) throws IOException {
+        write(file, lines, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Writes lines to a file in the given encoding, each followed by a line feed.
+     */
+    public static void write(File file, List<String> lines, Charset charset) throws IOException {
         StringBuilder content = new StringBuilder();
         for (String line : lines) {
             content.append(line).append('\n');
         }
-        Files.writeString(file.toPath(), content.toString(), StandardCharsets.UTF_8);
+        Files.writeString(file.toPath(), content.toString(), charset);
     }
 
     private static List<Entry> parseEntries(List<String> lines) {

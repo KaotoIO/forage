@@ -54,6 +54,15 @@ class ForageConfigurationTest {
     }
 
     @Test
+    void overriddenEntriesDoNotMakeNamesKnown() throws Exception {
+        // The second list overrides the first, which named "azure"
+        ForageConfiguration configuration = read(
+                "forage.multi.agent.names=azure", "forage.multi.agent.names=other", "forage.azure.openai.api.key=k");
+
+        assertThat(instanceOf(configuration)).containsEntry("forage.azure.openai.api.key", "<default>");
+    }
+
+    @Test
     void instanceListsMakeNamesKnown() throws Exception {
         ForageConfiguration configuration = read("forage.multi.agent.names=azure", "forage.azure.openai.api.key=k");
 
@@ -135,7 +144,8 @@ class ForageConfigurationTest {
         return configuration.entries().stream()
                 .collect(Collectors.toMap(
                         ForageConfiguration.Entry::key,
-                        entry -> entry.instanceName() != null ? entry.instanceName() : "<default>"));
+                        entry -> entry.instanceName() != null ? entry.instanceName() : "<default>",
+                        (first, last) -> last));
     }
 
     private File write(String... lines) throws Exception {

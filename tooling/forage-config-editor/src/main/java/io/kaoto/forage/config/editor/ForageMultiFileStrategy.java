@@ -2,6 +2,7 @@ package io.kaoto.forage.config.editor;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import io.kaoto.forage.catalog.model.ForageBean;
@@ -32,6 +33,21 @@ final class ForageMultiFileStrategy implements PropertiesFileStrategy {
     @Override
     public List<File> findPropertiesFiles(File directory) throws IOException {
         return ForageConfigurationFiles.forageProperties(directory, catalog);
+    }
+
+    /**
+     * {@code application.properties} and the {@code application-<profile>.properties} files, which every runtime
+     * loads next to the per-module files.
+     */
+    @Override
+    public List<File> findOverrideFiles(File directory) throws IOException {
+        List<File> files = new ArrayList<>();
+        File applicationProperties = ForageConfigurationFiles.applicationProperties(directory);
+        if (applicationProperties != null) {
+            files.add(applicationProperties);
+        }
+        files.addAll(ForageConfigurationFiles.profileProperties(directory));
+        return files;
     }
 
     /**

@@ -61,13 +61,13 @@ class ConfigWriteCommandTest {
 
         assertThat(exitCode).isEqualTo(0);
 
-        // Verify output - when dependencies are included, output has "factories" structure
+        // Verify output
         String output = printer.getOutput();
         assertThat(output).isNotEmpty();
 
         JsonNode result = OBJECT_MAPPER.readTree(output);
         assertThat(result.get("success").asBoolean()).isTrue();
-        // With dependencies, the structure is { success, factories: { jdbc: {...}, dependencies: {...} } }
+        // The structure is { success, factories: { jdbc: {...} } }
         JsonNode factories = result.get("factories");
         assertThat(factories).isNotNull();
         assertThat(factories.get("jdbc").get("beanName").asText()).isEqualTo("myPG");
@@ -90,13 +90,8 @@ class ConfigWriteCommandTest {
         assertThat(props.getProperty("forage.myPG.jdbc.idempotent.repository.enabled"))
                 .isEqualTo("true");
 
-        // Verify dependencies are written
-        assertThat(props.getProperty("camel.jbang.dependencies")).contains("io.kaoto.forage:forage-jdbc-postgresql:");
-        assertThat(props.getProperty("camel.jbang.dependencies.main")).contains("io.kaoto.forage:forage-jdbc:");
-        assertThat(props.getProperty("camel.jbang.dependencies.spring-boot"))
-                .contains("io.kaoto.forage:forage-jdbc-starter:");
-        assertThat(props.getProperty("camel.jbang.dependencies.quarkus"))
-                .contains("io.kaoto.forage:forage-quarkus-jdbc-deployment:");
+        // Dependencies are resolved by the Forage plugin when the project runs: none are written
+        assertNoDependencyLists(props);
     }
 
     @Test
@@ -126,15 +121,9 @@ class ConfigWriteCommandTest {
 
         JsonNode result = OBJECT_MAPPER.readTree(output);
         assertThat(result.get("success").asBoolean()).isTrue();
-        // Infinispan maps to "multi" factory type (agent factory), check the factories structure
-        JsonNode factories = result.get("factories");
-        if (factories != null) {
-            // Has dependencies - look for the factory in factories
-            assertThat(factories.has("multi") || factories.has("dependencies")).isTrue();
-        } else {
-            // Single result - beanName at top level
-            assertThat(result.get("beanName").asText()).isEqualTo("myMemory");
-        }
+        // Belongs to the agent factory
+        assertThat(result.get("factories").get("agent").get("beanName").asText())
+                .isEqualTo("myMemory");
 
         // Verify properties file was created
         File propsFile = new File(tempDir, "application.properties");
@@ -240,13 +229,8 @@ class ConfigWriteCommandTest {
         assertThat(props.getProperty("forage.myIBMMQ.jms.broker.url")).isEqualTo("127.0.0.1");
         assertThat(props.getProperty("forage.myIBMMQ.jms.username")).isEqualTo("user");
 
-        // Verify JMS dependencies are written
-        assertThat(props.getProperty("camel.jbang.dependencies")).contains("io.kaoto.forage:forage-jms-ibmmq:");
-        assertThat(props.getProperty("camel.jbang.dependencies.main")).contains("io.kaoto.forage:forage-jms:");
-        assertThat(props.getProperty("camel.jbang.dependencies.spring-boot"))
-                .contains("io.kaoto.forage:forage-jms-starter:");
-        assertThat(props.getProperty("camel.jbang.dependencies.quarkus"))
-                .contains("io.kaoto.forage:forage-quarkus-jms-deployment:");
+        // Dependencies are resolved by the Forage plugin when the project runs: none are written
+        assertNoDependencyLists(props);
     }
 
     @Test
@@ -278,15 +262,9 @@ class ConfigWriteCommandTest {
 
         JsonNode result = OBJECT_MAPPER.readTree(output);
         assertThat(result.get("success").asBoolean()).isTrue();
-        // Ollama maps to "multi" factory type, check for factories structure
-        JsonNode factories = result.get("factories");
-        if (factories != null) {
-            // Has dependencies - look for the factory in factories
-            assertThat(factories.has("multi") || factories.has("dependencies")).isTrue();
-        } else {
-            // Single result - beanName at top level
-            assertThat(result.get("beanName").asText()).isEqualTo("test");
-        }
+        // Belongs to the agent factory
+        assertThat(result.get("factories").get("agent").get("beanName").asText())
+                .isEqualTo("test");
 
         // Verify properties file was created
         File propsFile = new File(tempDir, "application.properties");
@@ -302,28 +280,24 @@ class ConfigWriteCommandTest {
     }
 
     @Test
-    void testDependenciesPreserveExisting() throws Exception {
-        // Test that existing dependencies are preserved when adding new forage dependencies
-
-        // Pre-create application.properties with existing dependencies
+    void testWriteKeepsUserDependenciesAndRemovesForageOnes() throws Exception {
+        // Older versions of the command wrote the Forage dependencies next to the user's own ones
         File propsFile = new File(tempDir, "application.properties");
         String existingContent =
                 """
                 # Existing configuration
                 some.existing.property=value
-                camel.jbang.dependencies=com.example:existing-lib:1.0,com.other:another-lib:2.0
-                camel.jbang.dependencies.main=com.example:existing-main:1.0
+                camel.jbang.dependencies=com.example:existing-lib:1.0,io.kaoto.forage:forage-jdbc-mariadb:1.0.0
+                camel.jbang.dependencies.main=com.example:existing-main:1.0,io.kaoto.forage:forage-jdbc:1.0.0
+                camel.jbang.dependencies.quarkus=io.kaoto.forage:forage-quarkus-jdbc-deployment:1.0.0
                 """;
         Files.writeString(propsFile.toPath(), existingContent);
 
-        // Write PostgreSQL config
         String jsonInput =
                 """
                 {
                   "forage.jdbc.db.kind": "postgresql",
                   "forage.jdbc.url": "jdbc:postgresql://localhost:5432/",
-                  "forage.jdbc.username": "test",
-                  "forage.jdbc.password": "test",
                   "kind": "postgresql",
                   "forage.bean.name": "myPG"
                 }
@@ -337,28 +311,18 @@ class ConfigWriteCommandTest {
         int exitCode = command.doCall();
         assertThat(exitCode).isEqualTo(0);
 
-        // Verify properties file
+        JsonNode result = OBJECT_MAPPER.readTree(printer.getOutput());
+        assertThat(result.get("dependencyCleanup").get("count").asInt()).isEqualTo(3);
+
         Properties props = new Properties();
         props.load(Files.newInputStream(propsFile.toPath()));
-
-        // Verify existing properties are preserved
         assertThat(props.getProperty("some.existing.property")).isEqualTo("value");
-
-        // Verify existing dependencies are preserved AND new ones are added
-        String baseDeps = props.getProperty("camel.jbang.dependencies");
-        assertThat(baseDeps).contains("com.example:existing-lib:1.0");
-        assertThat(baseDeps).contains("com.other:another-lib:2.0");
-        assertThat(baseDeps).contains("io.kaoto.forage:forage-jdbc-postgresql:");
-
-        String mainDeps = props.getProperty("camel.jbang.dependencies.main");
-        assertThat(mainDeps).contains("com.example:existing-main:1.0");
-        assertThat(mainDeps).contains("io.kaoto.forage:forage-jdbc:");
-
-        // Verify new dependency properties are added
-        assertThat(props.getProperty("camel.jbang.dependencies.spring-boot"))
-                .contains("io.kaoto.forage:forage-jdbc-starter:");
-        assertThat(props.getProperty("camel.jbang.dependencies.quarkus"))
-                .contains("io.kaoto.forage:forage-quarkus-jdbc-deployment:");
+        assertThat(props.getProperty("forage.myPG.jdbc.db.kind")).isEqualTo("postgresql");
+        // The user's dependencies are kept, whatever version of the Forage ones are removed
+        assertThat(props.getProperty("camel.jbang.dependencies")).isEqualTo("com.example:existing-lib:1.0");
+        assertThat(props.getProperty("camel.jbang.dependencies.main")).isEqualTo("com.example:existing-main:1.0");
+        assertThat(props.getProperty("camel.jbang.dependencies.quarkus")).isNull();
+        assertThat(props.getProperty("camel.jbang.dependencies.spring-boot")).isNull();
     }
 
     @Test
@@ -425,15 +389,8 @@ class ConfigWriteCommandTest {
         assertThat(propsAfterGemini.getProperty("forage.myGemini.google.model.name"))
                 .isEqualTo("gemini-pro");
 
-        // Verify base dependencies contain PostgreSQL and Google Gemini
-        String baseDepsAfterGemini = propsAfterGemini.getProperty("camel.jbang.dependencies");
-        assertThat(baseDepsAfterGemini)
-                .contains("io.kaoto.forage:forage-jdbc-postgresql:%s".formatted(VersionHelper.VERSION));
-        assertThat(baseDepsAfterGemini).contains("io.kaoto.forage:forage-model-google-gemini:");
-
-        // Verify main dependencies still contain JDBC
-        String mainDepsAfterGemini = propsAfterGemini.getProperty("camel.jbang.dependencies.main");
-        assertThat(mainDepsAfterGemini).contains("io.kaoto.forage:forage-jdbc:%s".formatted(VersionHelper.VERSION));
+        // The Forage dependencies written by older versions of the command are removed
+        assertNoDependencyLists(propsAfterGemini);
 
         // Step 2: Add JMS Artemis configuration using ConfigWriteCommand
         printer = new StringPrinter(); // Reset printer for second command
@@ -478,29 +435,11 @@ class ConfigWriteCommandTest {
         assertThat(finalProps.getProperty("forage.myArtemis.jms.username")).isEqualTo("admin");
         assertThat(finalProps.getProperty("forage.myArtemis.jms.password")).isEqualTo("admin");
 
-        // Verify base dependencies contain PostgreSQL, Google Gemini, and Artemis
-        String finalBaseDeps = finalProps.getProperty("camel.jbang.dependencies");
-        assertThat(finalBaseDeps)
-                .contains("io.kaoto.forage:forage-jdbc-postgresql:%s".formatted(VersionHelper.VERSION));
-        assertThat(finalBaseDeps).contains("io.kaoto.forage:forage-model-google-gemini:");
-        assertThat(finalBaseDeps).contains("io.kaoto.forage:forage-jms-artemis:");
+        assertNoDependencyLists(finalProps);
+    }
 
-        // Verify main dependencies contain both JDBC and JMS
-        String finalMainDeps = finalProps.getProperty("camel.jbang.dependencies.main");
-        assertThat(finalMainDeps).contains("io.kaoto.forage:forage-jdbc:%s".formatted(VersionHelper.VERSION));
-        assertThat(finalMainDeps).contains("io.kaoto.forage:forage-jms:");
-
-        // Verify spring-boot dependencies contain both JDBC and JMS starters
-        String finalSpringBootDeps = finalProps.getProperty("camel.jbang.dependencies.spring-boot");
-        assertThat(finalSpringBootDeps)
-                .contains("io.kaoto.forage:forage-jdbc-starter:%s".formatted(VersionHelper.VERSION));
-        assertThat(finalSpringBootDeps).contains("io.kaoto.forage:forage-jms-starter:");
-
-        // Verify quarkus dependencies contain both JDBC and JMS
-        String finalQuarkusDeps = finalProps.getProperty("camel.jbang.dependencies.quarkus");
-        assertThat(finalQuarkusDeps)
-                .contains("io.kaoto.forage:forage-quarkus-jdbc-deployment:%s".formatted(VersionHelper.VERSION));
-        assertThat(finalQuarkusDeps).contains("io.kaoto.forage:forage-quarkus-jms-deployment:");
+    private static void assertNoDependencyLists(Properties props) {
+        assertThat(props.stringPropertyNames()).noneMatch(key -> key.startsWith("camel.jbang.dependencies"));
     }
 
     @Test

@@ -109,14 +109,19 @@ PROCESSING PIPELINE
 OUTPUT
 ══════
 ┌─────────────────────────────────────────────────────────┐
-│ JSON Response (stdout)                                   │
-│ {                                                        │
-│   "success": true,                                       │
-│   "propertiesFile": "/path/to/file.properties",         │
-│   "operation": "create" | "update",                      │
-│   "message": "Successfully created/updated...",          │
-│   "beanName": "myPG"                                     │
-│ }                                                        │
+│ JSON Response (stdout)                                  │
+│ {                                                       │
+│   "success": true,                                      │
+│   "factories": {                                        │
+│     "jdbc": {                                           │
+│       "propertiesFile": "/path/to/file.properties",     │
+│       "operation": "create" | "update",                 │
+│       "message": "Successfully created/updated...",     │
+│       "beanName": "myPG"                                │
+│     }                                                   │
+│   },                                                    │
+│   "dependencyCleanup": {...}   (only if any was removed)│
+│ }                                                       │
 └─────────────────────────────────────────────────────────┘
                   │
                   ▼
@@ -137,8 +142,8 @@ OUTPUT
 DELETE MODE
 ═══════════
 ┌──────────────────────────────────────────────────────────┐
-│ handleDelete()                                            │
-│                                                           │
+│ handleDelete()                                           │
+│                                                          │
 │ 1. Requires --name parameter                             │
 │ 2. Scans the same files `config read` lists for the      │
 │    strategy (top level of --dir only); the application   │
@@ -148,34 +153,17 @@ DELETE MODE
 │ 4. Removes the keys that belong to the instance, parsed  │
 │    like `config read` does (ForagePropertyParser):       │
 │    forage.my.ds.* is instance "my.ds", not "my"; a key   │
-│    under forage.<name>. whose rest is a catalog entry    │
-│    belongs to <name> even if it is also a default entry  │
-│    (forage.azure.openai.api.key for an OpenAI "azure")   │
-│ 5. Finds entries like Properties.load does:              │
-│    '=', ':' or whitespace separators, continuation lines │
-│ 6. Cleans up dependencies (below)                        │
+│    under forage.<name>. whose rest reads as a default    │
+│    key belongs to <name> (forage.azure.openai.api.key    │
+│    for an OpenAI instance named "azure")                 │
+│ 5. Finds entries like Properties.load does               │
+│    (PropertiesDocument): '=', ':' or whitespace          │
+│    separators, continuation lines                        │
+│ 6. Removes the Forage dependencies older versions wrote  │
+│    (see Dependencies)                                    │
 │ 7. Preserves comments and other properties               │
-│                                                           │
-│ Returns JSON with deletion and dependency cleanup results│
-└──────────────────────────────────────────────────────────┘
-                  │
-                  ▼
-┌──────────────────────────────────────────────────────────┐
-│ Dependency cleanup (ForageDependencyResolver)             │
-│                                                           │
-│ 1. Dependencies of the deleted keys: factory variant     │
-│    GAVs (base, springboot, quarkus) plus bean GAVs (the  │
-│    bean the key belongs to, and the beans a value        │
-│    selects: catalog bean-name entries such as db.kind,   │
-│    agent.model.kind or agent.memory.kind, and any other  │
-│    *.kind property)                                      │
-│ 2. Dependencies still needed by the remaining keys of    │
-│    every file, whatever the strategy or active profile:  │
-│    application.properties, every application-*.properties│
-│    and forage-*.properties; each file counts on its own, │
-│    so the same key with another value elsewhere is kept  │
-│ 3. Removes (1) minus (2) from camel.jbang.dependencies*  │
-│    in application.properties                             │
+│                                                          │
+│ Returns JSON with the deleted properties per file        │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -193,15 +181,6 @@ DELETE MODE
 - `beanName`: String (optional prefix for properties)
 - `kind`: String (bean type, e.g., "postgresql", "ollama")
 - `properties`: Map<String, String> (key-value pairs)
-
-### ForageDependencyResolver.Dependencies (Record)
-- `base`: Set<String> (bean-specific GAVs, `camel.jbang.dependencies`)
-- `main`: Set<String> (base factory GAVs, `camel.jbang.dependencies.main`)
-- `springBoot`: Set<String> (Spring Boot factory GAVs, `camel.jbang.dependencies.spring-boot`)
-- `quarkus`: Set<String> (Quarkus factory GAVs, `camel.jbang.dependencies.quarkus`)
-
-Write and delete compute dependencies with the same `ForageDependencyResolver`, from keys parsed by
-`ForagePropertyParser`.
 
 ### PropertiesDocument
 - A properties file kept as its lines, so entries can be updated or removed in place
@@ -276,8 +255,6 @@ forage.myPG.jdbc.url=jdbc:postgresql://localhost:5432/
 forage.myPG.jdbc.username=test
 forage.myMariaDB.jdbc.url=jdbc:mariadb://localhost:3306/
 forage.myMariaDB.jdbc.username=test
-camel.jbang.dependencies=io.kaoto.forage:forage-jdbc-postgresql:1.0-SNAPSHOT,io.kaoto.forage:forage-jdbc-mariadb:1.0-SNAPSHOT
-camel.jbang.dependencies.main=io.kaoto.forage:forage-jdbc:1.0-SNAPSHOT
 ```
 
 **Command:**
@@ -289,14 +266,10 @@ camel forage config write --delete --name myPG
 ```properties
 forage.myMariaDB.jdbc.url=jdbc:mariadb://localhost:3306/
 forage.myMariaDB.jdbc.username=test
-camel.jbang.dependencies=io.kaoto.forage:forage-jdbc-mariadb:1.0-SNAPSHOT
-camel.jbang.dependencies.main=io.kaoto.forage:forage-jdbc:1.0-SNAPSHOT
 ```
 
 **Effect:**
 - Removes all `forage.myPG.*` properties
-- Removes `forage-jdbc-postgresql` from dependencies (no longer needed)
-- Keeps `forage-jdbc` factory dependency (still used by MariaDB)
 - Preserves MariaDB configuration
 
 ### Example 5: Delete Operation (Last Bean of Factory Type)
@@ -307,10 +280,8 @@ camel.jbang.dependencies.main=io.kaoto.forage:forage-jdbc:1.0-SNAPSHOT
 ```properties
 forage.myOllama.ollama.model.name=llama3
 forage.myOllama.ollama.base.url=http://localhost:11434
-camel.jbang.dependencies=io.kaoto.forage:forage-model-ollama:1.0-SNAPSHOT
-camel.jbang.dependencies.main=io.kaoto.forage:forage-agent:1.0-SNAPSHOT
-camel.jbang.dependencies.spring-boot=io.kaoto.forage:forage-agent-starter:1.0-SNAPSHOT
-camel.jbang.dependencies.quarkus=io.kaoto.forage:forage-quarkus-agent-deployment:1.0-SNAPSHOT
+camel.jbang.dependencies=com.example:my-lib:1.0,io.kaoto.forage:forage-model-ollama:1.6.2
+camel.jbang.dependencies.main=io.kaoto.forage:forage-agent:1.6.2
 ```
 
 **Command:**
@@ -320,13 +291,12 @@ camel forage config write --delete --name myOllama
 
 **After (application.properties):**
 ```properties
-# Empty - all forage properties and dependencies removed
+camel.jbang.dependencies=com.example:my-lib:1.0
 ```
 
 **Effect:**
 - Removes all `forage.myOllama.*` properties
-- Removes `forage-model-ollama` bean dependency
-- Removes all agent factory dependencies (no other agent beans configured)
+- Removes the Forage dependencies an older version of the command wrote, keeps `com.example:my-lib:1.0`
 
 ## Command Options
 
@@ -357,105 +327,31 @@ When updating existing properties files:
 3. Appends new properties at the end
 4. Maintains original file order
 
-## Dependency Management
+## Dependencies
 
-The command automatically manages `camel.jbang.dependencies*` properties in `application.properties` based on the factory type and kind being configured.
+The command does not write any `camel.jbang.dependencies*` property. Forage projects run with the Forage plugin
+installed, and the plugin resolves the dependencies from the configuration whenever `camel run` or
+`camel export` runs (`CatalogDrivenExportCustomizer`), for the runtime in use.
 
-### How It Works
+Older versions of the command wrote the Forage dependencies to `application.properties`, with the Forage version
+of the time. Such a stored copy is redundant and can pin an outdated version next to the one the plugin resolves,
+so every `config write` and `config write --delete` removes them:
 
-When writing configuration, the command:
-1. Looks up the bean GAV from the catalog (e.g., `forage-jdbc-postgresql` for kind `postgresql`)
-2. Looks up factory variant GAVs for each runtime (base, springboot, quarkus)
-3. Merges these dependencies with any existing dependencies in `application.properties`
+- Removes, from every `camel.jbang.dependencies*` property of `application.properties`, the GAVs of the factories
+  and beans the catalog knows, whatever their version
+- Keeps every other dependency, and removes a property only once it is empty
+- Reports what it removed under `dependencyCleanup`
 
-### Dependency Properties
-
-| Property | Description | Example |
-|----------|-------------|---------|
-| `camel.jbang.dependencies` | Bean-specific dependencies (database driver, broker client) | `io.kaoto.forage:forage-jdbc-postgresql:1.0-SNAPSHOT` |
-| `camel.jbang.dependencies.main` | Base/main runtime factory dependencies | `io.kaoto.forage:forage-jdbc:1.0-SNAPSHOT` |
-| `camel.jbang.dependencies.spring-boot` | Spring Boot runtime dependencies | `io.kaoto.forage:forage-jdbc-starter:1.0-SNAPSHOT` |
-| `camel.jbang.dependencies.quarkus` | Quarkus runtime dependencies | `io.kaoto.forage:forage-quarkus-jdbc-deployment:1.0-SNAPSHOT` |
-
-### Example
-
-**Input JSON:**
-```json
-{
-  "forage.jdbc.db.kind": "postgresql",
-  "forage.jdbc.url": "jdbc:postgresql://localhost:5432/",
-  "forage.jdbc.username": "test",
-  "forage.jdbc.password": "test",
-  "kind": "postgresql",
-  "forage.bean.name": "myPG"
-}
-```
-
-**Generated application.properties:**
+**Before:**
 ```properties
-# Forage configuration properties
-forage.myPG.jdbc.db.kind=postgresql
-forage.myPG.jdbc.url=jdbc:postgresql://localhost:5432/
-forage.myPG.jdbc.username=test
-forage.myPG.jdbc.password=test
-
-# Automatically generated dependencies
-camel.jbang.dependencies=io.kaoto.forage:forage-jdbc-postgresql:1.0-SNAPSHOT
-camel.jbang.dependencies.main=io.kaoto.forage:forage-jdbc:1.0-SNAPSHOT
-camel.jbang.dependencies.spring-boot=io.kaoto.forage:forage-jdbc-starter:1.0-SNAPSHOT
-camel.jbang.dependencies.quarkus=io.kaoto.forage:forage-quarkus-jdbc-deployment:1.0-SNAPSHOT
+camel.jbang.dependencies=com.example:my-custom-lib:1.0,io.kaoto.forage:forage-jdbc-postgresql:1.6.2
+camel.jbang.dependencies.main=io.kaoto.forage:forage-jdbc:1.6.2
 ```
 
-### Preserving Existing Dependencies
-
-When updating dependencies, the command:
-- **Never removes** existing dependencies from any `camel.jbang.dependencies*` property
-- **Only adds** new forage dependencies to the list
-- **Preserves order** of existing dependencies
-
-**Example with existing dependencies:**
-
-Before:
+**After:**
 ```properties
 camel.jbang.dependencies=com.example:my-custom-lib:1.0
 ```
-
-After adding PostgreSQL JDBC configuration:
-```properties
-camel.jbang.dependencies=com.example:my-custom-lib:1.0,io.kaoto.forage:forage-jdbc-postgresql:1.0-SNAPSHOT
-```
-
-### Dependency Cleanup During Deletion
-
-When deleting a configuration with `--delete --name <instanceName>`, the command intelligently cleans up unused dependencies:
-
-#### Cleanup Logic
-
-1. **Delete Properties**: Remove the properties of the instance from the strategy's files (for the application
-   strategy, `application.properties` and every `application-<profile>.properties` override)
-2. **Deleted Dependencies**: Compute the dependencies the deleted keys need: their factory variant GAVs, the bean
-   each key configures (e.g. `forage.myOllama.ollama.model.name` → `forage-model-ollama`), the beans their values
-   select (e.g. `jdbc.db.kind=postgresql`, `agent.model.kind=ollama`, `agent.memory.kind=redis`) and the beans they
-   turn on, resolved like `camel forage run` and `export` do (e.g. `agent.in.memory.store.file.source` →
-   `forage-in-memory-store`)
-3. **Remaining Dependencies**: Compute the dependencies every remaining key needs, in `application.properties`,
-   every `application-<profile>.properties` (whatever the active profile, since the dependency lists are shared by
-   all profiles) and the `forage-*.properties` files
-4. **Remove**: Remove the deleted dependencies that no remaining key needs
-
-#### What Gets Removed
-
-| Condition | Dependencies Removed |
-|-----------|---------------------|
-| Bean type no longer configured (e.g., no more `postgresql` instances) | Bean GAV (`forage-jdbc-postgresql`) |
-| Factory type no longer used (e.g., no more `jdbc.*` properties) | Factory variant GAVs (`forage-jdbc`, `forage-jdbc-starter`, `forage-quarkus-jdbc-deployment`) |
-
-#### What Is Preserved
-
-- Dependencies for other bean types still configured
-- Factory dependencies when other beans of the same factory type exist
-- Non-forage dependencies (custom user dependencies)
-- Comments and file structure
 
 #### Delete Output Format
 
@@ -473,7 +369,7 @@ When deleting a configuration with `--delete --name <instanceName>`, the command
     },
     "dependencyCleanup": {
       "removedDependencies": [
-        "io.kaoto.forage:forage-jdbc-postgresql:1.0-SNAPSHOT"
+        "io.kaoto.forage:forage-jdbc-postgresql:1.6.2"
       ],
       "count": 1
     }

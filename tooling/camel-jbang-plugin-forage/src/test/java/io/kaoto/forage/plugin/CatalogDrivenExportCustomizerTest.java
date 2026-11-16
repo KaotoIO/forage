@@ -165,8 +165,8 @@ class CatalogDrivenExportCustomizerTest {
 
     @Test
     void testKeycloak_mainRuntime() throws Exception {
-        // The Security Policy factory is keyed by its first provider prefix, "keycloak", so the scanner
-        // drops that prefix from keycloak properties
+        // The Security Policy factory is keyed by its first provider prefix, "keycloak", which is also the
+        // keycloak bean prefix
         CatalogDrivenExportCustomizer customizer =
                 createCustomizer("forage.keycloak.server.url=http://localhost:8080\nforage.keycloak.realm=forage\n");
 
@@ -174,6 +174,19 @@ class CatalogDrivenExportCustomizerTest {
         assertThat(deps).anyMatch(d -> d.contains("forage-core-security:"));
         assertThat(deps).anyMatch(d -> d.contains("forage-security-keycloak:"));
         assertThat(deps).noneMatch(d -> d.contains("forage-security-shiro:"));
+    }
+
+    @Test
+    void testGoogleCustomSearch_resolvesWebSearchNotAgent() throws Exception {
+        // google.custom.search.* belongs to WebSearch, although the Gemini agent bean also uses the "google" prefix
+        CatalogDrivenExportCustomizer customizer =
+                createCustomizer("forage.google.custom.search.api.key=k\nforage.google.custom.search.csi=c\n");
+
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.MAIN);
+        assertThat(deps).anyMatch(d -> d.contains("forage-web-search:"));
+        assertThat(deps).anyMatch(d -> d.contains("forage-web-search-google-custom:"));
+        assertThat(deps).noneMatch(d -> d.contains("forage-agent:"));
+        assertThat(deps).noneMatch(d -> d.contains("forage-model-google-gemini:"));
     }
 
     @Test
@@ -357,8 +370,8 @@ class CatalogDrivenExportCustomizerTest {
 
     @Test
     void testRagWithAgentNamedAfterBean() throws Exception {
-        // The forage-examples RAG agent is named "ollama", like the chat model bean: the scanner keeps the
-        // instance name in the property keys
+        // The forage-examples RAG agent is named "ollama", like the chat model bean: its keys are still read as
+        // agent properties of the "ollama" instance
         CatalogDrivenExportCustomizer customizer = createCustomizer("forage.ollama.agent.model.kind=ollama\n"
                 + "forage.ollama.agent.embedding.model.name=granite-embedding:latest\n"
                 + "forage.ollama.agent.in.memory.store.file.source=company-knowledge-base.txt\n");

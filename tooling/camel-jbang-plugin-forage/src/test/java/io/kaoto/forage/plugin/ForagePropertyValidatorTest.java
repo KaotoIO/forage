@@ -4,7 +4,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import io.kaoto.forage.catalog.model.ConfigEntry;
+import io.kaoto.forage.catalog.model.ForageBean;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
 import io.kaoto.forage.plugin.ForagePropertyValidator.ValidationResult;
 import io.kaoto.forage.plugin.ForagePropertyValidator.ValidationWarning;
@@ -383,6 +386,56 @@ class ForagePropertyValidatorTest {
     }
 
     // Helper method to create properties files
+    @Test
+    void testAgentPropertiesOutsideTheFactoryPrefixAreValid() throws IOException {
+        // Agent factory entries that do not start with forage.agent.
+        createPropertiesFile(
+                "application.properties",
+                "forage.multi.agent.names=a1,a2",
+                "forage.multi.agent.id.source=header",
+                "forage.multi.agent.id.source.header=agentId",
+                "forage.provider.agent.class=com.example.MyAgent",
+                "forage.provider.model.factory.class=com.example.MyModelFactory",
+                "forage.provider.features.memory.factory.class=com.example.MyMemoryFactory");
+
+        ValidationResult result = ForagePropertyValidator.validate(tempDir.toFile(), catalog);
+
+        assertThat(result.getWarnings())
+                .extracting(ValidationWarning::getMessage)
+                .isEmpty();
+    }
+
+    @Test
+    void testEveryCatalogConfigEntryIsAKnownProperty() throws IOException {
+        // Every factory and bean config entry the catalog declares, set on the default instance
+        List<String> lines = new ArrayList<>();
+        for (ForageCatalogReader.FactoryMetadata factory : catalog.getAllFactories()) {
+            factory.configEntries().forEach(entry -> lines.add(sampleLine(entry)));
+            for (ForageBean bean : catalog.getAllBeansForFactory(factory.factoryTypeKey())) {
+                if (bean.getConfigEntries() != null) {
+                    bean.getConfigEntries().forEach(entry -> lines.add(sampleLine(entry)));
+                }
+            }
+        }
+        createPropertiesFile("application.properties", lines.toArray(String[]::new));
+
+        ValidationResult result = ForagePropertyValidator.validate(tempDir.toFile(), catalog);
+
+        // The sample value is not a valid bean name, so only bean-value warnings are expected
+        assertThat(result.getWarnings())
+                .filteredOn(w -> w.getType() != ValidationWarning.Type.INVALID_BEAN_VALUE)
+                .extracting(ValidationWarning::getMessage)
+                .isEmpty();
+    }
+
+    private static String sampleLine(ConfigEntry entry) {
+        String name = entry.getName().replaceAll("\\{[^}]+}", "route1");
+        if ("map".equals(entry.getType())) {
+            name += ".someKey";
+        }
+        return name + "=x";
+    }
+
     private File createPropertiesFile(String filename, String... lines) throws IOException {
         File file = tempDir.resolve(filename).toFile();
         try (FileWriter writer = new FileWriter(file)) {

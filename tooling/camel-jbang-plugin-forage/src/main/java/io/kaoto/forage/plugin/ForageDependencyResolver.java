@@ -5,11 +5,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
+import io.kaoto.forage.plugin.ForagePropertyParser.ParsedProperty;
 
 /**
  * Computes the dependencies {@code forage.*} properties need: the variant GAVs of each property's factory
  * (base, Spring Boot, Quarkus) and the GAVs of the beans they configure, taken from the bean the key belongs to
- * (e.g. {@code ollama} for {@code forage.ollama.model.name}) and from kind values ({@code db.kind}, {@code kind}).
+ * (e.g. {@code ollama} for {@code forage.ollama.model.name}) and from the beans a value selects (e.g.
+ * {@code db.kind=postgresql}, {@code agent.model.kind=ollama}; see
+ * {@link ForagePropertyParser#selectedBeans(ParsedProperty, String)}).
  *
  * <p>This class has no CLI dependencies, so it can be reused outside the {@code config} commands.
  */
@@ -55,6 +58,16 @@ public final class ForageDependencyResolver {
         public boolean isEmpty() {
             return base.isEmpty() && main.isEmpty() && springBoot.isEmpty() && quarkus.isEmpty();
         }
+
+        /**
+         * Adds every GAV of the given dependencies to this one.
+         */
+        public void addAll(Dependencies other) {
+            base.addAll(other.base);
+            main.addAll(other.main);
+            springBoot.addAll(other.springBoot);
+            quarkus.addAll(other.quarkus);
+        }
     }
 
     /**
@@ -65,18 +78,23 @@ public final class ForageDependencyResolver {
      */
     public Dependencies resolve(Map<String, String> properties) {
         Dependencies dependencies = new Dependencies();
-        for (Map.Entry<String, String> entry : properties.entrySet()) {
-            parser.parse(entry.getKey()).ifPresent(parsed -> {
-                addFactory(dependencies, parsed.factoryType());
-                if (parsed.beanType() != null) {
-                    addBean(dependencies, parsed.beanType());
-                }
-                if (parsed.isKindProperty()) {
-                    addBean(dependencies, entry.getValue());
-                }
-            });
-        }
+        properties.forEach((key, value) -> parser.parse(key).ifPresent(parsed -> add(dependencies, parsed, value)));
         return dependencies;
+    }
+
+    /**
+     * Adds the dependencies of one property: its factory, the bean it configures and the beans its value selects.
+     *
+     * @param dependencies the dependencies to add to
+     * @param parsed the parsed property key
+     * @param value the property value
+     */
+    public void add(Dependencies dependencies, ParsedProperty parsed, String value) {
+        addFactory(dependencies, parsed.factoryType());
+        if (parsed.beanType() != null) {
+            addBean(dependencies, parsed.beanType());
+        }
+        parser.selectedBeans(parsed, value).forEach(bean -> addBean(dependencies, bean));
     }
 
     /**

@@ -1,5 +1,6 @@
 package io.kaoto.forage.plugin;
 
+import java.util.List;
 import java.util.Map;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
 import io.kaoto.forage.plugin.ForagePropertyParser.ParsedProperty;
@@ -55,9 +56,28 @@ class ForagePropertyParserTest {
     }
 
     @Test
-    void kindProperties() {
-        assertThat(parse("forage.ds1.jdbc.db.kind").isKindProperty()).isTrue();
-        assertThat(parse("forage.ds1.jdbc.url").isKindProperty()).isFalse();
+    void selectedBeans() {
+        // Catalog bean-name entries, whatever their name
+        assertThat(selectedBeans("forage.ds1.jdbc.db.kind", "postgresql")).containsExactly("postgresql");
+        assertThat(selectedBeans("forage.a1.agent.model.kind", "ollama")).containsExactly("ollama");
+        assertThat(selectedBeans("forage.agent.memory.kind", "redis")).containsExactly("redis");
+        assertThat(selectedBeans("forage.a1.agent.embedding.store.kind", "in-memory"))
+                .containsExactly("in-memory");
+        // A multi-value bean-name entry lists several beans
+        assertThat(selectedBeans("forage.route.policy.route-a.name", "schedule, flip"))
+                .containsExactly("schedule", "flip");
+        // Other *.kind properties
+        assertThat(selectedBeans("forage.cxf.kind", "soap")).containsExactly("soap");
+        // Everything else selects nothing
+        assertThat(selectedBeans("forage.ds1.jdbc.url", "jdbc:h2:mem:x")).isEmpty();
+        assertThat(selectedBeans("forage.ds1.jdbc.db.kind", " ")).isEmpty();
+    }
+
+    @Test
+    void configEntries() {
+        assertThat(parser.isConfigEntry("forage.jdbc.url")).isTrue();
+        assertThat(parser.isConfigEntry("forage.openai.api.key")).isTrue();
+        assertThat(parser.isConfigEntry("forage.ds1.jdbc.url")).isFalse();
     }
 
     @Test
@@ -85,6 +105,10 @@ class ForagePropertyParserTest {
         assertThat(ollama.main()).anyMatch(gav -> gav.contains("forage-agent:"));
 
         assertThat(resolver.resolve(Map.of("camel.main.name", "x")).isEmpty()).isTrue();
+    }
+
+    private static List<String> selectedBeans(String key, String value) {
+        return parser.selectedBeans(parse(key), value);
     }
 
     private static ParsedProperty parse(String key) {

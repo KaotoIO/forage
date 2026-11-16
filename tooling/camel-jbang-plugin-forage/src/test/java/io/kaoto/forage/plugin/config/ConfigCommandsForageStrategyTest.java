@@ -2,6 +2,7 @@ package io.kaoto.forage.plugin.config;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.Properties;
 import org.apache.camel.dsl.jbang.core.commands.CamelCommand;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
@@ -321,6 +322,211 @@ class ConfigCommandsForageStrategyTest {
 
         assertThat(command.doCall()).isEqualTo(1);
         assertThat(missingDir).doesNotExist();
+    }
+
+    @Test
+    void deleteKeepsBeansSelectedByAnotherAgentsKind() throws Exception {
+        // Both agents select their model and memory through bean-name entries (agent.model.kind, agent.memory.kind)
+        for (String name : List.of("a1", "a2")) {
+            assertThat(write(
+                                    PropertiesFileStrategyType.APPLICATION,
+                                    """
+                                    {"forage.agent.model.kind": "ollama", "forage.agent.memory.kind": "redis",
+                                     "forage.bean.name": "%s"}
+                                    """
+                                            .formatted(name))
+                            .exitCode())
+                    .isZero();
+        }
+        File appFile = new File(tempDir, "application.properties");
+        assertThat(load(appFile).getProperty("camel.jbang.dependencies"))
+                .contains("forage-model-ollama:", "forage-memory-redis:");
+
+        assertThat(delete("a1", PropertiesFileStrategyType.APPLICATION).exitCode())
+                .isZero();
+
+        Properties appProps = load(appFile);
+        assertThat(appProps.getProperty("forage.a1.agent.model.kind")).isNull();
+        assertThat(appProps.getProperty("forage.a2.agent.model.kind")).isEqualTo("ollama");
+        assertThat(appProps.getProperty("camel.jbang.dependencies"))
+                .contains("forage-model-ollama:", "forage-memory-redis:");
+
+        // Deleting the last agent removes them
+        assertThat(delete("a2", PropertiesFileStrategyType.APPLICATION).exitCode())
+                .isZero();
+        appProps = load(appFile);
+        assertThat(appProps.getProperty("camel.jbang.dependencies")).isNull();
+        assertThat(appProps.getProperty("camel.jbang.dependencies.main")).isNull();
+    }
+
+    @Test
+    void deleteKeepsKindValuesOfTheSameKeyInAnotherFile() throws Exception {
+        // The default DataSource is PostgreSQL in application.properties and MySQL in the prod profile
+        assertThat(write(PropertiesFileStrategyType.APPLICATION, PG_JSON.formatted("ds1"))
+                        .exitCode())
+                .isZero();
+        File appFile = new File(tempDir, "application.properties");
+        Files.writeString(appFile.toPath(), "forage.jdbc.db.kind=postgresql\n" + Files.readString(appFile.toPath()));
+        Files.writeString(new File(tempDir, "application-prod.properties").toPath(), "forage.jdbc.db.kind=mysql\n");
+
+        assertThat(delete("ds1", PropertiesFileStrategyType.APPLICATION).exitCode())
+                .isZero();
+
+        Properties appProps = load(appFile);
+        assertThat(appProps.getProperty("forage.jdbc.db.kind")).isEqualTo("postgresql");
+        assertThat(appProps.getProperty("camel.jbang.dependencies")).contains("forage-jdbc-postgresql");
+    }
+
+    @Test
+    void deleteRemovesEveryKeyOfAnInstanceNamedLikeABeanPrefix() throws Exception {
+        // An OpenAI instance named "azure": forage.azure.openai.api.key is also the default Azure OpenAI entry
+        File appFile = new File(tempDir, "application.properties");
+        Files.writeString(appFile.toPath(), "forage.azure.openai.api.key=k\nforage.azure.openai.model.name=gpt\n");
+
+        JsonNode result =
+                delete("azure", PropertiesFileStrategyType.APPLICATION).json();
+
+        assertThat(result.get("success").asBoolean()).isTrue();
+        assertThat(result.get("results")
+                        .get("application.properties")
+                        .get("deletedProperties")
+                        .asInt())
+                .isEqualTo(2);
+        assertThat(load(appFile)).isEmpty();
+    }
+
+    @Test
+    void writeRejectsWebSearchKeysUnderTheForageStrategy() throws Exception {
+        // google.custom.search.* belongs to WebSearch, not to the Gemini agent bean that also uses "google"
+        String json = "{\"forage.google.custom.search.api.key\": \"k\", \"forage.google.custom.search.csi\": \"c\"}";
+
+        Result result = write(PropertiesFileStrategyType.FORAGE, json);
+        assertThat(result.exitCode()).isEqualTo(1);
+        assertThat(result.json().get("error").asText()).contains("WebSearch has no dedicated properties file");
+        assertThat(tempDir.listFiles()).isEmpty();
+
+        assertThat(write(PropertiesFileStrategyType.APPLICATION, json).exitCode())
+                .isZero();
+        Properties appProps = load(new File(tempDir, "application.properties"));
+        assertThat(appProps.getProperty("forage.google.custom.search.api.key")).isEqualTo("k");
+        assertThat(appProps.getProperty("camel.jbang.dependencies")).contains("forage-web-search-google-custom:");
+        assertThat(appProps.getProperty("camel.jbang.dependencies.main"))
+                .contains("forage-web-search:")
+                .doesNotContain("forage-agent:");
+    }
+
+    @Test
+    void deleteFindsEntriesWrittenWithAnySeparator() throws Exception {
+        File appFile = new File(tempDir, "application.properties");
+        Files.writeString(
+                appFile.toPath(),
+                """
+                # DataSources
+                forage.ds1.jdbc.db.kind: postgresql
+                forage.ds1.jdbc.url jdbc:h2:mem:x
+                forage.ds1.jdbc.password = long\\
+                    -secret
+                forage.ds2.jdbc.db.kind=h2
+                """);
+        assertThat(read(PropertiesFileStrategyType.APPLICATION.id())
+                        .json()
+                        .get("beans")
+                        .findValuesAsText("name"))
+                .contains("ds1", "ds2");
+
+        JsonNode result = delete("ds1", PropertiesFileStrategyType.APPLICATION).json();
+
+        assertThat(result.get("success").asBoolean()).isTrue();
+        assertThat(Files.readString(appFile.toPath())).isEqualTo("# DataSources\nforage.ds2.jdbc.db.kind=h2\n");
+    }
+
+    @Test
+    void deleteInMissingDirectoryReportsNoConfiguration() throws Exception {
+        for (PropertiesFileStrategyType type : PropertiesFileStrategyType.values()) {
+            ConfigWriteCommand command = new ConfigWriteCommand(main());
+            setField(command, "delete", true);
+            setField(command, "instanceName", "x");
+            setField(command, "directory", new File(tempDir, "missing"));
+            setStrategy(command, type);
+
+            assertThat(command.doCall()).as(type.id()).isEqualTo(1);
+            assertThat(OBJECT_MAPPER.readTree(printer.getOutput()).get("error").asText())
+                    .as(type.id())
+                    .isEqualTo("No configuration found for instance 'x'");
+        }
+    }
+
+    @Test
+    void deleteRemovesProfileOverridesOfTheInstance() throws Exception {
+        assertThat(write(PropertiesFileStrategyType.APPLICATION, PG_JSON.formatted("myPG"))
+                        .exitCode())
+                .isZero();
+        File devFile = new File(tempDir, "application-dev.properties");
+        Files.writeString(devFile.toPath(), "camel.main.name=dev\nforage.myPG.jdbc.url=jdbc:postgresql://dev/db\n");
+
+        JsonNode result = delete("myPG", PropertiesFileStrategyType.APPLICATION).json();
+
+        assertThat(result.get("success").asBoolean()).isTrue();
+        assertThat(result.get("results").has("application-dev.properties")).isTrue();
+        assertThat(Files.readString(devFile.toPath())).isEqualTo("camel.main.name=dev\n");
+        Properties appProps = load(new File(tempDir, "application.properties"));
+        assertThat(appProps.getProperty("forage.myPG.jdbc.db.kind")).isNull();
+        assertThat(appProps.getProperty("camel.jbang.dependencies")).isNull();
+        assertThat(appProps.getProperty("camel.jbang.dependencies.main")).isNull();
+    }
+
+    @Test
+    void deleteRemovesTypoKeysOfAnInstanceNamedLikeABean() throws Exception {
+        // An agent named "ollama" with a typo in one key, next to a default Ollama chat model
+        File appFile = new File(tempDir, "application.properties");
+        Files.writeString(
+                appFile.toPath(),
+                """
+                forage.ollama.agent.model.kind=ollama
+                forage.ollama.agent.modle.nmae=llama3
+                forage.ollama.model.name=llama3
+                """);
+
+        JsonNode result =
+                delete("ollama", PropertiesFileStrategyType.APPLICATION).json();
+
+        assertThat(result.get("success").asBoolean()).isTrue();
+        assertThat(Files.readString(appFile.toPath())).isEqualTo("forage.ollama.model.name=llama3\n");
+    }
+
+    @Test
+    void deleteKeepsBeansAnotherInstanceTurnsOn() throws Exception {
+        // a selects the in-memory store, b only sets its file source, which needs the store too (as for export)
+        for (String json : List.of(
+                "{\"forage.agent.embedding.store.kind\": \"in-memory-store\", \"forage.bean.name\": \"a\"}",
+                "{\"forage.agent.in.memory.store.file.source\": \"kb.txt\", \"forage.bean.name\": \"b\"}")) {
+            assertThat(write(PropertiesFileStrategyType.APPLICATION, json).exitCode())
+                    .isZero();
+        }
+        File appFile = new File(tempDir, "application.properties");
+        assertThat(load(appFile).getProperty("camel.jbang.dependencies")).contains("forage-in-memory-store:");
+
+        assertThat(delete("a", PropertiesFileStrategyType.APPLICATION).exitCode())
+                .isZero();
+
+        Properties appProps = load(appFile);
+        assertThat(appProps.getProperty("forage.b.agent.in.memory.store.file.source"))
+                .isEqualTo("kb.txt");
+        assertThat(appProps.getProperty("camel.jbang.dependencies")).contains("forage-in-memory-store:");
+    }
+
+    @Test
+    void writeEscapesKeysAndValues() throws Exception {
+        String json = "{\"forage.jdbc.url\": \"jdbc:h2:file:C:\\\\data\\\\db\", \"forage.bean.name\": \"ds1\"}";
+
+        assertThat(write(PropertiesFileStrategyType.APPLICATION, json).exitCode())
+                .isZero();
+        // Written again, to go through the update path too
+        assertThat(write(PropertiesFileStrategyType.APPLICATION, json).exitCode())
+                .isZero();
+
+        assertThat(load(new File(tempDir, "application.properties")).getProperty("forage.ds1.jdbc.url"))
+                .isEqualTo("jdbc:h2:file:C:\\data\\db");
     }
 
     private void writeAgents() throws Exception {

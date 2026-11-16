@@ -212,6 +212,10 @@ public final class ForagePropertyValidator {
                 String name = entry.getName();
                 if (name != null && name.startsWith(factoryPrefix)) {
                     validNames.add(name.substring(factoryPrefix.length()));
+                } else if (name != null && name.startsWith(FORAGE_PREFIX)) {
+                    // Factory entries outside the factory prefix (e.g. forage.multi.agent.names), which the
+                    // scanner groups under their whole key
+                    validNames.add(name.substring(FORAGE_PREFIX.length()));
                 }
             }
         }

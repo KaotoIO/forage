@@ -1455,6 +1455,68 @@ echo "PASS: dotted instance names are kept apart and keep their dependencies"
 rm -rf "${PROJECT_DIR}"
 ```
 
+### Test 11.7: Delete keeps beans selected by kinds, removes profile overrides and finds any entry layout
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+fail() { echo "FAIL: $1"; [ -n "$2" ] && echo "$2"; rm -rf "${PROJECT_DIR}"; exit 1; }
+APP_FILE="${PROJECT_DIR}/application.properties"
+write() {
+  OUTPUT=$(camel forage config write --input "$1" --dir "${PROJECT_DIR}" --strategy "${2:-application}" 2>&1) \
+    || fail "write failed: $1" "${OUTPUT}"
+}
+delete() {
+  OUTPUT=$(camel forage config write --delete --name "$1" --dir "${PROJECT_DIR}" --strategy application 2>&1) \
+    || fail "delete of '$1' failed" "${OUTPUT}"
+}
+
+# Two agents selecting the same model and memory through agent.model.kind / agent.memory.kind
+write '{"forage.agent.model.kind":"ollama","forage.agent.memory.kind":"redis","forage.bean.name":"a1"}'
+write '{"forage.agent.model.kind":"ollama","forage.agent.memory.kind":"redis","forage.bean.name":"a2"}'
+grep -q '^camel.jbang.dependencies=.*forage-model-ollama:' "${APP_FILE}" \
+  || fail "write did not add the model selected by agent.model.kind"
+delete a1
+grep -q '^camel.jbang.dependencies=.*forage-model-ollama:' "${APP_FILE}" \
+  || fail "ollama dependency removed although a2 still selects it"
+grep -q '^camel.jbang.dependencies=.*forage-memory-redis:' "${APP_FILE}" \
+  || fail "redis dependency removed although a2 still selects it"
+echo "PASS: beans selected by another agent's kinds are kept"
+
+rm -rf "${PROJECT_DIR}"
+PROJECT_DIR=$(mktemp -d)
+APP_FILE="${PROJECT_DIR}/application.properties"
+
+# A profile override of the instance is deleted with it
+write '{"forage.jdbc.db.kind":"postgresql","kind":"postgresql","forage.bean.name":"myPG"}'
+printf 'camel.main.name=dev\nforage.myPG.jdbc.url=jdbc:postgresql://dev/db\n' > "${PROJECT_DIR}/application-dev.properties"
+delete myPG
+grep -q '^forage.myPG' "${PROJECT_DIR}/application-dev.properties" && fail "profile override of myPG kept"
+grep -q '^camel.main.name=dev' "${PROJECT_DIR}/application-dev.properties" || fail "other profile properties removed"
+echo "PASS: profile overrides of the instance are deleted"
+
+# Entries written with ':' or whitespace separators, or continued on the next line, are deleted too
+printf 'forage.ds1.jdbc.db.kind: postgresql\nforage.ds1.jdbc.url jdbc:h2:mem:x\nforage.ds1.jdbc.password=long\\\n    -secret\n' >> "${APP_FILE}"
+delete ds1
+grep -q 'forage.ds1\|-secret' "${APP_FILE}" && fail "entries of ds1 left behind" "$(cat "${APP_FILE}")"
+echo "PASS: entries are found whatever their separator or line layout"
+
+# An OpenAI instance named "azure": forage.azure.openai.api.key is also the default Azure OpenAI entry
+printf 'forage.azure.openai.api.key=k\nforage.azure.openai.model.name=gpt\n' >> "${APP_FILE}"
+delete azure
+grep -q '^forage.azure' "${APP_FILE}" && fail "keys of the instance 'azure' left behind"
+echo "PASS: every key of an instance named like a bean prefix is deleted"
+
+rm -rf "${PROJECT_DIR}"
+PROJECT_DIR=$(mktemp -d)
+
+# google.custom.search.* is WebSearch (no dedicated file), not the Gemini agent bean
+camel forage config write --input '{"forage.google.custom.search.api.key":"k"}' --dir "${PROJECT_DIR}" --strategy forage > /dev/null 2>&1 \
+  && fail "WebSearch keys written under the forage strategy"
+echo "PASS: WebSearch keys are rejected under the forage strategy"
+
+rm -rf "${PROJECT_DIR}"
+```
+
 ---
 
 ## Phase 12: Cleanup
@@ -1482,5 +1544,5 @@ echo "PASS: all temporary directories cleaned up by individual tests"
 | 8 | 8.1-8.6 | Delete instance, preserves others, error cases | Critical |
 | 9 | 9.1-9.3 | Delete dependency cleanup | High |
 | 10 | 10.1-10.2 | Round-trip write-read, write-delete-read | Critical |
-| 11 | 11.1-11.6 | Forage strategy write/read/delete, invalid values, dependency cleanup across files, profiles, default and dotted instances, bean-named instances | High |
+| 11 | 11.1-11.7 | Forage strategy write/read/delete, invalid values, dependency cleanup across files, profiles, default and dotted instances, bean-named instances, agent kinds, profile overrides, entry layouts | High |
 | 12 | 12 | Cleanup | Low |

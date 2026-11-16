@@ -1,4 +1,4 @@
-package io.kaoto.forage.plugin.config;
+package io.kaoto.forage.config.editor;
 
 import java.io.File;
 import java.io.IOException;

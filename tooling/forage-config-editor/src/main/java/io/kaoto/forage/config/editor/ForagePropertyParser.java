@@ -1,4 +1,4 @@
-package io.kaoto.forage.plugin;
+package io.kaoto.forage.config.editor;
 
 import java.util.List;
 import java.util.Optional;

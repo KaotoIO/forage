@@ -1,8 +1,8 @@
-package io.kaoto.forage.plugin;
+package io.kaoto.forage.config.editor;
 
 import java.util.List;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
-import io.kaoto.forage.plugin.ForagePropertyParser.ParsedProperty;
+import io.kaoto.forage.config.editor.ForagePropertyParser.ParsedProperty;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

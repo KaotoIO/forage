@@ -1,13 +1,9 @@
-package io.kaoto.forage.plugin.config;
+package io.kaoto.forage.config.editor;
 
 import java.io.File;
 import java.nio.file.Files;
 import java.util.List;
-import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
-import picocli.CommandLine;
-
-import static io.kaoto.forage.plugin.config.ConfigCommandTestSupport.getStrategy;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -64,36 +60,6 @@ class PropertiesFileStrategyTest {
         assertThat(PropertiesFileStrategyType.FORAGE.create(catalog)).isInstanceOf(ForageMultiFileStrategy.class);
         assertThatThrownBy(() -> PropertiesFileStrategyType.FORAGE.create(null))
                 .isInstanceOf(NullPointerException.class);
-    }
-
-    @Test
-    void optionDefaultsToApplication() throws Exception {
-        ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain());
-        new CommandLine(command).parseArgs();
-        assertThat(getStrategy(command)).isEqualTo("application");
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"forage", "Forage", "FORAGE"})
-    void optionAcceptsAnyCase(String value) throws Exception {
-        ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain());
-        new CommandLine(command).parseArgs("--strategy", value);
-        assertThat(PropertiesFileStrategyType.fromId(getStrategy(command)))
-                .isEqualTo(PropertiesFileStrategyType.FORAGE);
-    }
-
-    @Test
-    void optionDefersValidationToTheCommand() throws Exception {
-        // picocli accepts any value so that the command can report it as a JSON error
-        ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain());
-        new CommandLine(command).parseArgs("-s", "app");
-        assertThat(getStrategy(command)).isEqualTo("app");
-
-        PropertiesFileStrategyOption option = new PropertiesFileStrategyOption();
-        option.strategy = "app";
-        assertThatThrownBy(() -> option.resolve(catalog))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unknown properties file strategy 'app'");
     }
 
     @Test

@@ -1,6 +1,7 @@
 package io.kaoto.forage.plugin.config;
 
 import java.lang.reflect.Field;
+import io.kaoto.forage.config.editor.PropertiesFileStrategyType;
 
 /**
  * Reflection helpers shared by the {@code config} command tests.

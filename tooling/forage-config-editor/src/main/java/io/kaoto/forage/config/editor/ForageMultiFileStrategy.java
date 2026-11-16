@@ -3,6 +3,8 @@ package io.kaoto.forage.config.editor;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
+import io.kaoto.forage.catalog.model.ForageBean;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
 
 /**
@@ -30,6 +32,33 @@ final class ForageMultiFileStrategy implements PropertiesFileStrategy {
     @Override
     public List<File> findPropertiesFiles(File directory) throws IOException {
         return ForageConfigurationFiles.forageProperties(directory, catalog);
+    }
+
+    /**
+     * The bean's own properties file when the catalog records one (e.g. {@code forage-jms-artemis.properties}), since
+     * on plain Camel and Quarkus a bean only reads its own file and {@code application.properties}; the factory's
+     * file otherwise.
+     */
+    @Override
+    public String getPropertiesFileName(String factoryTypeKey, String beanName) {
+        if (beanName != null) {
+            Optional<String> beanFile = findBeanPropertiesFile(factoryTypeKey, beanName);
+            if (beanFile.isPresent()) {
+                return beanFile.get();
+            }
+        }
+        return getPropertiesFileName(factoryTypeKey);
+    }
+
+    /**
+     * The properties file the catalog records for a bean of a factory, if any.
+     */
+    Optional<String> findBeanPropertiesFile(String factoryTypeKey, String beanName) {
+        return catalog.getAllBeansForFactory(factoryTypeKey).stream()
+                .filter(bean -> beanName.equals(bean.getName()))
+                .map(ForageBean::getPropertiesFile)
+                .filter(file -> file != null && !file.isEmpty())
+                .findFirst();
     }
 
     @Override

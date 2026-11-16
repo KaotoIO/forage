@@ -247,11 +247,12 @@ class ConfigCommandsForageStrategyTest {
 
     @Test
     void deleteInstanceNamedLikeABeanOnlyRemovesItsOwnKeys() throws Exception {
-        // A Gemini agent (bean prefix "google", unlike its bean name) plus a DataSource called "ollama"
+        // A Gemini agent (bean prefix "google", unlike its bean name) plus a DataSource called "ollama", written by
+        // hand since config write no longer creates instances with such an ambiguous name
         writeGeminiAgent();
-        assertThat(write(PropertiesFileStrategyType.APPLICATION, PG_JSON.formatted("ollama"))
-                        .exitCode())
-                .isZero();
+        File appFile = new File(tempDir, "application.properties");
+        Files.writeString(
+                appFile.toPath(), Files.readString(appFile.toPath()) + "forage.ollama.jdbc.db.kind=postgresql\n");
 
         assertThat(delete("ollama", PropertiesFileStrategyType.APPLICATION).exitCode())
                 .isZero();
@@ -259,6 +260,37 @@ class ConfigCommandsForageStrategyTest {
         Properties appProps = load(new File(tempDir, "application.properties"));
         assertThat(appProps.getProperty("forage.ollama.jdbc.db.kind")).isNull();
         assertThat(appProps.getProperty("forage.myG.google.api.key")).isEqualTo("x");
+    }
+
+    @Test
+    void writeRejectsAmbiguousNamesForNewInstances() throws Exception {
+        Result result = write(PropertiesFileStrategyType.APPLICATION, PG_JSON.formatted("ollama"));
+
+        assertThat(result.exitCode()).isEqualTo(1);
+        assertThat(result.json().get("error").asText()).contains("Invalid instance name 'ollama'");
+        assertThat(tempDir.listFiles()).isEmpty();
+    }
+
+    @Test
+    void deleteRemovesTheInstanceFromInstanceLists() throws Exception {
+        File appFile = new File(tempDir, "application.properties");
+        Files.writeString(
+                appFile.toPath(),
+                """
+                forage.multi.agent.names=a1,a2
+                forage.a1.agent.model.kind=ollama
+                forage.a2.agent.model.kind=ollama
+                """);
+
+        JsonNode result = delete("a1", PropertiesFileStrategyType.APPLICATION).json();
+
+        assertThat(result.get("results")
+                        .get("application.properties")
+                        .get("updatedProperties")
+                        .asInt())
+                .isEqualTo(1);
+        assertThat(Files.readString(appFile.toPath()))
+                .isEqualTo("forage.multi.agent.names=a2\nforage.a2.agent.model.kind=ollama\n");
     }
 
     @Test

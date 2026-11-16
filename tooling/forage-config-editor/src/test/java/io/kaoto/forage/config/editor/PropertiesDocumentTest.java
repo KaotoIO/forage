@@ -115,6 +115,25 @@ class PropertiesDocumentTest {
     }
 
     @Test
+    void editsApplyToTheOriginalLines() {
+        PropertiesDocument document = PropertiesDocument.of(List.of("# header", "a=1", "b=long\\", "  value", "c=3"));
+        Map<Entry, String> newValues = new LinkedHashMap<>();
+        newValues.put(document.entries().get(2), null);
+        newValues.put(document.entries().get(1), "two");
+        newValues.put(document.entries().get(0), "one");
+
+        List<PropertiesDocument.TextEdit> edits = document.edits(newValues, Map.of("d", "4"));
+
+        assertThat(edits)
+                .containsExactly(
+                        new PropertiesDocument.TextEdit(1, 2, List.of("a=one")),
+                        new PropertiesDocument.TextEdit(2, 4, List.of("b=two")),
+                        new PropertiesDocument.TextEdit(4, 5, List.of()),
+                        new PropertiesDocument.TextEdit(5, 5, List.of("d=4")));
+        assertThat(document.apply(edits)).containsExactly("# header", "a=one", "b=two", "d=4");
+    }
+
+    @Test
     void readAndWrite() throws Exception {
         File file = new File(tempDir, "app.properties");
         assertThat(PropertiesDocument.read(file).entries()).isEmpty();

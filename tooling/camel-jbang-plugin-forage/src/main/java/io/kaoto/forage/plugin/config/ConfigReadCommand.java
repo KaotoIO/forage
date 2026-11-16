@@ -1,19 +1,18 @@
 package io.kaoto.forage.plugin.config;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
+import java.util.Set;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import io.kaoto.forage.catalog.model.ConditionalBeanGroup;
 import io.kaoto.forage.catalog.model.ConditionalBeanInfo;
 import io.kaoto.forage.catalog.model.ConfigEntry;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
+import io.kaoto.forage.config.editor.ForageConfiguration;
 import io.kaoto.forage.config.editor.ForagePropertyParser;
 import io.kaoto.forage.config.editor.ForagePropertyParser.ParsedProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -65,11 +64,11 @@ public class ConfigReadCommand extends AbstractConfigCommand {
                 return outputResult(List.of(), "No Forage properties files found");
             }
 
-            // Parse all properties files and detect beans
+            // Resolve the keys of all the files together, then list the beans of each file
+            ForageConfiguration configuration = ForageConfiguration.read(catalog, propertiesFiles, Set.of());
             List<BeanInfo> beans = new ArrayList<>();
             for (File file : propertiesFiles) {
-                List<BeanInfo> fileBeans = parsePropertiesFile(file);
-                beans.addAll(fileBeans);
+                beans.addAll(beansOf(configuration, file));
             }
 
             // Apply filter if specified
@@ -85,19 +84,13 @@ public class ConfigReadCommand extends AbstractConfigCommand {
         }
     }
 
-    private List<BeanInfo> parsePropertiesFile(File file) throws IOException {
-        Properties props = new Properties();
-        try (FileInputStream fis = new FileInputStream(file)) {
-            props.load(fis);
-        }
-
+    private List<BeanInfo> beansOf(ForageConfiguration configuration, File file) {
         // Group properties by factory type and instance name
         Map<String, InstanceProperties> instances = new LinkedHashMap<>();
 
-        ForagePropertyParser parser = new ForagePropertyParser(catalog);
-        for (String key : props.stringPropertyNames()) {
-            ParsedProperty parsed = parser.parse(key).orElse(null);
-            if (parsed == null) {
+        for (ForageConfiguration.Entry entry : configuration.entries()) {
+            ParsedProperty parsed = entry.property();
+            if (!entry.file().equals(file) || parsed == null) {
                 continue;
             }
 
@@ -111,7 +104,7 @@ public class ConfigReadCommand extends AbstractConfigCommand {
             if (instance.beanType == null && parsed.beanType() != null) {
                 instance.beanType = parsed.beanType();
             }
-            instance.properties.put(parsed.propertyName(), props.getProperty(key));
+            instance.properties.put(parsed.propertyName(), entry.value());
         }
 
         // Convert instances to BeanInfo

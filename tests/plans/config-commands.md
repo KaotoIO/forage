@@ -1420,9 +1420,10 @@ delete() {
     || fail "delete of '$1' failed" "${OUTPUT}"
 }
 
-# A Gemini agent (bean prefix "google") and a DataSource that happens to be called "ollama"
+# A Gemini agent (bean prefix "google") and a DataSource that happens to be called "ollama", written by hand:
+# config write does not create instances with such an ambiguous name (Test 11.8)
 write '{"forage.google.api.key":"x","forage.google.model.name":"gemini","kind":"google-gemini","forage.bean.name":"myG"}'
-write '{"forage.jdbc.db.kind":"postgresql","kind":"postgresql","forage.bean.name":"ollama"}'
+echo 'forage.ollama.jdbc.db.kind=postgresql' >> "${APP_FILE}"
 delete ollama
 grep -q '^forage.myG.google.api.key=x' "${APP_FILE}" || fail "Gemini agent removed by deleting the DataSource 'ollama'"
 grep -q '^forage.ollama.jdbc' "${APP_FILE}" && fail "DataSource 'ollama' left behind"
@@ -1495,6 +1496,44 @@ echo "PASS: WebSearch keys are rejected under the forage strategy"
 rm -rf "${PROJECT_DIR}"
 ```
 
+### Test 11.8: Instance names, instance lists and bean files
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+fail() { echo "FAIL: $1"; [ -n "$2" ] && echo "$2"; rm -rf "${PROJECT_DIR}"; exit 1; }
+APP_FILE="${PROJECT_DIR}/application.properties"
+
+# A new instance cannot be named like the start of Forage keys (here the Ollama bean prefix)
+OUTPUT=$(camel forage config write --input '{"forage.jdbc.db.kind":"h2","forage.bean.name":"ollama"}' --dir "${PROJECT_DIR}" 2>&1) \
+  && fail "instance named 'ollama' created" "${OUTPUT}"
+echo "${OUTPUT}" | jq -e '.error | contains("Invalid instance name")' > /dev/null || fail "unexpected error" "${OUTPUT}"
+[ -z "$(ls -A "${PROJECT_DIR}")" ] || fail "files written for a rejected instance"
+echo "PASS: ambiguous names are rejected for new instances"
+
+# Deleting an agent removes it from forage.multi.agent.names
+printf 'forage.multi.agent.names=a1,a2\nforage.a1.agent.model.kind=ollama\nforage.a2.agent.model.kind=ollama\n' > "${APP_FILE}"
+OUTPUT=$(camel forage config write --delete --name a1 --dir "${PROJECT_DIR}" 2>&1) || fail "delete of a1 failed" "${OUTPUT}"
+grep -q '^forage.multi.agent.names=a2$' "${APP_FILE}" || fail "a1 still listed" "$(cat "${APP_FILE}")"
+OUTPUT=$(camel forage config write --delete --name a2 --dir "${PROJECT_DIR}" 2>&1) || fail "delete of a2 failed" "${OUTPUT}"
+grep -q 'multi.agent.names' "${APP_FILE}" && fail "empty agent list kept"
+echo "PASS: deleted agents are removed from forage.multi.agent.names"
+
+rm -rf "${PROJECT_DIR}"
+PROJECT_DIR=$(mktemp -d)
+
+# Under the forage strategy, a bean with its own file gets its properties there; one without gets a warning
+OUTPUT=$(camel forage config write --input '{"forage.agent.model.kind":"bedrock","forage.bedrock.region":"eu-west-1","forage.bean.name":"a1"}' --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "bedrock write failed" "${OUTPUT}"
+grep -q '^forage.a1.bedrock.region=eu-west-1' "${PROJECT_DIR}/forage-model-bedrock.properties" \
+  || fail "bedrock properties not in forage-model-bedrock.properties" "${OUTPUT}"
+OUTPUT=$(camel forage config write --input '{"forage.ollama.model.name":"llama3","forage.bean.name":"a2"}' --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "ollama write failed" "${OUTPUT}"
+echo "${OUTPUT}" | jq -e '.factories.agent.warnings | length == 1' > /dev/null || fail "no warning for ollama" "${OUTPUT}"
+echo "PASS: bean properties go to the bean's own file, or come with a warning"
+
+rm -rf "${PROJECT_DIR}"
+```
+
 ---
 
 ## Phase 12: Cleanup
@@ -1522,5 +1561,5 @@ echo "PASS: all temporary directories cleaned up by individual tests"
 | 8 | 8.1-8.6 | Delete instance, preserves others, error cases | Critical |
 | 9 | 9.1-9.3 | Delete removes the Forage dependencies older versions stored | High |
 | 10 | 10.1-10.2 | Round-trip write-read, write-delete-read | Critical |
-| 11 | 11.1-11.7 | Forage strategy write/read/delete, invalid values, files of each strategy, profiles, default and dotted instances, bean-named instances, profile overrides, entry layouts | High |
+| 11 | 11.1-11.8 | Forage strategy write/read/delete, invalid values, files of each strategy, profiles, default and dotted instances, bean-named instances, profile overrides, entry layouts, instance names, instance lists, bean files | High |
 | 12 | 12 | Cleanup | Low |

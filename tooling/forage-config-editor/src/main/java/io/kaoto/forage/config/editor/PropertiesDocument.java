@@ -7,8 +7,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -77,63 +79,111 @@ public final class PropertiesDocument {
     }
 
     /**
-     * Returns the lines without the given entries, including their continuation lines.
+     * A change to the lines of a document: lines {@code startLine} (inclusive) to {@code endLine} (exclusive) are
+     * replaced by {@code lines}. An insertion has {@code startLine == endLine}; a removal has no lines. Line numbers
+     * refer to the document the edit was computed for, so a list of edits applies to that document at once, the way
+     * an editor applies a set of text edits.
+     *
+     * @param startLine the first replaced line
+     * @param endLine the line after the last replaced one
+     * @param lines the new lines
      */
-    public List<String> without(Collection<Entry> removed) {
-        Set<Integer> removedLines = new HashSet<>();
-        for (Entry entry : removed) {
-            for (int i = entry.firstLine(); i <= entry.lastLine(); i++) {
-                removedLines.add(i);
-            }
+    public record TextEdit(int startLine, int endLine, List<String> lines) {
+
+        public TextEdit {
+            lines = List.copyOf(lines);
         }
+    }
+
+    /**
+     * Returns the edits that replace the given entries: each by a single {@code key=value} line with its new value,
+     * or by nothing when the new value is {@code null}, continuation lines included. Keys and values are escaped as
+     * {@link Properties} expects.
+     *
+     * @param newValues the entries to replace, with their new values
+     * @param appended entries to append at the end of the document, in order
+     * @return the edits, in line order
+     */
+    public List<TextEdit> edits(Map<Entry, String> newValues, Map<String, String> appended) {
+        List<TextEdit> edits = new ArrayList<>();
+        newValues.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey(Comparator.comparingInt(Entry::firstLine)))
+                .forEach(change -> edits.add(new TextEdit(
+                        change.getKey().firstLine(),
+                        change.getKey().lastLine() + 1,
+                        change.getValue() != null
+                                ? List.of(format(change.getKey().key(), change.getValue()))
+                                : List.of())));
+        List<String> appendedLines = new ArrayList<>();
+        appended.forEach((key, value) -> appendedLines.add(format(key, value)));
+        if (!appendedLines.isEmpty()) {
+            // A last line ending with a continuation would swallow the appended entries: end it with a blank line
+            if (!lines.isEmpty() && isContinued(lines.get(lines.size() - 1))) {
+                appendedLines.add(0, "");
+            }
+            edits.add(new TextEdit(lines.size(), lines.size(), appendedLines));
+        }
+        return edits;
+    }
+
+    /**
+     * Applies edits computed for this document.
+     *
+     * @param edits non-overlapping edits, as returned by {@link #edits(Map, Map)}
+     * @return the edited lines
+     */
+    public List<String> apply(List<TextEdit> edits) {
+        List<TextEdit> sorted = edits.stream()
+                .sorted(Comparator.comparingInt(TextEdit::startLine))
+                .toList();
         List<String> result = new ArrayList<>();
-        for (int i = 0; i < lines.size(); i++) {
-            if (!removedLines.contains(i)) {
-                result.add(lines.get(i));
-            }
+        int next = 0;
+        for (TextEdit edit : sorted) {
+            result.addAll(lines.subList(next, edit.startLine()));
+            result.addAll(edit.lines());
+            next = edit.endLine();
         }
+        result.addAll(lines.subList(next, lines.size()));
         return result;
     }
 
     /**
-     * Returns the lines with the given values set: the first entry of a key is replaced, in place, by a single
-     * {@code key=value} line, further entries of the same key are removed, and keys not in the document are
-     * appended in the given order. A {@code null} value removes every entry of its key. Keys and values are
-     * escaped as {@link Properties} expects, so they read back unchanged.
+     * Returns the lines without the given entries, including their continuation lines.
      */
-    public List<String> withValues(Map<String, String> values) {
-        Set<Integer> replacedLines = new HashSet<>();
-        Map<Integer, String> replacements = new HashMap<>();
-        Set<String> written = new HashSet<>();
+    public List<String> without(Collection<Entry> removed) {
+        Map<Entry, String> newValues = new HashMap<>();
+        removed.forEach(entry -> newValues.put(entry, null));
+        return apply(edits(newValues, Map.of()));
+    }
+
+    /**
+     * Returns the edits that set the given values: the first entry of a key is replaced, in place, by a single
+     * {@code key=value} line, further entries of the same key are removed, and keys not in the document are
+     * appended in the given order. A {@code null} value removes every entry of its key.
+     */
+    public List<TextEdit> editsSettingValues(Map<String, String> values) {
+        Map<Entry, String> newValues = new HashMap<>();
+        Set<String> found = new HashSet<>();
         for (Entry entry : entries) {
             if (values.containsKey(entry.key())) {
-                for (int line = entry.firstLine(); line <= entry.lastLine(); line++) {
-                    replacedLines.add(line);
-                }
-                String value = values.get(entry.key());
-                if (value != null && written.add(entry.key())) {
-                    replacements.put(entry.firstLine(), format(entry.key(), value));
-                }
+                newValues.put(entry, found.add(entry.key()) ? values.get(entry.key()) : null);
             }
         }
-        List<String> result = new ArrayList<>();
-        for (int i = 0; i < lines.size(); i++) {
-            if (replacements.containsKey(i)) {
-                result.add(replacements.get(i));
-            } else if (!replacedLines.contains(i)) {
-                result.add(lines.get(i));
-            }
-        }
+        Map<String, String> appended = new LinkedHashMap<>();
         values.forEach((key, value) -> {
-            if (value != null && !written.contains(key)) {
-                // A last line ending with a continuation would swallow the appended entry: end it with a blank line
-                if (!result.isEmpty() && isContinued(result.get(result.size() - 1))) {
-                    result.add("");
-                }
-                result.add(format(key, value));
+            if (value != null && !found.contains(key)) {
+                appended.put(key, value);
             }
         });
-        return result;
+        return edits(newValues, appended);
+    }
+
+    /**
+     * Returns the lines with the given values set, see {@link #editsSettingValues(Map)}. Keys and values are escaped
+     * as {@link Properties} expects, so they read back unchanged.
+     */
+    public List<String> withValues(Map<String, String> values) {
+        return apply(editsSettingValues(values));
     }
 
     /**

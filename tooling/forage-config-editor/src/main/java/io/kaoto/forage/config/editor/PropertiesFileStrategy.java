@@ -60,4 +60,16 @@ public interface PropertiesFileStrategy {
      *         caller must then report an error instead of writing the configuration
      */
     String getPropertiesFileName(String factoryTypeKey);
+
+    /**
+     * Resolves the properties file name a property of a given factory type and bean should be written to.
+     *
+     * @param factoryTypeKey the factory type key (e.g., {@code "jdbc"}, {@code "agent"})
+     * @param beanName the bean the property configures (e.g., {@code "ollama"}), or {@code null} for a factory
+     *     property
+     * @return the file name, or {@code null} if this strategy has no file for the factory type
+     */
+    default String getPropertiesFileName(String factoryTypeKey, String beanName) {
+        return getPropertiesFileName(factoryTypeKey);
+    }
 }

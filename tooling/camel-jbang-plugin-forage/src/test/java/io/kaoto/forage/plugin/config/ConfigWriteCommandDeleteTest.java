@@ -1,7 +1,6 @@
 package io.kaoto.forage.plugin.config;
 
 import java.io.File;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.util.Properties;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
@@ -9,6 +8,9 @@ import org.apache.camel.dsl.jbang.core.common.StringPrinter;
 import io.kaoto.forage.core.common.VersionHelper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import static io.kaoto.forage.plugin.config.ConfigCommandTestSupport.setField;
+import static io.kaoto.forage.plugin.config.ConfigCommandTestSupport.setStrategy;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,7 +60,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "myPG");
 
@@ -124,7 +126,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command for PostgreSQL only
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "myPG");
 
@@ -194,7 +196,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "myOllama");
 
@@ -270,7 +272,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command for PostgreSQL
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "myPG");
 
@@ -328,7 +330,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "myPG");
 
@@ -363,7 +365,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command for non-existent instance
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "nonExistent");
 
@@ -393,7 +395,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command without instance name
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         // Not setting instanceName
 
@@ -415,7 +417,7 @@ class ConfigWriteCommandDeleteTest {
         // Execute delete command
         ConfigWriteCommand command = new ConfigWriteCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "delete", true);
         setField(command, "instanceName", "myPG");
 
@@ -428,14 +430,5 @@ class ConfigWriteCommandDeleteTest {
         JsonNode result = OBJECT_MAPPER.readTree(output);
         assertThat(result.get("success").asBoolean()).isFalse();
         assertThat(result.get("error").asText()).contains("No configuration found");
-    }
-
-    /**
-     * Helper method to set private fields on the command object using reflection.
-     */
-    private static void setField(Object target, String fieldName, Object value) throws Exception {
-        Field field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
     }
 }

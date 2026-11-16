@@ -29,11 +29,13 @@ PROCESSING PIPELINE
    ┌──────────────────────────────────────────────────┐
    │ findPropertiesFiles(directory)                   │
    │                                                   │
-   │ Strategy "forage":                               │
-   │   • Scan for forage-*.properties files          │
-   │   • Use catalog to find specific file names     │
+   │ Only the top level of --dir is scanned.          │
    │                                                   │
-   │ Strategy "application":                          │
+   │ Strategy "forage":                               │
+   │   • Catalog file names (Config.name())           │
+   │   • Any other forage-*.properties file           │
+   │                                                   │
+   │ Strategy "application" (default):                │
    │   • Look for application.properties only        │
    │                                                   │
    │ Returns: List<File>                              │
@@ -359,13 +361,14 @@ Conditional beans are automatically detected based on enabled configuration entr
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
-| `--dir` | `-d` | Directory to scan for properties files | current directory |
+| `--dir` | `-d` | Directory to scan for properties files (top level only, not subdirectories) | current directory |
 | `--filter` | `-f` | Filter by factory type (e.g., 'jdbc', 'jms', 'agent') | none (show all) |
-| `--strategy` | `-s` | Property file strategy: 'forage' or 'application' | forage |
+| `--strategy` | `-s` | Property file strategy: 'application' or 'forage' (case-insensitive) | application |
 
 ## Error Handling
 
 The command returns exit code 1 and JSON error response for:
+- Unknown `--strategy` value
 - Invalid directory path
 - File system errors
 - Parsing errors

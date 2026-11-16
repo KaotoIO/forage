@@ -1,10 +1,9 @@
-package io.kaoto.forage.plugin.config;
+package io.kaoto.forage.config.editor;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import io.kaoto.forage.plugin.ForagePropertyScanner;
 
 /**
  * Strategy that stores all Forage configuration in a single {@code application.properties} file.
@@ -19,19 +18,19 @@ final class ApplicationPropertiesStrategy implements PropertiesFileStrategy {
 
     @Override
     public List<File> findPropertiesFiles(File directory) {
-        File appProps = ForagePropertyScanner.loadApplicationProperties(directory);
+        File appProps = ForageConfigurationFiles.applicationProperties(directory);
         return appProps != null ? List.of(appProps) : List.of();
     }
 
     @Override
     public List<File> findDeletionFiles(File directory) throws IOException {
         List<File> files = new ArrayList<>(findPropertiesFiles(directory));
-        files.addAll(ForagePropertyScanner.findProfilePropertiesFiles(directory));
+        files.addAll(ForageConfigurationFiles.profileProperties(directory));
         return files;
     }
 
     @Override
     public String getPropertiesFileName(String factoryTypeKey) {
-        return ForagePropertyScanner.APPLICATION_PROPERTIES;
+        return ForageConfigurationFiles.APPLICATION_PROPERTIES;
     }
 }

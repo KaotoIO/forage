@@ -34,6 +34,12 @@
 
         <dependency>
             <groupId>io.kaoto.forage</groupId>
+            <artifactId>forage-config-editor</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.kaoto.forage</groupId>
             <artifactId>forage-core-common</artifactId>
             <version>${project.version}</version>
         </dependency>

@@ -159,28 +159,6 @@ class ForagePropertyScannerTest {
         assertThat(result).isEmpty();
     }
 
-    @Test
-    void allConfigurationFilesIncludeEveryProfile() throws Exception {
-        writeFile("application.properties", "camel.main.profile=dev\n");
-        writeFile("application-dev.properties", "forage.ds.jdbc.db.kind=h2\n");
-        writeFile("application-prod.properties", "forage.ds.jdbc.db.kind=h2\n");
-        writeFile("forage-custom.properties", "forage.ds2.jdbc.db.kind=h2\n");
-        writeFile("other.properties", "forage.ds3.jdbc.db.kind=h2\n");
-
-        assertThat(ForagePropertyScanner.findAllConfigurationFiles(tempDir, catalog))
-                .containsExactly(
-                        new File(tempDir, "application.properties"),
-                        new File(tempDir, "application-dev.properties"),
-                        new File(tempDir, "application-prod.properties"),
-                        new File(tempDir, "forage-custom.properties"));
-    }
-
-    @Test
-    void allConfigurationFilesOfMissingDirectory() throws Exception {
-        assertThat(ForagePropertyScanner.findAllConfigurationFiles(new File(tempDir, "missing"), catalog))
-                .isEmpty();
-    }
-
     private void writeFile(String name, String content) throws IOException {
         File file = new File(tempDir, name);
         try (FileWriter writer = new FileWriter(file)) {

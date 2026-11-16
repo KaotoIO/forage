@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
 
@@ -186,7 +187,7 @@ public final class ForagePropertyScanner {
      * The property name the scan groups values under: relative to the factory for factory properties
      * (e.g. {@code db.kind}), and including the bean prefix for bean properties (e.g. {@code ollama.model.name}).
      */
-    private static String scannedPropertyName(ForagePropertyParser.ParsedProperty parsed) {
+    static String scannedPropertyName(ForagePropertyParser.ParsedProperty parsed) {
         return parsed.beanType() != null ? parsed.entryKey() : parsed.propertyName();
     }
 
@@ -254,20 +255,21 @@ public final class ForagePropertyScanner {
         if (applicationPropsFile != null) {
             files.add(applicationPropsFile);
         }
-        if (dir.isDirectory()) {
-            try (Stream<Path> paths = Files.list(dir.toPath())) {
-                paths.filter(Files::isRegularFile)
-                        .filter(p -> {
-                            String fileName = p.getFileName().toString();
-                            return fileName.startsWith("application-") && fileName.endsWith(".properties");
-                        })
-                        .sorted()
-                        .map(Path::toFile)
-                        .forEach(files::add);
-            }
-            files.addAll(findForagePropertiesFiles(dir, catalog));
-        }
+        files.addAll(findProfilePropertiesFiles(dir));
+        files.addAll(findForagePropertiesFiles(dir, catalog));
         return files;
+    }
+
+    /**
+     * Returns every {@code application-<profile>.properties} file of the directory, whatever the active profile,
+     * sorted by name. Only the top level of the directory is scanned.
+     *
+     * @param dir the directory to scan
+     * @return the existing files, never {@code null}; empty if the directory does not exist
+     * @throws IOException if the directory cannot be scanned
+     */
+    public static List<File> findProfilePropertiesFiles(File dir) throws IOException {
+        return listFiles(dir, fileName -> fileName.startsWith("application-") && fileName.endsWith(".properties"));
     }
 
     static String resolveProfile(Properties applicationProps) {
@@ -300,7 +302,7 @@ public final class ForagePropertyScanner {
      *
      * @param dir the directory to scan
      * @param catalog the catalog reader
-     * @return the matching files, never {@code null}
+     * @return the matching files, never {@code null}; empty if the directory does not exist
      * @throws IOException if the directory cannot be scanned
      */
     public static List<File> findForagePropertiesFiles(File dir, ForageCatalogReader catalog) throws IOException {
@@ -313,13 +315,20 @@ public final class ForagePropertyScanner {
             }
         }
 
-        try (Stream<Path> paths = Files.walk(dir.toPath(), 1)) {
+        return listFiles(
+                dir,
+                fileName -> catalogFileNames.contains(fileName)
+                        || (fileName.startsWith("forage-") && fileName.endsWith(".properties")));
+    }
+
+    private static List<File> listFiles(File dir, Predicate<String> fileNameFilter) throws IOException {
+        if (!dir.isDirectory()) {
+            return List.of();
+        }
+        try (Stream<Path> paths = Files.list(dir.toPath())) {
             return paths.filter(Files::isRegularFile)
-                    .filter(p -> {
-                        String fileName = p.getFileName().toString();
-                        return catalogFileNames.contains(fileName)
-                                || (fileName.startsWith("forage-") && fileName.endsWith(".properties"));
-                    })
+                    .filter(p -> fileNameFilter.test(p.getFileName().toString()))
+                    .sorted()
                     .map(Path::toFile)
                     .toList();
         }

@@ -39,6 +39,19 @@ public interface PropertiesFileStrategy {
     List<File> findPropertiesFiles(File directory) throws IOException;
 
     /**
+     * Finds the existing properties files {@code config write --delete} removes an instance from: the files
+     * returned by {@link #findPropertiesFiles(File)} plus any file that overrides them at runtime, so that a
+     * deleted instance does not come back, partly configured, through an override.
+     *
+     * @param directory the directory to scan (never {@code null})
+     * @return the existing properties files, never {@code null}
+     * @throws IOException if the directory cannot be scanned
+     */
+    default List<File> findDeletionFiles(File directory) throws IOException {
+        return findPropertiesFiles(directory);
+    }
+
+    /**
      * Resolves the properties file name a given factory type should be written to.
      *
      * @param factoryTypeKey the factory type key (e.g., {@code "jdbc"}, {@code "agent"})

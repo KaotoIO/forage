@@ -2,13 +2,11 @@ package io.kaoto.forage.plugin.config;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -18,8 +16,11 @@ import java.util.Set;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
 import io.kaoto.forage.plugin.ForageDependencyResolver;
+import io.kaoto.forage.plugin.ForageDependencyResolver.Dependencies;
 import io.kaoto.forage.plugin.ForagePropertyParser;
+import io.kaoto.forage.plugin.ForagePropertyParser.ParsedProperty;
 import io.kaoto.forage.plugin.ForagePropertyScanner;
+import io.kaoto.forage.plugin.PropertiesDocument;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import picocli.CommandLine;
@@ -165,17 +166,17 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
         }
 
         // Collect and write dependencies to application.properties
-        DependencyInfo dependencies = collectDependencies(factoryConfigs);
-        if (hasDependencies(dependencies)) {
+        Dependencies dependencies = collectDependencies(factoryConfigs);
+        if (!dependencies.isEmpty()) {
             File appPropertiesFile = new File(directory, ForagePropertyScanner.APPLICATION_PROPERTIES);
             updateDependencies(appPropertiesFile, dependencies);
 
             // Add dependency info to results
             Map<String, Object> depResult = new LinkedHashMap<>();
-            depResult.put("baseDependencies", dependencies.baseDependencies());
-            depResult.put("mainDependencies", dependencies.mainDependencies());
-            depResult.put("springBootDependencies", dependencies.springBootDependencies());
-            depResult.put("quarkusDependencies", dependencies.quarkusDependencies());
+            depResult.put("baseDependencies", dependencies.base());
+            depResult.put("mainDependencies", dependencies.main());
+            depResult.put("springBootDependencies", dependencies.springBoot());
+            depResult.put("quarkusDependencies", dependencies.quarkus());
             results.put("dependencies", depResult);
         }
 
@@ -210,6 +211,7 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
      * The kind is extracted from "kind" or "forage.kind" property to identify the bean type.
      */
     private Map<String, FactoryConfig> groupByFactory(Map<String, String> configMap) {
+        ForagePropertyParser parser = new ForagePropertyParser(catalog);
         Map<String, FactoryConfig> factoryConfigs = new LinkedHashMap<>();
         // Track kind per factory type key
         Map<String, String> factoryKinds = new HashMap<>();
@@ -254,7 +256,7 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
             String normalizedKey = catalog.normalizePropertyKey(key);
 
             // Find which factory type this key belongs to
-            Optional<String> factoryTypeOpt = catalog.findFactoryTypeKeyForInputProperty(key);
+            Optional<String> factoryTypeOpt = findFactoryTypeKey(parser, normalizedKey, null);
             if (factoryTypeOpt.isEmpty()) {
                 continue;
             }
@@ -293,33 +295,12 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
             // Normalize the key (strip forage. prefix if present)
             String normalizedKey = catalog.normalizePropertyKey(key);
 
-            // Try to find factory type from the property key first
-            Optional<String> factoryTypeOpt = catalog.findFactoryTypeKeyForInputProperty(key);
-            String factoryTypeKey;
-
-            if (factoryTypeOpt.isPresent()) {
-                factoryTypeKey = factoryTypeOpt.get();
-            } else if (kindFactoryTypeKey != null) {
-                // Use the factory type determined from the kind
-                factoryTypeKey = kindFactoryTypeKey;
-            } else {
-                // Try to find factory type from the property prefix
-                // (e.g., "google.api.key" -> prefix "google" -> bean "google-gemini" -> factory "multi")
-                int dotIndex = normalizedKey.indexOf('.');
-                if (dotIndex > 0) {
-                    String propertyPrefix = normalizedKey.substring(0, dotIndex);
-                    Optional<String> prefixFactoryTypeOpt = catalog.findFactoryTypeKeyForPropertyPrefix(propertyPrefix);
-                    if (prefixFactoryTypeOpt.isPresent()) {
-                        factoryTypeKey = prefixFactoryTypeOpt.get();
-                    } else {
-                        // Cannot determine factory type for this property
-                        continue;
-                    }
-                } else {
-                    // Cannot determine factory type for this property
-                    continue;
-                }
+            Optional<String> factoryTypeOpt = findFactoryTypeKey(parser, normalizedKey, kindFactoryTypeKey);
+            if (factoryTypeOpt.isEmpty()) {
+                // Cannot determine factory type for this property
+                continue;
             }
+            String factoryTypeKey = factoryTypeOpt.get();
 
             // Use factory-specific bean name if available, otherwise use global bean name
             String beanName = factoryBeanNames.getOrDefault(factoryTypeKey, globalBeanName);
@@ -354,6 +335,30 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
     }
 
     /**
+     * Finds the factory an input key (written for the default instance, without {@code forage.}) belongs to: the
+     * factory that declares it in the catalog, parsed like the properties files are (so
+     * {@code google.custom.search.api.key} is WebSearch, not the Gemini agent bean that also uses {@code google}),
+     * else the factory named by its first segment (e.g. {@code jdbc} for a {@code jdbc.*} key the catalog does not
+     * declare), else the factory of the given kind, else the parser's segment heuristics.
+     */
+    private Optional<String> findFactoryTypeKey(
+            ForagePropertyParser parser, String normalizedKey, String kindFactoryTypeKey) {
+        Optional<ParsedProperty> parsed = parser.parse(FORAGE_PREFIX + normalizedKey);
+        if (parsed.isPresent()
+                && parser.isConfigEntry(FORAGE_PREFIX + parsed.get().entryKey())) {
+            return Optional.of(parsed.get().factoryType());
+        }
+        Optional<String> byFirstSegment = catalog.findFactoryTypeKeyForInputProperty(normalizedKey);
+        if (byFirstSegment.isPresent()) {
+            return byFirstSegment;
+        }
+        if (kindFactoryTypeKey != null) {
+            return Optional.of(kindFactoryTypeKey);
+        }
+        return parsed.map(ParsedProperty::factoryType);
+    }
+
+    /**
      * Builds the full property key with forage prefix and optional bean name.
      * Input: "jdbc.url", beanName: "ds1" -> Output: "forage.ds1.jdbc.url"
      * Input: "jdbc.url", beanName: null -> Output: "forage.jdbc.url"
@@ -373,9 +378,9 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
      * - Bean GAV (e.g., forage-jdbc-postgresql) -> base dependencies
      * - Factory variant GAVs for each runtime (base, springboot, quarkus)
      */
-    private DependencyInfo collectDependencies(Map<String, FactoryConfig> factoryConfigs) {
+    private Dependencies collectDependencies(Map<String, FactoryConfig> factoryConfigs) {
         ForageDependencyResolver resolver = new ForageDependencyResolver(catalog);
-        ForageDependencyResolver.Dependencies dependencies = new ForageDependencyResolver.Dependencies();
+        Dependencies dependencies = new Dependencies();
 
         for (Map.Entry<String, FactoryConfig> entry : factoryConfigs.entrySet()) {
             FactoryConfig factoryConfig = entry.getValue();
@@ -384,25 +389,10 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
             // The kind given as metadata (e.g. "kind": "postgresql")
             resolver.addBean(dependencies, factoryConfig.kind());
             // Everything the written properties need, using the same rule as the delete cleanup
-            ForageDependencyResolver.Dependencies written = resolver.resolve(factoryConfig.properties());
-            dependencies.base().addAll(written.base());
-            dependencies.main().addAll(written.main());
-            dependencies.springBoot().addAll(written.springBoot());
-            dependencies.quarkus().addAll(written.quarkus());
+            dependencies.addAll(resolver.resolve(factoryConfig.properties()));
         }
 
-        return new DependencyInfo(
-                dependencies.base(), dependencies.main(), dependencies.springBoot(), dependencies.quarkus());
-    }
-
-    /**
-     * Checks if there are any dependencies to write.
-     */
-    private boolean hasDependencies(DependencyInfo deps) {
-        return !deps.baseDependencies().isEmpty()
-                || !deps.mainDependencies().isEmpty()
-                || !deps.springBootDependencies().isEmpty()
-                || !deps.quarkusDependencies().isEmpty();
+        return dependencies;
     }
 
     // Dependency property keys
@@ -415,95 +405,44 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
      * Updates the application.properties file with dependencies.
      * Merges new forage dependencies with existing ones without removing existing dependencies.
      */
-    private void updateDependencies(File propertiesFile, DependencyInfo newDeps) throws IOException {
-        final Map<String, Set<String>> existingDeps = newDependencyMap();
+    private void updateDependencies(File propertiesFile, Dependencies newDeps) throws IOException {
+        PropertiesDocument document = PropertiesDocument.read(propertiesFile);
+        Map<String, Set<String>> dependencies = readDependencies(document);
 
-        List<String> lines = new ArrayList<>();
-        Set<String> dependencyKeysFound = new HashSet<>();
+        dependencies.get(CAMEL_JBANG_DEPENDENCIES).addAll(newDeps.base());
+        dependencies.get(CAMEL_JBANG_DEPENDENCIES_MAIN).addAll(newDeps.main());
+        dependencies.get(CAMEL_JBANG_DEPENDENCIES_SPRING_BOOT).addAll(newDeps.springBoot());
+        dependencies.get(CAMEL_JBANG_DEPENDENCIES_QUARKUS).addAll(newDeps.quarkus());
 
-        // Read existing file and parse dependencies
-        if (propertiesFile.exists()) {
-            lines = new ArrayList<>(java.nio.file.Files.readAllLines(propertiesFile.toPath(), StandardCharsets.UTF_8));
+        PropertiesDocument.write(propertiesFile, document.withValues(toPropertyValues(dependencies)));
+    }
 
-            for (String line : lines) {
-                String trimmed = line.trim();
-                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
-                    continue;
-                }
-
-                int equalsIndex = line.indexOf('=');
-                if (equalsIndex > 0) {
-                    String key = line.substring(0, equalsIndex).trim();
-                    String value = line.substring(equalsIndex + 1).trim();
-
-                    if (existingDeps.containsKey(key)) {
-                        dependencyKeysFound.add(key);
-                        // Parse existing dependencies
-                        if (!value.isEmpty()) {
-                            for (String dep : value.split(",")) {
-                                String trimmedDep = dep.trim();
-                                if (!trimmedDep.isEmpty()) {
-                                    existingDeps.get(key).add(trimmedDep);
-                                }
-                            }
-                        }
+    /**
+     * Reads the GAVs of every {@code camel.jbang.dependencies*} property, whichever separator and line layout they
+     * were written with.
+     */
+    private static Map<String, Set<String>> readDependencies(PropertiesDocument document) {
+        Map<String, Set<String>> dependencies = newDependencyMap();
+        for (PropertiesDocument.Entry entry : document.entries()) {
+            Set<String> gavs = dependencies.get(entry.key());
+            if (gavs != null) {
+                for (String gav : entry.value().split(",")) {
+                    if (!gav.isBlank()) {
+                        gavs.add(gav.trim());
                     }
                 }
             }
         }
+        return dependencies;
+    }
 
-        // Merge new dependencies with existing ones
-        existingDeps.get(CAMEL_JBANG_DEPENDENCIES).addAll(newDeps.baseDependencies());
-        existingDeps.get(CAMEL_JBANG_DEPENDENCIES_MAIN).addAll(newDeps.mainDependencies());
-        existingDeps.get(CAMEL_JBANG_DEPENDENCIES_SPRING_BOOT).addAll(newDeps.springBootDependencies());
-        existingDeps.get(CAMEL_JBANG_DEPENDENCIES_QUARKUS).addAll(newDeps.quarkusDependencies());
-
-        // Update or append dependency lines
-        List<String> updatedLines = new ArrayList<>();
-        for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
-                updatedLines.add(line);
-                continue;
-            }
-
-            int equalsIndex = line.indexOf('=');
-            if (equalsIndex > 0) {
-                String key = line.substring(0, equalsIndex).trim();
-
-                if (existingDeps.containsKey(key)) {
-                    Set<String> deps = existingDeps.get(key);
-                    if (!deps.isEmpty()) {
-                        updatedLines.add(key + "=" + String.join(",", deps));
-                    }
-                    // Mark as processed so we don't append it again
-                    dependencyKeysFound.add(key);
-                } else {
-                    updatedLines.add(line);
-                }
-            } else {
-                updatedLines.add(line);
-            }
-        }
-
-        // Append any new dependency keys that weren't in the original file
-        for (String key : existingDeps.keySet()) {
-            if (!dependencyKeysFound.contains(key)) {
-                Set<String> deps = existingDeps.get(key);
-                if (!deps.isEmpty()) {
-                    updatedLines.add(key + "=" + String.join(",", deps));
-                }
-            }
-        }
-
-        // Write the updated content
-        try (FileOutputStream fos = new FileOutputStream(propertiesFile)) {
-            StringBuilder content = new StringBuilder();
-            for (String line : updatedLines) {
-                content.append(line).append("\n");
-            }
-            fos.write(content.toString().getBytes(StandardCharsets.UTF_8));
-        }
+    /**
+     * The property values to write for the dependency lists; an empty list removes its property.
+     */
+    private static Map<String, String> toPropertyValues(Map<String, Set<String>> dependencies) {
+        Map<String, String> values = new LinkedHashMap<>();
+        dependencies.forEach((key, gavs) -> values.put(key, gavs.isEmpty() ? null : String.join(",", gavs)));
+        return values;
     }
 
     private static Map<String, Set<String>> newDependencyMap() {
@@ -523,84 +462,14 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
 
     private void writePropertiesFile(File file, Map<String, String> newProperties, String factoryTypeKey)
             throws IOException {
-        if (!file.exists()) {
-            // Create new file with header
-            try (FileOutputStream fos = new FileOutputStream(file)) {
-                StringBuilder content = new StringBuilder();
-                content.append("# Forage ")
-                        .append(getFactoryDisplayName(factoryTypeKey))
-                        .append(" Configuration\n");
-                content.append("# Generated by Forage JBang Plugin\n\n");
-
-                for (Map.Entry<String, String> entry : newProperties.entrySet()) {
-                    content.append(entry.getKey())
-                            .append("=")
-                            .append(entry.getValue())
-                            .append("\n");
-                }
-
-                fos.write(content.toString().getBytes(StandardCharsets.UTF_8));
-            }
-            return;
-        }
-
-        // Read existing file preserving order and comments
-        List<String> lines = java.nio.file.Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
-
-        // Track which properties need to be updated vs appended
-        final List<String> updatedLines = computeUpdatableProperties(newProperties, lines);
-
-        // Write the updated content
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            StringBuilder content = new StringBuilder();
-            for (String line : updatedLines) {
-                content.append(line).append("\n");
-            }
-            fos.write(content.toString().getBytes(StandardCharsets.UTF_8));
-        }
-    }
-
-    private static List<String> computeUpdatableProperties(Map<String, String> newProperties, List<String> lines) {
-        Map<String, String> propsToUpdate = new LinkedHashMap<>(newProperties);
-        Set<String> updatedKeys = new HashSet<>();
-
-        // Update existing properties in place
-        List<String> updatedLines = new ArrayList<>();
-        for (String line : lines) {
-            String trimmed = line.trim();
-
-            // Preserve comments and blank lines
-            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
-                updatedLines.add(line);
-                continue;
-            }
-
-            // Parse property line
-            int equalsIndex = line.indexOf('=');
-            if (equalsIndex > 0) {
-                String key = line.substring(0, equalsIndex).trim();
-
-                if (propsToUpdate.containsKey(key)) {
-                    // Update the property value
-                    updatedLines.add(key + "=" + propsToUpdate.get(key));
-                    updatedKeys.add(key);
-                } else {
-                    // Keep existing property unchanged
-                    updatedLines.add(line);
-                }
-            } else {
-                // Not a valid property line, keep as-is
-                updatedLines.add(line);
-            }
-        }
-
-        // Append new properties that weren't in the original file
-        for (Map.Entry<String, String> entry : propsToUpdate.entrySet()) {
-            if (!updatedKeys.contains(entry.getKey())) {
-                updatedLines.add(entry.getKey() + "=" + entry.getValue());
-            }
-        }
-        return updatedLines;
+        // A new file starts with a header; an existing one is updated in place, preserving order and comments
+        PropertiesDocument document = file.exists()
+                ? PropertiesDocument.read(file)
+                : PropertiesDocument.of(List.of(
+                        "# Forage " + getFactoryDisplayName(factoryTypeKey) + " Configuration",
+                        "# Generated by Forage JBang Plugin",
+                        ""));
+        PropertiesDocument.write(file, document.withValues(newProperties));
     }
 
     private int handleDelete() throws IOException {
@@ -612,29 +481,33 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
         ForageDependencyResolver resolver = new ForageDependencyResolver(catalog, parser);
 
         // Read every file before modifying any: the files to delete from (the ones `config read` lists for this
-        // strategy) and every file whose instances may still need dependencies, whatever the active profile
-        List<File> targetFiles = strategy.findPropertiesFiles(directory);
-        Map<File, LoadedFile> allFiles = new LinkedHashMap<>();
-        for (File file : ForagePropertyScanner.findAllConfigurationFiles(directory, catalog)) {
-            allFiles.put(file, LoadedFile.load(file));
-        }
-        for (File file : targetFiles) {
-            if (!allFiles.containsKey(file)) {
-                allFiles.put(file, LoadedFile.load(file));
-            }
+        // strategy, plus the files overriding them) and every file whose instances may still need dependencies,
+        // whatever the active profile
+        Set<File> deletionFiles = new LinkedHashSet<>(strategy.findDeletionFiles(directory));
+        Set<File> files = new LinkedHashSet<>(ForagePropertyScanner.findAllConfigurationFiles(directory, catalog));
+        files.addAll(deletionFiles);
+        Map<File, PropertiesDocument> documents = new LinkedHashMap<>();
+        for (File file : files) {
+            documents.put(file, PropertiesDocument.read(file));
         }
 
-        Map<File, Map<String, String>> deletedByFile = new LinkedHashMap<>();
-        for (File file : targetFiles) {
-            LoadedFile loaded = allFiles.get(file);
-            Map<String, String> deleted = new LinkedHashMap<>();
-            loaded.properties().forEach((key, value) -> {
-                if (belongsToInstance(parser, key, instanceName)) {
-                    deleted.put(key, value);
+        // Each entry is parsed once, to tell whether it belongs to the instance and which dependencies it needs.
+        // Entries are kept per file, since the same key can have another value in another file.
+        Map<File, List<PropertiesDocument.Entry>> deletedByFile = new LinkedHashMap<>();
+        Dependencies deletedDependencies = new Dependencies();
+        Dependencies remainingDependencies = new Dependencies();
+        for (Map.Entry<File, PropertiesDocument> document : documents.entrySet()) {
+            for (PropertiesDocument.Entry entry : document.getValue().entries()) {
+                Optional<ParsedProperty> parsed = parser.parse(entry.key());
+                boolean deleted = deletionFiles.contains(document.getKey())
+                        && belongsToInstance(parser, entry.key(), parsed, instanceName);
+                if (deleted) {
+                    deletedByFile
+                            .computeIfAbsent(document.getKey(), file -> new ArrayList<>())
+                            .add(entry);
                 }
-            });
-            if (!deleted.isEmpty()) {
-                deletedByFile.put(file, deleted);
+                Dependencies dependencies = deleted ? deletedDependencies : remainingDependencies;
+                parsed.ifPresent(property -> resolver.add(dependencies, property, entry.value()));
             }
         }
 
@@ -643,28 +516,14 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
         }
 
         // Dependencies the deleted instance needed, minus those still needed by what remains in any file
-        Map<String, String> deletedProperties = new LinkedHashMap<>();
-        deletedByFile.values().forEach(deletedProperties::putAll);
-        Map<String, String> remainingProperties = new LinkedHashMap<>();
-        allFiles.forEach((file, loaded) -> {
-            Set<String> deletedKeys = deletedByFile.getOrDefault(file, Map.of()).keySet();
-            loaded.properties().forEach((key, value) -> {
-                if (!deletedKeys.contains(key)) {
-                    remainingProperties.put(key, value);
-                }
-            });
-        });
-        Set<String> gavsToRemove = resolver.resolve(deletedProperties).all();
-        gavsToRemove.removeAll(resolver.resolve(remainingProperties).all());
+        Set<String> gavsToRemove = deletedDependencies.all();
+        gavsToRemove.removeAll(remainingDependencies.all());
 
         Map<String, Object> results = new LinkedHashMap<>();
-        for (Map.Entry<File, Map<String, String>> entry : deletedByFile.entrySet()) {
+        for (Map.Entry<File, List<PropertiesDocument.Entry>> entry : deletedByFile.entrySet()) {
             File propertiesFile = entry.getKey();
-            writeLines(
-                    propertiesFile,
-                    computeRemovableLines(
-                            allFiles.get(propertiesFile).lines(),
-                            entry.getValue().keySet()));
+            PropertiesDocument.write(
+                    propertiesFile, documents.get(propertiesFile).without(entry.getValue()));
             results.put(
                     propertiesFile.getName(),
                     Map.of(
@@ -697,70 +556,30 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
     }
 
     /**
-     * Whether a property belongs to the given instance, using the same parsing as {@code config read}. Keys the
-     * parser does not recognise (e.g. typos) fall back to the {@code forage.<instanceName>.} prefix.
+     * Whether a property belongs to the instance. Keys are parsed like {@code config read} does, which reads a key
+     * that is itself a catalog entry, or that starts with a bean prefix, as the default instance's. A key under
+     * {@code forage.<instance>.} also belongs to the instance when the rest of it reads as a default-instance key:
+     * a catalog entry (e.g. {@code forage.azure.openai.api.key} for an OpenAI instance named {@code azure},
+     * although it is also the default Azure OpenAI entry) or a key of a known factory or bean (e.g. the typo
+     * {@code forage.ollama.agent.modle.nmae} for an agent named {@code ollama}). Genuine default-instance keys
+     * ({@code forage.ollama.model.name}) and dotted instance names ({@code forage.my.ds.*} for {@code my}) do not
+     * qualify, since their rest does not read as a default-instance key. A key under the prefix that nothing
+     * recognises (e.g. {@code forage.myPG.jdbcc.url}) belongs to the instance too.
      */
-    private static boolean belongsToInstance(ForagePropertyParser parser, String key, String instanceName) {
-        return parser.parse(key)
-                .map(parsed -> instanceName.equals(parsed.instanceName()))
-                .orElseGet(() -> key.startsWith(FORAGE_PREFIX + instanceName + "."));
-    }
-
-    private static List<String> computeRemovableLines(List<String> lines, Set<String> deletedPropertyKeys) {
-        List<String> updatedLines = new ArrayList<>();
-        for (String line : lines) {
-            String trimmed = line.trim();
-
-            // Preserve comments and blank lines
-            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
-                updatedLines.add(line);
-                continue;
-            }
-
-            // Check if this line should be removed
-            int equalsIndex = line.indexOf('=');
-            if (equalsIndex > 0) {
-                String key = line.substring(0, equalsIndex).trim();
-                if (!deletedPropertyKeys.contains(key)) {
-                    updatedLines.add(line);
-                }
-            } else {
-                updatedLines.add(line);
-            }
+    private static boolean belongsToInstance(
+            ForagePropertyParser parser, String key, Optional<ParsedProperty> parsed, String instanceName) {
+        if (parsed.isPresent() && instanceName.equals(parsed.get().instanceName())) {
+            return true;
         }
-        return updatedLines;
-    }
-
-    private static void writeLines(File file, List<String> lines) throws IOException {
-        StringBuilder content = new StringBuilder();
-        for (String line : lines) {
-            content.append(line).append("\n");
+        String instancePrefix = FORAGE_PREFIX + instanceName + ".";
+        if (!key.startsWith(instancePrefix)) {
+            return false;
         }
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            fos.write(content.toString().getBytes(StandardCharsets.UTF_8));
+        Optional<ParsedProperty> rest = parser.parse(FORAGE_PREFIX + key.substring(instancePrefix.length()));
+        if (rest.isPresent()) {
+            return rest.get().instanceName() == null;
         }
-    }
-
-    /**
-     * A properties file read once: its raw lines (to rewrite it preserving comments and order) and its
-     * {@code key=value} entries, parsed with the same line rules used to remove them.
-     */
-    private record LoadedFile(List<String> lines, Map<String, String> properties) {
-
-        static LoadedFile load(File file) throws IOException {
-            List<String> lines = java.nio.file.Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
-            Map<String, String> properties = new LinkedHashMap<>();
-            for (String line : lines) {
-                String trimmed = line.trim();
-                int equalsIndex = line.indexOf('=');
-                if (!trimmed.isEmpty() && !trimmed.startsWith("#") && equalsIndex > 0) {
-                    properties.put(
-                            line.substring(0, equalsIndex).trim(),
-                            line.substring(equalsIndex + 1).trim());
-                }
-            }
-            return new LoadedFile(lines, properties);
-        }
+        return parsed.isEmpty();
     }
 
     /**
@@ -772,79 +591,25 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
      */
     private Map<String, Object> removeDependencies(File appPropertiesFile, Set<String> gavsToRemove)
             throws IOException {
-        List<String> lines = java.nio.file.Files.readAllLines(appPropertiesFile.toPath(), StandardCharsets.UTF_8);
+        PropertiesDocument document = PropertiesDocument.read(appPropertiesFile);
+        Map<String, Set<String>> dependencies = readDependencies(document);
 
-        final Map<String, Set<String>> dependencyProperties = newDependencyMap();
-
-        Set<String> foundDependencyKeys = new HashSet<>();
-        Set<String> removedGavs = new HashSet<>();
-
-        // Parse existing dependencies
-        for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
-                continue;
-            }
-            int equalsIndex = line.indexOf('=');
-            if (equalsIndex > 0) {
-                String key = line.substring(0, equalsIndex).trim();
-                String value = line.substring(equalsIndex + 1).trim();
-
-                if (dependencyProperties.containsKey(key)) {
-                    foundDependencyKeys.add(key);
-                    for (String dep : value.split(",")) {
-                        String trimmedDep = dep.trim();
-                        if (!trimmedDep.isEmpty()) {
-                            if (gavsToRemove.contains(trimmedDep)) {
-                                removedGavs.add(trimmedDep);
-                            } else {
-                                dependencyProperties.get(key).add(trimmedDep);
-                            }
-                        }
-                    }
+        Set<String> removedGavs = new LinkedHashSet<>();
+        for (Set<String> gavs : dependencies.values()) {
+            for (String gav : gavs) {
+                if (gavsToRemove.contains(gav)) {
+                    removedGavs.add(gav);
                 }
             }
+            gavs.removeAll(gavsToRemove);
         }
 
         if (removedGavs.isEmpty()) {
             return Map.of();
         }
 
-        // Rebuild the file with updated dependencies
-        List<String> updatedLines = new ArrayList<>();
-        for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
-                updatedLines.add(line);
-                continue;
-            }
-
-            int equalsIndex = line.indexOf('=');
-            if (equalsIndex > 0) {
-                String key = line.substring(0, equalsIndex).trim();
-
-                if (dependencyProperties.containsKey(key)) {
-                    Set<String> deps = dependencyProperties.get(key);
-                    if (!deps.isEmpty()) {
-                        updatedLines.add(key + "=" + String.join(",", deps));
-                    }
-                    // If deps is empty, we skip the line entirely (remove the property)
-                } else {
-                    updatedLines.add(line);
-                }
-            } else {
-                updatedLines.add(line);
-            }
-        }
-
-        // Write the updated content
-        try (FileOutputStream fos = new FileOutputStream(appPropertiesFile)) {
-            StringBuilder content = new StringBuilder();
-            for (String line : updatedLines) {
-                content.append(line).append("\n");
-            }
-            fos.write(content.toString().getBytes(StandardCharsets.UTF_8));
-        }
+        // An emptied dependency property is removed
+        PropertiesDocument.write(appPropertiesFile, document.withValues(toPropertyValues(dependencies)));
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("removedDependencies", new ArrayList<>(removedGavs));
@@ -856,13 +621,4 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
      * Record to hold factory configuration including bean name and properties.
      */
     private record FactoryConfig(String beanName, String kind, Map<String, String> properties) {}
-
-    /**
-     * Record to hold dependencies collected for each runtime variant.
-     */
-    private record DependencyInfo(
-            Set<String> baseDependencies,
-            Set<String> mainDependencies,
-            Set<String> springBootDependencies,
-            Set<String> quarkusDependencies) {}
 }

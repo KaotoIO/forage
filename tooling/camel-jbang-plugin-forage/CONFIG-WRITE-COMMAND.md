@@ -141,13 +141,20 @@ DELETE MODE
 │                                                           │
 │ 1. Requires --name parameter                             │
 │ 2. Scans the same files `config read` lists for the      │
-│    strategy (top level of --dir only)                    │
+│    strategy (top level of --dir only); the application   │
+│    strategy also scans every application-*.properties,   │
+│    so profile overrides of the instance are deleted too  │
 │ 3. Reads every file before modifying any                 │
 │ 4. Removes the keys that belong to the instance, parsed  │
 │    like `config read` does (ForagePropertyParser):       │
-│    forage.my.ds.* is instance "my.ds", not "my"          │
-│ 5. Cleans up dependencies (below)                        │
-│ 6. Preserves comments and other properties               │
+│    forage.my.ds.* is instance "my.ds", not "my"; a key   │
+│    under forage.<name>. whose rest is a catalog entry    │
+│    belongs to <name> even if it is also a default entry  │
+│    (forage.azure.openai.api.key for an OpenAI "azure")   │
+│ 5. Finds entries like Properties.load does:              │
+│    '=', ':' or whitespace separators, continuation lines │
+│ 6. Cleans up dependencies (below)                        │
+│ 7. Preserves comments and other properties               │
 │                                                           │
 │ Returns JSON with deletion and dependency cleanup results│
 └──────────────────────────────────────────────────────────┘
@@ -158,16 +165,17 @@ DELETE MODE
 │                                                           │
 │ 1. Dependencies of the deleted keys: factory variant     │
 │    GAVs (base, springboot, quarkus) plus bean GAVs (the  │
-│    bean the key belongs to, and kind / db.kind values)   │
+│    bean the key belongs to, and the beans a value        │
+│    selects: catalog bean-name entries such as db.kind,   │
+│    agent.model.kind or agent.memory.kind, and any other  │
+│    *.kind property)                                      │
 │ 2. Dependencies still needed by the remaining keys of    │
 │    every file, whatever the strategy or active profile:  │
 │    application.properties, every application-*.properties│
-│    and forage-*.properties                               │
+│    and forage-*.properties; each file counts on its own, │
+│    so the same key with another value elsewhere is kept  │
 │ 3. Removes (1) minus (2) from camel.jbang.dependencies*  │
 │    in application.properties                             │
-│                                                           │
-│ Overrides of the instance in a profile file are not      │
-│ deleted, so their dependencies are kept.                 │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -186,16 +194,19 @@ DELETE MODE
 - `kind`: String (bean type, e.g., "postgresql", "ollama")
 - `properties`: Map<String, String> (key-value pairs)
 
-### DependencyInfo (Record)
-- `baseDependencies`: Set<String> (bean-specific GAVs)
-- `mainDependencies`: Set<String> (base factory GAVs)
-- `springBootDependencies`: Set<String> (Spring Boot factory GAVs)
-- `quarkusDependencies`: Set<String> (Quarkus factory GAVs)
+### ForageDependencyResolver.Dependencies (Record)
+- `base`: Set<String> (bean-specific GAVs, `camel.jbang.dependencies`)
+- `main`: Set<String> (base factory GAVs, `camel.jbang.dependencies.main`)
+- `springBoot`: Set<String> (Spring Boot factory GAVs, `camel.jbang.dependencies.spring-boot`)
+- `quarkus`: Set<String> (Quarkus factory GAVs, `camel.jbang.dependencies.quarkus`)
 
-### DeletedConfigInfo (Record)
-- `deletedPropertyKeys`: Set<String> (all removed property keys)
-- `deletedTypes`: Set<String> (type segments from deleted keys, e.g., "jdbc", "ollama")
-- `deletedFactoryTypeKeys`: Set<String> (factory type keys that were deleted)
+Write and delete compute dependencies with the same `ForageDependencyResolver`, from keys parsed by
+`ForagePropertyParser`.
+
+### PropertiesDocument
+- A properties file kept as its lines, so entries can be updated or removed in place
+- Finds entries with the rules of `Properties.load`, so anything `config read` lists can be edited
+- Escapes the keys and values it writes, so they read back unchanged
 
 ## Usage Examples
 
@@ -420,12 +431,17 @@ When deleting a configuration with `--delete --name <instanceName>`, the command
 
 #### Cleanup Logic
 
-1. **Delete Properties**: Remove all properties matching `forage.{instanceName}.*`
-2. **Collect Types**: Extract type segments from deleted keys (e.g., `forage.myPG.jdbc.url` → type `jdbc`)
-3. **Scan Remaining**: Find all types still configured in remaining properties
-4. **Determine Unused**:
-   - If a deleted type has no remaining instances → remove its bean GAV
-   - If a factory type has no remaining beans → remove all factory variant GAVs
+1. **Delete Properties**: Remove the properties of the instance from the strategy's files (for the application
+   strategy, `application.properties` and every `application-<profile>.properties` override)
+2. **Deleted Dependencies**: Compute the dependencies the deleted keys need: their factory variant GAVs, the bean
+   each key configures (e.g. `forage.myOllama.ollama.model.name` → `forage-model-ollama`), the beans their values
+   select (e.g. `jdbc.db.kind=postgresql`, `agent.model.kind=ollama`, `agent.memory.kind=redis`) and the beans they
+   turn on, resolved like `camel forage run` and `export` do (e.g. `agent.in.memory.store.file.source` →
+   `forage-in-memory-store`)
+3. **Remaining Dependencies**: Compute the dependencies every remaining key needs, in `application.properties`,
+   every `application-<profile>.properties` (whatever the active profile, since the dependency lists are shared by
+   all profiles) and the `forage-*.properties` files
+4. **Remove**: Remove the deleted dependencies that no remaining key needs
 
 #### What Gets Removed
 

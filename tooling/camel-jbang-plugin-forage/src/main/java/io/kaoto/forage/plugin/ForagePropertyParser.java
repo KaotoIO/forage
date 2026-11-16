@@ -1,9 +1,11 @@
 package io.kaoto.forage.plugin;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import io.kaoto.forage.catalog.model.ConfigEntry;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
 
 /**
@@ -19,8 +21,15 @@ import io.kaoto.forage.catalog.reader.ForageCatalogReader;
  */
 public final class ForagePropertyParser {
 
-    /** Properties whose value names the bean kind (e.g. {@code db.kind=postgresql}, {@code kind=artemis}). */
+    /**
+     * Factory properties whose value names the bean kind of the instance (e.g. {@code db.kind=postgresql},
+     * {@code kind=artemis}), used to report the kind of a bean. See {@link #selectedBeans(ParsedProperty, String)}
+     * for every property whose value selects a bean.
+     */
     public static final Set<String> KIND_PROPERTIES = Set.of("db.kind", "kind");
+
+    private static final String BEAN_NAME_TYPE = "bean-name";
+    private static final String KIND_SEGMENT = "kind";
 
     private static final String FORAGE_PREFIX = "forage.";
     private static final Pattern FORAGE_PROPERTY_PATTERN = Pattern.compile("^forage\\.(.+)$");
@@ -41,15 +50,7 @@ public final class ForagePropertyParser {
      * @param entryKey the key without {@code forage.} and the instance name (e.g. {@code ollama.model.name})
      */
     public record ParsedProperty(
-            String factoryType, String instanceName, String beanType, String propertyName, String entryKey) {
-
-        /**
-         * @return {@code true} if this property's value names the bean kind
-         */
-        public boolean isKindProperty() {
-            return KIND_PROPERTIES.contains(propertyName);
-        }
-    }
+            String factoryType, String instanceName, String beanType, String propertyName, String entryKey) {}
 
     /**
      * Parses a full property key.
@@ -65,6 +66,54 @@ public final class ForagePropertyParser {
         String remainder = matcher.group(1);
         ParsedProperty parsed = parseUsingConfigEntries(remainder);
         return Optional.ofNullable(parsed != null ? parsed : parseUsingSegments(remainder));
+    }
+
+    /**
+     * Whether the key is a config entry declared in the catalog, exactly as written (e.g. {@code forage.jdbc.url},
+     * {@code forage.openai.api.key}).
+     *
+     * @param key the full property key
+     * @return {@code true} if a factory or bean declares the entry
+     */
+    public boolean isConfigEntry(String key) {
+        return catalog.findConfigEntryOwner(key).isPresent();
+    }
+
+    /**
+     * Returns the beans a property's value selects, by name: the value of a catalog {@code bean-name} entry
+     * (e.g. {@code db.kind}, {@code agent.model.kind}, {@code agent.memory.kind}), split on commas for a
+     * multi-value entry (e.g. {@code route.policy.<routeId>.name=schedule,flip}), and the value of any other
+     * {@code *.kind} property (e.g. {@code cxf.kind=soap}).
+     *
+     * @param parsed the parsed property
+     * @param value the property value
+     * @return the selected bean names, empty if the property does not select a bean
+     */
+    public List<String> selectedBeans(ParsedProperty parsed, String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        Optional<ConfigEntry> beanNameEntry = findBeanNameEntry(parsed);
+        if (beanNameEntry.isPresent()) {
+            return beanNameEntry.get().isMultiValue() ? PropertyKeys.splitValues(value) : List.of(value.trim());
+        }
+        String propertyName = parsed.propertyName();
+        if (propertyName.equals(KIND_SEGMENT) || propertyName.endsWith("." + KIND_SEGMENT)) {
+            return List.of(value.trim());
+        }
+        return List.of();
+    }
+
+    private Optional<ConfigEntry> findBeanNameEntry(ParsedProperty parsed) {
+        return catalog.getFactoryMetadata(parsed.factoryType())
+                .map(ForageCatalogReader.FactoryMetadata::configEntries)
+                .flatMap(entries -> entries.stream()
+                        .filter(entry -> BEAN_NAME_TYPE.equals(entry.getType()))
+                        .filter(entry ->
+                                entry.getName() != null && entry.getName().startsWith(FORAGE_PREFIX))
+                        .filter(entry -> PropertyKeys.matchesExactly(
+                                parsed.entryKey(), entry.getName().substring(FORAGE_PREFIX.length())))
+                        .findFirst());
     }
 
     /**

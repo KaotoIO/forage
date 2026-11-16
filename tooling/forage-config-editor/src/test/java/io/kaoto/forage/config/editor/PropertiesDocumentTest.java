@@ -1,4 +1,4 @@
-package io.kaoto.forage.plugin;
+package io.kaoto.forage.config.editor;
 
 import java.io.File;
 import java.io.StringReader;
@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import io.kaoto.forage.plugin.PropertiesDocument.Entry;
+import io.kaoto.forage.config.editor.PropertiesDocument.Entry;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -90,6 +90,7 @@ class PropertiesDocumentTest {
         values.put("multi", "a\nb");
         values.put("lead", " x");
         values.put("key with spaces#!", "a=b:c#d!e");
+        values.put("caf\u00e9", "na\u00efve \u20ac");
 
         Properties reloaded = load(document.withValues(values));
 
@@ -112,6 +113,39 @@ class PropertiesDocumentTest {
         Properties properties = new Properties();
         properties.load(new StringReader(String.join("\n", lines) + "\n"));
         return properties;
+    }
+
+    @Test
+    void editsApplyToTheOriginalLines() {
+        PropertiesDocument document = PropertiesDocument.of(List.of("# header", "a=1", "b=long\\", "  value", "c=3"));
+        Map<Entry, String> newValues = new LinkedHashMap<>();
+        newValues.put(document.entries().get(2), null);
+        newValues.put(document.entries().get(1), "two");
+        newValues.put(document.entries().get(0), "one");
+
+        List<PropertiesDocument.TextEdit> edits = document.edits(newValues, Map.of("d", "4"));
+
+        assertThat(edits)
+                .containsExactly(
+                        new PropertiesDocument.TextEdit(1, 2, List.of("a=one")),
+                        new PropertiesDocument.TextEdit(2, 4, List.of("b=two")),
+                        new PropertiesDocument.TextEdit(4, 5, List.of()),
+                        new PropertiesDocument.TextEdit(5, 5, List.of("d=4")));
+        assertThat(document.apply(edits)).containsExactly("# header", "a=one", "b=two", "d=4");
+    }
+
+    @Test
+    void readDetectsTheEncoding() throws Exception {
+        File utf8 = new File(tempDir, "utf8.properties");
+        java.nio.file.Files.write(utf8.toPath(), "a=caf\u00e9\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        File latin1 = new File(tempDir, "latin1.properties");
+        java.nio.file.Files.write(
+                latin1.toPath(), "a=caf\u00e9\n".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1));
+
+        assertThat(PropertiesDocument.read(utf8).charset()).isEqualTo(java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(PropertiesDocument.read(utf8).entries().get(0).value()).isEqualTo("caf\u00e9");
+        assertThat(PropertiesDocument.read(latin1).charset()).isEqualTo(java.nio.charset.StandardCharsets.ISO_8859_1);
+        assertThat(PropertiesDocument.read(latin1).entries().get(0).value()).isEqualTo("caf\u00e9");
     }
 
     @Test

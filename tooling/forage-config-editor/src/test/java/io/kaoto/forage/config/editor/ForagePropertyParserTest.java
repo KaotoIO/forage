@@ -1,9 +1,8 @@
-package io.kaoto.forage.plugin;
+package io.kaoto.forage.config.editor;
 
 import java.util.List;
-import java.util.Map;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
-import io.kaoto.forage.plugin.ForagePropertyParser.ParsedProperty;
+import io.kaoto.forage.config.editor.ForagePropertyParser.ParsedProperty;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -74,6 +73,20 @@ class ForagePropertyParserTest {
     }
 
     @Test
+    void candidatesListEveryCatalogReading() {
+        // Both the default Azure OpenAI entry and the openai.api.key entry of an instance named "azure"
+        assertThat(parser.candidates("forage.azure.openai.api.key"))
+                .extracting(ParsedProperty::instanceName, ParsedProperty::beanType)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(null, "azure-openai"),
+                        org.assertj.core.groups.Tuple.tuple("azure", "openai"));
+        assertThat(parser.candidates("forage.ds1.jdbc.url")).hasSize(1);
+        assertThat(parser.candidates("forage.ds1.jdbc.urll")).isEmpty();
+        assertThat(parser.parseHeuristically("forage.ds1.jdbc.urll"))
+                .hasValue(new ParsedProperty("jdbc", "ds1", null, "urll", "jdbc.urll"));
+    }
+
+    @Test
     void configEntries() {
         assertThat(parser.isConfigEntry("forage.jdbc.url")).isTrue();
         assertThat(parser.isConfigEntry("forage.openai.api.key")).isTrue();
@@ -87,31 +100,6 @@ class ForagePropertyParserTest {
                 .isEqualTo(new ParsedProperty("jdbc", "ds1", null, "urll", "jdbc.urll"));
         assertThat(parser.parse("forage.nothing.known.here")).isEmpty();
         assertThat(parser.parse("camel.jbang.dependencies")).isEmpty();
-    }
-
-    @Test
-    void resolverCollectsFactoryAndBeanDependencies() {
-        ForageDependencyResolver resolver = new ForageDependencyResolver(catalog, parser);
-
-        ForageDependencyResolver.Dependencies jdbc =
-                resolver.resolve(Map.of("forage.myPG.jdbc.db.kind", "postgresql", "camel.main.name", "x"));
-        assertThat(jdbc.base()).anyMatch(gav -> gav.contains("forage-jdbc-postgresql:"));
-        assertThat(jdbc.main()).anyMatch(gav -> gav.contains("forage-jdbc:"));
-        assertThat(jdbc.springBoot()).anyMatch(gav -> gav.contains("forage-jdbc-starter:"));
-        assertThat(jdbc.quarkus()).anyMatch(gav -> gav.contains("forage-quarkus-jdbc-deployment:"));
-
-        ForageDependencyResolver.Dependencies ollama = resolver.resolve(Map.of("forage.ollama.model.name", "llama3"));
-        assertThat(ollama.base()).anyMatch(gav -> gav.contains("forage-model-ollama:"));
-        assertThat(ollama.main()).anyMatch(gav -> gav.contains("forage-agent:"));
-
-        assertThat(resolver.resolve(Map.of("camel.main.name", "x")).isEmpty()).isTrue();
-
-        // Beans a factory property turns on, as export resolves them
-        ForageDependencyResolver.Dependencies fileSource =
-                resolver.resolve(Map.of("forage.b.agent.in.memory.store.file.source", "kb.txt"));
-        assertThat(fileSource.base())
-                .anyMatch(gav -> gav.contains("forage-in-memory-store:"))
-                .anyMatch(gav -> gav.contains("forage-default-retrieval-augmentor:"));
     }
 
     private static List<String> selectedBeans(String key, String value) {

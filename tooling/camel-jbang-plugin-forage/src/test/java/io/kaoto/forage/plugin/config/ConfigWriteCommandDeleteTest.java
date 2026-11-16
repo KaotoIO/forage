@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.util.Properties;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.common.StringPrinter;
+import io.kaoto.forage.config.editor.PropertiesFileStrategyType;
 import io.kaoto.forage.core.common.VersionHelper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -84,7 +85,7 @@ class ConfigWriteCommandDeleteTest {
         assertThat(props.getProperty("forage.myPG.jdbc.username")).isNull();
         assertThat(props.getProperty("forage.myPG.jdbc.password")).isNull();
 
-        // Verify dependencies are cleaned up (no more JDBC instances)
+        // The Forage dependencies written by older versions of the command are removed
         assertThat(props.getProperty("camel.jbang.dependencies")).isNull();
         assertThat(props.getProperty("camel.jbang.dependencies.main")).isNull();
         assertThat(props.getProperty("camel.jbang.dependencies.spring-boot")).isNull();
@@ -156,17 +157,8 @@ class ConfigWriteCommandDeleteTest {
         assertThat(props.getProperty("forage.myMariaDB.jdbc.username")).isEqualTo("mariauser");
         assertThat(props.getProperty("forage.myMariaDB.jdbc.password")).isEqualTo("mariapass");
 
-        // Factory dependencies should be preserved (MariaDB still uses jdbc factory)
-        assertThat(props.getProperty("camel.jbang.dependencies.main"))
-                .contains("io.kaoto.forage:forage-jdbc:%s".formatted(VersionHelper.VERSION));
-        assertThat(props.getProperty("camel.jbang.dependencies.spring-boot"))
-                .contains("io.kaoto.forage:forage-jdbc-starter:%s".formatted(VersionHelper.VERSION));
-        assertThat(props.getProperty("camel.jbang.dependencies.quarkus"))
-                .contains("io.kaoto.forage:forage-quarkus-jdbc-deployment:%s".formatted(VersionHelper.VERSION));
-
-        // MariaDB bean dependency should be preserved
-        assertThat(props.getProperty("camel.jbang.dependencies"))
-                .contains("io.kaoto.forage:forage-jdbc-mariadb:%s".formatted(VersionHelper.VERSION));
+        // The Forage plugin resolves the dependencies MariaDB needs: the stored Forage ones are removed
+        assertNoDependencyLists(props);
     }
 
     @Test
@@ -227,11 +219,7 @@ class ConfigWriteCommandDeleteTest {
         assertThat(props.getProperty("forage.myOllama.ollama.base.url")).isNull();
         assertThat(props.getProperty("forage.myOllama.ollama.log.requests")).isNull();
 
-        // All agent-related dependencies should be removed (ollama bean GAV removed)
-        String baseDeps = props.getProperty("camel.jbang.dependencies");
-        if (baseDeps != null) {
-            assertThat(baseDeps).doesNotContain("forage-model-ollama");
-        }
+        assertNoDependencyLists(props);
     }
 
     @Test
@@ -294,18 +282,12 @@ class ConfigWriteCommandDeleteTest {
         assertThat(props.getProperty("forage.myArtemis.jms.username")).isEqualTo("admin");
         assertThat(props.getProperty("forage.myArtemis.jms.password")).isEqualTo("admin");
 
-        // JMS dependencies should be preserved
-        String baseDeps = props.getProperty("camel.jbang.dependencies");
-        assertThat(baseDeps).contains("forage-jms-artemis");
+        // The Forage plugin resolves the JMS dependencies: the stored Forage ones are removed
+        assertNoDependencyLists(props);
+    }
 
-        String mainDeps = props.getProperty("camel.jbang.dependencies.main");
-        assertThat(mainDeps).contains("forage-jms");
-
-        String springBootDeps = props.getProperty("camel.jbang.dependencies.spring-boot");
-        assertThat(springBootDeps).contains("forage-jms-starter");
-
-        String quarkusDeps = props.getProperty("camel.jbang.dependencies.quarkus");
-        assertThat(quarkusDeps).contains("forage-quarkus-jms-deployment");
+    private static void assertNoDependencyLists(Properties props) {
+        assertThat(props.stringPropertyNames()).noneMatch(key -> key.startsWith("camel.jbang.dependencies"));
     }
 
     @Test
@@ -342,13 +324,10 @@ class ConfigWriteCommandDeleteTest {
         Properties props = new Properties();
         props.load(Files.newInputStream(propsFile.toPath()));
 
-        // Custom dependencies should be preserved
-        String baseDeps = props.getProperty("camel.jbang.dependencies");
-        assertThat(baseDeps).contains("com.example:custom-lib:1.0");
-        assertThat(baseDeps).contains("com.another:lib:2.0");
-
-        String mainDeps = props.getProperty("camel.jbang.dependencies.main");
-        assertThat(mainDeps).contains("com.example:custom-main:1.0");
+        // Custom dependencies are preserved, the Forage ones are removed
+        assertThat(props.getProperty("camel.jbang.dependencies"))
+                .isEqualTo("com.example:custom-lib:1.0,com.another:lib:2.0");
+        assertThat(props.getProperty("camel.jbang.dependencies.main")).isEqualTo("com.example:custom-main:1.0");
     }
 
     @Test

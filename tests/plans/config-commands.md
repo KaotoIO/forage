@@ -6,7 +6,8 @@ This test plan verifies Forage's `camel forage config read` and `camel forage co
 
 - `config read` scans a directory for properties files, parses `forage.*` properties, and outputs a structured JSON object with `success`, `directory`, `beanCount`, and a `beans` array. It supports filtering by factory type (`--filter`), directory selection (`--dir`), and strategy selection (`--strategy`).
 - `config write` accepts JSON input (via `--input` or stdin), maps properties to factory types using the Forage catalog, and writes them to properties files. It prefixes properties with the bean name when `forage.bean.name` is provided.
-- `config write --delete` removes all `forage.{instanceName}.*` properties for a given `--name` and cleans up unused dependencies.
+- `config write --delete` removes all `forage.{instanceName}.*` properties for a given `--name`.
+- Neither command writes `camel.jbang.dependencies*`: the Forage plugin resolves the dependencies when the project runs or is exported. Both remove the Forage dependencies older versions of `config write` stored there, and keep the others.
 
 Both commands output structured JSON (success/error) and return exit code 0 on success, 1 on error, including for an unknown `--strategy` value.
 
@@ -627,7 +628,7 @@ grep -q "forage.test.ollama.log.requests=true" "${PROPS_FILE}" \
 rm -rf "${PROJECT_DIR}"
 ```
 
-### Test 5.4: Write includes dependency information in output
+### Test 5.4: Write does not store dependencies
 
 ```bash
 PROJECT_DIR=$(mktemp -d)
@@ -645,14 +646,10 @@ fi
 
 PROPS_FILE="${PROJECT_DIR}/application.properties"
 
-# Verify dependency properties were written
-grep -q "camel.jbang.dependencies=.*forage-jdbc-postgresql" "${PROPS_FILE}" \
-  && echo "PASS: base dependency for forage-jdbc-postgresql written" \
-  || echo "FAIL: base dependency for forage-jdbc-postgresql not found"
-
-grep -q "camel.jbang.dependencies.main=.*forage-jdbc" "${PROPS_FILE}" \
-  && echo "PASS: main dependency for forage-jdbc written" \
-  || echo "FAIL: main dependency for forage-jdbc not found"
+# The Forage plugin resolves the dependencies when the project runs: none are stored
+grep -q "^camel.jbang.dependencies" "${PROPS_FILE}" \
+  && echo "FAIL: dependency properties written" \
+  || echo "PASS: no dependency properties written"
 
 rm -rf "${PROJECT_DIR}"
 ```
@@ -698,8 +695,8 @@ grep -q "com.example:existing-lib:1.0" "${PROPS_FILE}" \
   || echo "FAIL: existing dependency was removed"
 
 grep -q "forage-jdbc-postgresql" "${PROPS_FILE}" \
-  && echo "PASS: new forage dependency added" \
-  || echo "FAIL: new forage dependency not added"
+  && echo "FAIL: forage dependency written" \
+  || echo "PASS: no forage dependency written"
 
 # Verify new forage properties are present
 grep -q "forage.myPG.jdbc.url" "${PROPS_FILE}" \
@@ -741,14 +738,10 @@ grep -q "forage.myArtemis.jms.broker.url" "${PROPS_FILE}" \
   && echo "PASS: JMS properties written" \
   || echo "FAIL: JMS properties not written"
 
-# Verify dependencies contain both
-grep -q "forage-jdbc-postgresql" "${PROPS_FILE}" \
-  && echo "PASS: JDBC dependency preserved" \
-  || echo "FAIL: JDBC dependency lost"
-
-grep -q "forage-jms-artemis" "${PROPS_FILE}" \
-  && echo "PASS: JMS dependency added" \
-  || echo "FAIL: JMS dependency not added"
+# No dependency properties are written
+grep -q "^camel.jbang.dependencies" "${PROPS_FILE}" \
+  && echo "FAIL: dependency properties written" \
+  || echo "PASS: no dependency properties written"
 
 rm -rf "${PROJECT_DIR}"
 ```
@@ -1059,9 +1052,12 @@ rm -rf "${PROJECT_DIR}"
 
 ---
 
-## Phase 9: Config Write Delete — Dependency Cleanup
+## Phase 9: Config Write Delete — Dependencies Stored by Older Versions
 
-### Test 9.1: Delete last instance removes its dependencies
+Older versions of `config write` stored the Forage dependencies in `application.properties`. Delete (like write)
+removes them, whatever their version, and keeps every other dependency.
+
+### Test 9.1: Delete removes the stored Forage dependencies
 
 ```bash
 PROJECT_DIR=$(mktemp -d)
@@ -1087,17 +1083,16 @@ fi
 
 PROPS_FILE="${PROJECT_DIR}/application.properties"
 
-# After deleting the only JDBC instance, JDBC dependencies should be removed
-if grep -q "forage-jdbc-postgresql" "${PROPS_FILE}"; then
-  echo "FAIL: forage-jdbc-postgresql dependency still present after last instance deleted"
+if grep -q "^camel.jbang.dependencies" "${PROPS_FILE}"; then
+  echo "FAIL: stored Forage dependencies still present"
 else
-  echo "PASS: forage-jdbc-postgresql dependency removed"
+  echo "PASS: stored Forage dependencies removed"
 fi
 
 rm -rf "${PROJECT_DIR}"
 ```
 
-### Test 9.2: Delete one of multiple same-factory instances preserves shared dependencies
+### Test 9.2: Delete keeps the other instances and removes every stored Forage dependency
 
 ```bash
 PROJECT_DIR=$(mktemp -d)
@@ -1124,14 +1119,14 @@ fi
 
 PROPS_FILE="${PROJECT_DIR}/application.properties"
 
-# MariaDB still uses jdbc factory, so factory-level dependencies must be preserved
-grep -q "forage-jdbc-mariadb" "${PROPS_FILE}" \
-  && echo "PASS: MariaDB bean dependency preserved" \
-  || echo "FAIL: MariaDB bean dependency removed"
+grep -q "^forage.myMariaDB.jdbc.db.kind=mariadb" "${PROPS_FILE}" \
+  && echo "PASS: MariaDB configuration preserved" \
+  || echo "FAIL: MariaDB configuration removed"
 
-grep -q "camel.jbang.dependencies.main" "${PROPS_FILE}" \
-  && echo "PASS: main dependency preserved (MariaDB still uses jdbc)" \
-  || echo "FAIL: main dependency removed despite MariaDB still present"
+# The plugin resolves what MariaDB needs: no stored Forage dependency is left
+grep -q "^camel.jbang.dependencies" "${PROPS_FILE}" \
+  && echo "FAIL: stored Forage dependencies still present" \
+  || echo "PASS: stored Forage dependencies removed"
 
 rm -rf "${PROJECT_DIR}"
 ```
@@ -1166,6 +1161,10 @@ grep -q "com.example:custom-lib:1.0" "${PROPS_FILE}" \
 grep -q "com.example:custom-main:1.0" "${PROPS_FILE}" \
   && echo "PASS: custom main dependency preserved" \
   || echo "FAIL: custom main dependency removed"
+
+grep -q "io.kaoto.forage:" "${PROPS_FILE}" \
+  && echo "FAIL: stored Forage dependencies still present" \
+  || echo "PASS: stored Forage dependencies removed"
 
 rm -rf "${PROJECT_DIR}"
 ```
@@ -1260,9 +1259,10 @@ rm -rf "${PROJECT_DIR}"
 ## Phase 11: Forage Strategy (`--strategy forage`)
 
 The `forage` strategy writes each factory to its own catalog-defined file (for JDBC,
-`forage-datasource-factory.properties`, named after the module's `Config.name()`), keeps
-dependencies in `application.properties`, and reads/deletes from the catalog file names plus any
-`forage-*.properties` file in the top level of the directory.
+`forage-datasource-factory.properties`, named after the module's `Config.name()`), writes no
+dependencies, and reads/deletes from the catalog file names plus any
+`forage-*.properties` file in the top level of the directory. Deleting an instance found there also removes its
+overrides from `application.properties` and the `application-<profile>.properties` files.
 
 ### Test 11.1: Write uses the catalog file, read and delete use the same files
 
@@ -1280,9 +1280,8 @@ grep -q '^forage.foragePG.jdbc.db.kind=postgresql' "${FORAGE_FILE}" 2>/dev/null 
   || fail "forage-datasource-factory.properties not written" "${OUTPUT}"
 echo "PASS: forage strategy wrote forage-datasource-factory.properties"
 
-grep -q '^camel.jbang.dependencies=.*forage-jdbc-postgresql' "${PROJECT_DIR}/application.properties" \
-  || fail "dependencies missing from application.properties"
-echo "PASS: dependencies written to application.properties"
+[ ! -e "${PROJECT_DIR}/application.properties" ] || fail "application.properties written by the forage strategy"
+echo "PASS: no dependencies written"
 
 # A file matched only by the forage-*.properties wildcard
 echo 'forage.customPG.jdbc.db.kind=postgresql' > "${PROJECT_DIR}/forage-custom.properties"
@@ -1302,7 +1301,7 @@ echo "PASS: delete removes an instance that read listed from a wildcard file"
 rm -rf "${PROJECT_DIR}"
 ```
 
-### Test 11.2: Delete keeps dependencies needed by the other file family
+### Test 11.2: Delete under one strategy keeps the instances of the other
 
 ```bash
 PROJECT_DIR=$(mktemp -d)
@@ -1326,12 +1325,9 @@ OUTPUT=$(camel forage config write --delete --name foragePG --dir "${PROJECT_DIR
 ! grep -q 'foragePG' "${FORAGE_FILE}" || fail "foragePG still present after delete"
 echo "PASS: foragePG removed from forage-datasource-factory.properties"
 
-# appPG (in application.properties) still needs the PostgreSQL dependency
 grep -q '^forage.appPG.jdbc.db.kind=postgresql' "${PROJECT_DIR}/application.properties" \
   || fail "appPG was removed by deleting foragePG"
-grep -q '^camel.jbang.dependencies=.*forage-jdbc-postgresql' "${PROJECT_DIR}/application.properties" \
-  || fail "dependency removed although appPG still needs it"
-echo "PASS: dependency kept for appPG defined in application.properties"
+echo "PASS: appPG in application.properties kept"
 
 rm -rf "${PROJECT_DIR}"
 ```
@@ -1375,7 +1371,7 @@ echo "PASS: WebSearch configuration rejected under --strategy forage, nothing wr
 rm -rf "${PROJECT_DIR}"
 ```
 
-### Test 11.5: Delete keeps dependencies needed by a default instance or any profile file
+### Test 11.5: Delete keeps the default instance and the instances of other profile files
 
 ```bash
 PROJECT_DIR=$(mktemp -d)
@@ -1389,23 +1385,23 @@ OUTPUT=$(camel forage config write --input '{"forage.rabbitmq.host":"b","forage.
   || fail "write of named rabbitmq instance failed" "${OUTPUT}"
 OUTPUT=$(camel forage config write --delete --name second --dir "${PROJECT_DIR}" --strategy application 2>&1) \
   || fail "delete of 'second' failed" "${OUTPUT}"
-grep -q '^camel.jbang.dependencies.main=.*forage-spring-rabbitmq:' "${APP_FILE}" \
-  || fail "rabbitmq dependency removed although the default instance still needs it"
-echo "PASS: dependency kept for the default rabbitmq instance"
+grep -q '^forage.rabbitmq.host=a' "${APP_FILE}" || fail "default rabbitmq instance removed"
+grep -q '^forage.second' "${APP_FILE}" && fail "instance 'second' left behind"
+echo "PASS: default rabbitmq instance kept"
 
 rm -rf "${PROJECT_DIR}"
 PROJECT_DIR=$(mktemp -d)
 APP_FILE="${PROJECT_DIR}/application.properties"
 
-# Instance only defined in a profile file that is not active (dependency lists are shared by all profiles)
+# Another instance only defined in a profile file
 OUTPUT=$(camel forage config write --input '{"forage.jdbc.db.kind":"postgresql","kind":"postgresql","forage.bean.name":"myPG"}' --dir "${PROJECT_DIR}" --strategy application 2>&1) \
   || fail "write of myPG failed" "${OUTPUT}"
 echo 'forage.prodPG.jdbc.db.kind=postgresql' > "${PROJECT_DIR}/application-prod.properties"
 OUTPUT=$(env -u CAMEL_MAIN_PROFILE camel forage config write --delete --name myPG --dir "${PROJECT_DIR}" --strategy application 2>&1) \
   || fail "delete of myPG failed" "${OUTPUT}"
-grep -q '^camel.jbang.dependencies=.*forage-jdbc-postgresql' "${APP_FILE}" \
-  || fail "postgresql dependency removed although prodPG in application-prod.properties still needs it"
-echo "PASS: dependency kept for prodPG defined in an inactive profile file"
+grep -q '^forage.prodPG.jdbc.db.kind=postgresql' "${PROJECT_DIR}/application-prod.properties" \
+  || fail "prodPG removed from application-prod.properties"
+echo "PASS: prodPG in application-prod.properties kept"
 
 rm -rf "${PROJECT_DIR}"
 ```
@@ -1425,21 +1421,21 @@ delete() {
     || fail "delete of '$1' failed" "${OUTPUT}"
 }
 
-# A Gemini agent (bean prefix "google") and a DataSource that happens to be called "ollama"
+# A Gemini agent (bean prefix "google") and a DataSource that happens to be called "ollama", written by hand:
+# config write does not create instances with such an ambiguous name (Test 11.8)
 write '{"forage.google.api.key":"x","forage.google.model.name":"gemini","kind":"google-gemini","forage.bean.name":"myG"}'
-write '{"forage.jdbc.db.kind":"postgresql","kind":"postgresql","forage.bean.name":"ollama"}'
+echo 'forage.ollama.jdbc.db.kind=postgresql' >> "${APP_FILE}"
 delete ollama
-grep -q '^camel.jbang.dependencies.main=.*forage-agent:' "${APP_FILE}" \
-  || fail "agent dependency removed by deleting the DataSource 'ollama'"
-grep -q 'forage-jdbc-postgresql' "${APP_FILE}" && fail "postgresql dependency kept after deleting the only DataSource"
-echo "PASS: deleting an instance named like a bean only removes its own dependencies"
+grep -q '^forage.myG.google.api.key=x' "${APP_FILE}" || fail "Gemini agent removed by deleting the DataSource 'ollama'"
+grep -q '^forage.ollama.jdbc' "${APP_FILE}" && fail "DataSource 'ollama' left behind"
+echo "PASS: deleting an instance named like a bean only removes its own keys"
 
-# A second agent: deleting it keeps the agent dependencies Gemini still needs
+# A second agent: deleting it keeps the Gemini agent
 write '{"forage.ollama.model.name":"llama3","kind":"ollama","forage.bean.name":"myOllama"}'
 delete myOllama
-grep -q '^camel.jbang.dependencies.quarkus=.*forage-quarkus-agent-deployment:' "${APP_FILE}" \
-  || fail "agent dependency removed although myG still needs it"
-echo "PASS: agent dependencies kept for the remaining agent"
+grep -q '^forage.myOllama' "${APP_FILE}" && fail "myOllama left behind"
+grep -q '^forage.myG.google.api.key=x' "${APP_FILE}" || fail "myG removed by deleting myOllama"
+echo "PASS: only the deleted agent is removed"
 
 # Dotted instance name: "my" is not an instance, "my.ds" is
 write '{"forage.jdbc.db.kind":"postgresql","kind":"postgresql","forage.bean.name":"myPG"}'
@@ -1447,15 +1443,15 @@ echo 'forage.my.ds.jdbc.url=jdbc:h2:mem:x' >> "${APP_FILE}"
 camel forage config write --delete --name my --dir "${PROJECT_DIR}" --strategy application > /dev/null 2>&1 \
   && fail "--name my matched the instance my.ds"
 grep -q '^forage.my.ds.jdbc.url=' "${APP_FILE}" || fail "my.ds removed by --name my"
-delete myPG
-grep -q '^camel.jbang.dependencies.main=.*forage-jdbc:' "${APP_FILE}" \
-  || fail "jdbc dependency removed although my.ds still needs it"
-echo "PASS: dotted instance names are kept apart and keep their dependencies"
+delete my.ds
+grep -q '^forage.my.ds' "${APP_FILE}" && fail "my.ds left behind"
+grep -q '^forage.myPG.jdbc.db.kind=postgresql' "${APP_FILE}" || fail "myPG removed by deleting my.ds"
+echo "PASS: dotted instance names are kept apart"
 
 rm -rf "${PROJECT_DIR}"
 ```
 
-### Test 11.7: Delete keeps beans selected by kinds, removes profile overrides and finds any entry layout
+### Test 11.7: Delete removes profile overrides and finds any entry layout
 
 ```bash
 PROJECT_DIR=$(mktemp -d)
@@ -1469,22 +1465,6 @@ delete() {
   OUTPUT=$(camel forage config write --delete --name "$1" --dir "${PROJECT_DIR}" --strategy application 2>&1) \
     || fail "delete of '$1' failed" "${OUTPUT}"
 }
-
-# Two agents selecting the same model and memory through agent.model.kind / agent.memory.kind
-write '{"forage.agent.model.kind":"ollama","forage.agent.memory.kind":"redis","forage.bean.name":"a1"}'
-write '{"forage.agent.model.kind":"ollama","forage.agent.memory.kind":"redis","forage.bean.name":"a2"}'
-grep -q '^camel.jbang.dependencies=.*forage-model-ollama:' "${APP_FILE}" \
-  || fail "write did not add the model selected by agent.model.kind"
-delete a1
-grep -q '^camel.jbang.dependencies=.*forage-model-ollama:' "${APP_FILE}" \
-  || fail "ollama dependency removed although a2 still selects it"
-grep -q '^camel.jbang.dependencies=.*forage-memory-redis:' "${APP_FILE}" \
-  || fail "redis dependency removed although a2 still selects it"
-echo "PASS: beans selected by another agent's kinds are kept"
-
-rm -rf "${PROJECT_DIR}"
-PROJECT_DIR=$(mktemp -d)
-APP_FILE="${PROJECT_DIR}/application.properties"
 
 # A profile override of the instance is deleted with it
 write '{"forage.jdbc.db.kind":"postgresql","kind":"postgresql","forage.bean.name":"myPG"}'
@@ -1517,6 +1497,44 @@ echo "PASS: WebSearch keys are rejected under the forage strategy"
 rm -rf "${PROJECT_DIR}"
 ```
 
+### Test 11.8: Instance names, instance lists and bean files
+
+```bash
+PROJECT_DIR=$(mktemp -d)
+fail() { echo "FAIL: $1"; [ -n "$2" ] && echo "$2"; rm -rf "${PROJECT_DIR}"; exit 1; }
+APP_FILE="${PROJECT_DIR}/application.properties"
+
+# A new instance cannot be named like the start of Forage keys (here the Ollama bean prefix)
+OUTPUT=$(camel forage config write --input '{"forage.jdbc.db.kind":"h2","forage.bean.name":"ollama"}' --dir "${PROJECT_DIR}" 2>&1) \
+  && fail "instance named 'ollama' created" "${OUTPUT}"
+echo "${OUTPUT}" | jq -e '.error | contains("Invalid instance name")' > /dev/null || fail "unexpected error" "${OUTPUT}"
+[ -z "$(ls -A "${PROJECT_DIR}")" ] || fail "files written for a rejected instance"
+echo "PASS: ambiguous names are rejected for new instances"
+
+# Deleting an agent removes it from forage.multi.agent.names
+printf 'forage.multi.agent.names=a1,a2\nforage.a1.agent.model.kind=ollama\nforage.a2.agent.model.kind=ollama\n' > "${APP_FILE}"
+OUTPUT=$(camel forage config write --delete --name a1 --dir "${PROJECT_DIR}" 2>&1) || fail "delete of a1 failed" "${OUTPUT}"
+grep -q '^forage.multi.agent.names=a2$' "${APP_FILE}" || fail "a1 still listed" "$(cat "${APP_FILE}")"
+OUTPUT=$(camel forage config write --delete --name a2 --dir "${PROJECT_DIR}" 2>&1) || fail "delete of a2 failed" "${OUTPUT}"
+grep -q 'multi.agent.names' "${APP_FILE}" && fail "empty agent list kept"
+echo "PASS: deleted agents are removed from forage.multi.agent.names"
+
+rm -rf "${PROJECT_DIR}"
+PROJECT_DIR=$(mktemp -d)
+
+# Under the forage strategy, a bean with its own file gets its properties there; one without gets a warning
+OUTPUT=$(camel forage config write --input '{"forage.agent.model.kind":"bedrock","forage.bedrock.region":"eu-west-1","forage.bean.name":"a1"}' --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "bedrock write failed" "${OUTPUT}"
+grep -q '^forage.a1.bedrock.region=eu-west-1' "${PROJECT_DIR}/forage-model-bedrock.properties" \
+  || fail "bedrock properties not in forage-model-bedrock.properties" "${OUTPUT}"
+OUTPUT=$(camel forage config write --input '{"forage.ollama.model.name":"llama3","forage.bean.name":"a2"}' --dir "${PROJECT_DIR}" --strategy forage 2>&1) \
+  || fail "ollama write failed" "${OUTPUT}"
+echo "${OUTPUT}" | jq -e '.factories.agent.warnings | length == 1' > /dev/null || fail "no warning for ollama" "${OUTPUT}"
+echo "PASS: bean properties go to the bean's own file, or come with a warning"
+
+rm -rf "${PROJECT_DIR}"
+```
+
 ---
 
 ## Phase 12: Cleanup
@@ -1538,11 +1556,11 @@ echo "PASS: all temporary directories cleaned up by individual tests"
 | 2 | 2.1-2.4 | Read parses beans, properties, sourceFile | Critical |
 | 3 | 3.1-3.2 | Read filter by factory type | High |
 | 4 | 4.1-4.2 | Read conditional beans (enabled/disabled) | High |
-| 5 | 5.1-5.4 | Write JDBC, JMS, Ollama, dependencies | Critical |
+| 5 | 5.1-5.4 | Write JDBC, JMS, Ollama, no stored dependencies | Critical |
 | 6 | 6.1-6.2 | Write merge with existing, sequential writes | Critical |
 | 7 | 7.1-7.3 | Write error handling (empty, invalid JSON) | High |
 | 8 | 8.1-8.6 | Delete instance, preserves others, error cases | Critical |
-| 9 | 9.1-9.3 | Delete dependency cleanup | High |
+| 9 | 9.1-9.3 | Delete removes the Forage dependencies older versions stored | High |
 | 10 | 10.1-10.2 | Round-trip write-read, write-delete-read | Critical |
-| 11 | 11.1-11.7 | Forage strategy write/read/delete, invalid values, dependency cleanup across files, profiles, default and dotted instances, bean-named instances, agent kinds, profile overrides, entry layouts | High |
+| 11 | 11.1-11.8 | Forage strategy write/read/delete, invalid values, files of each strategy, profiles, default and dotted instances, bean-named instances, profile overrides, entry layouts, instance names, instance lists, bean files | High |
 | 12 | 12 | Cleanup | Low |

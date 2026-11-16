@@ -1,5 +1,6 @@
-package io.kaoto.forage.plugin;
+package io.kaoto.forage.config.editor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -50,7 +51,15 @@ public final class ForagePropertyParser {
      * @param entryKey the key without {@code forage.} and the instance name (e.g. {@code ollama.model.name})
      */
     public record ParsedProperty(
-            String factoryType, String instanceName, String beanType, String propertyName, String entryKey) {}
+            String factoryType, String instanceName, String beanType, String propertyName, String entryKey) {
+
+        /**
+         * @return the same property, for another instance
+         */
+        public ParsedProperty withInstanceName(String name) {
+            return new ParsedProperty(factoryType, name, beanType, propertyName, entryKey);
+        }
+    }
 
     /**
      * Parses a full property key.
@@ -59,13 +68,53 @@ public final class ForagePropertyParser {
      * @return the parsed property, or empty if the key is not a recognised Forage property
      */
     public Optional<ParsedProperty> parse(String key) {
+        List<ParsedProperty> candidates = candidates(key);
+        return candidates.isEmpty() ? parseHeuristically(key) : Optional.of(candidates.get(0));
+    }
+
+    /**
+     * Returns every way the key reads as {@code forage.<instance>.<config entry>} with a catalog config entry, the
+     * default instance first, then by increasing instance name length. A key with more than one candidate is
+     * ambiguous: for example {@code forage.azure.openai.api.key} is both the default Azure OpenAI entry and the
+     * {@code openai.api.key} entry of an instance named {@code azure}.
+     *
+     * @param key the full property key
+     * @return the candidates, empty if no suffix of the key is a catalog config entry
+     */
+    public List<ParsedProperty> candidates(String key) {
         Matcher matcher = FORAGE_PROPERTY_PATTERN.matcher(key);
         if (!matcher.matches()) {
-            return Optional.empty();
+            return List.of();
         }
-        String remainder = matcher.group(1);
-        ParsedProperty parsed = parseUsingConfigEntries(remainder);
-        return Optional.ofNullable(parsed != null ? parsed : parseUsingSegments(remainder));
+        List<ParsedProperty> candidates = new ArrayList<>();
+        String instanceName = null;
+        String entryKey = matcher.group(1);
+        while (true) {
+            Optional<ForageCatalogReader.ConfigEntryOwner> owner =
+                    catalog.findConfigEntryOwner(FORAGE_PREFIX + entryKey);
+            if (owner.isPresent()) {
+                candidates.add(toParsedProperty(instanceName, entryKey, owner.get()));
+            }
+            int dot = entryKey.indexOf('.');
+            if (dot < 0) {
+                return candidates;
+            }
+            String segment = entryKey.substring(0, dot);
+            instanceName = instanceName == null ? segment : instanceName + "." + segment;
+            entryKey = entryKey.substring(dot + 1);
+        }
+    }
+
+    /**
+     * Parses a key that no catalog config entry matches (e.g. a typo) with segment heuristics: a factory key or bean
+     * name in the first or second segment.
+     *
+     * @param key the full property key
+     * @return the parsed property, or empty if the heuristics recognise nothing
+     */
+    public Optional<ParsedProperty> parseHeuristically(String key) {
+        Matcher matcher = FORAGE_PROPERTY_PATTERN.matcher(key);
+        return matcher.matches() ? Optional.ofNullable(parseUsingSegments(matcher.group(1))) : Optional.empty();
     }
 
     /**
@@ -114,29 +163,6 @@ public final class ForagePropertyParser {
                         .filter(entry -> PropertyKeys.matchesExactly(
                                 parsed.entryKey(), entry.getName().substring(FORAGE_PREFIX.length())))
                         .findFirst());
-    }
-
-    /**
-     * Tries the shortest instance name first, so a key that is itself a config entry belongs to the default
-     * instance.
-     */
-    private ParsedProperty parseUsingConfigEntries(String key) {
-        String instanceName = null;
-        String entryKey = key;
-        while (true) {
-            Optional<ForageCatalogReader.ConfigEntryOwner> owner =
-                    catalog.findConfigEntryOwner(FORAGE_PREFIX + entryKey);
-            if (owner.isPresent()) {
-                return toParsedProperty(instanceName, entryKey, owner.get());
-            }
-            int dot = entryKey.indexOf('.');
-            if (dot < 0) {
-                return null;
-            }
-            String segment = entryKey.substring(0, dot);
-            instanceName = instanceName == null ? segment : instanceName + "." + segment;
-            entryKey = entryKey.substring(dot + 1);
-        }
     }
 
     private ParsedProperty toParsedProperty(

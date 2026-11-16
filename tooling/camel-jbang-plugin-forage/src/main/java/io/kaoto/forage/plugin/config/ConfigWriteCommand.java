@@ -5,22 +5,19 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
-import io.kaoto.forage.plugin.ForageDependencyResolver;
-import io.kaoto.forage.plugin.ForageDependencyResolver.Dependencies;
-import io.kaoto.forage.plugin.ForagePropertyParser;
-import io.kaoto.forage.plugin.ForagePropertyParser.ParsedProperty;
-import io.kaoto.forage.plugin.ForagePropertyScanner;
-import io.kaoto.forage.plugin.PropertiesDocument;
+import io.kaoto.forage.config.editor.ForageConfigurationEditor;
+import io.kaoto.forage.config.editor.ForageConfigurationEditor.ConfigurationEditException;
+import io.kaoto.forage.config.editor.ForageConfigurationEditor.EditResult;
+import io.kaoto.forage.config.editor.ForageConfigurationEditor.FileChange;
+import io.kaoto.forage.config.editor.ForagePropertyParser;
+import io.kaoto.forage.config.editor.ForagePropertyParser.ParsedProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import picocli.CommandLine;
@@ -125,11 +122,14 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
                     + "(e.g., 'forage.jdbc.url', 'jdbc.url', 'forage.jms.broker.url', 'jms.broker.url').");
         }
 
-        // Fail before writing anything if a factory has no target file under the selected strategy
-        for (String factoryTypeKey : factoryConfigs.keySet()) {
-            if (strategy.getPropertiesFileName(factoryTypeKey) == null) {
-                return outputError(getFactoryDisplayName(factoryTypeKey)
-                        + " has no dedicated properties file; use --strategy application to configure it.");
+        // Fail before writing anything if a factory has no target file or a new instance an invalid name
+        ForageConfigurationEditor editor = new ForageConfigurationEditor(catalog, directory, strategy);
+        for (Map.Entry<String, FactoryConfig> entry : factoryConfigs.entrySet()) {
+            FactoryConfig factoryConfig = entry.getValue();
+            Optional<String> problem =
+                    editor.validateWrite(entry.getKey(), factoryConfig.beanName(), factoryConfig.properties());
+            if (problem.isPresent()) {
+                return outputError(problem.get());
             }
         }
 
@@ -140,60 +140,55 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
         // Process each factory type
         Map<String, Object> results = new LinkedHashMap<>();
         for (Map.Entry<String, FactoryConfig> entry : factoryConfigs.entrySet()) {
-            String factoryTypeKey = entry.getKey();
             FactoryConfig factoryConfig = entry.getValue();
-
-            String propertiesFileName = strategy.getPropertiesFileName(factoryTypeKey);
-            File propertiesFile = new File(directory, propertiesFileName);
-            String operation = propertiesFile.exists() ? "update" : "create";
-
-            writePropertiesFile(propertiesFile, factoryConfig.properties(), factoryTypeKey);
-
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put(KEY_SUCCESS, true);
-            result.put("propertiesFile", propertiesFile.getAbsolutePath());
-            result.put("operation", operation);
-            result.put(
-                    "message",
-                    "Successfully " + operation + "d configuration for " + getFactoryDisplayName(factoryTypeKey));
-            if (factoryConfig.beanName() != null) {
-                result.put("beanName", factoryConfig.beanName());
-            }
-            if (factoryConfig.kind() != null) {
-                result.put("kind", factoryConfig.kind());
-            }
-            results.put(factoryTypeKey, result);
+            EditResult written = editor.write(entry.getKey(), factoryConfig.beanName(), factoryConfig.properties());
+            written.write();
+            results.put(entry.getKey(), toFactoryResult(entry.getKey(), factoryConfig, written));
         }
 
-        // Collect and write dependencies to application.properties
-        Dependencies dependencies = collectDependencies(factoryConfigs);
-        if (!dependencies.isEmpty()) {
-            File appPropertiesFile = new File(directory, ForagePropertyScanner.APPLICATION_PROPERTIES);
-            updateDependencies(appPropertiesFile, dependencies);
-
-            // Add dependency info to results
-            Map<String, Object> depResult = new LinkedHashMap<>();
-            depResult.put("baseDependencies", dependencies.base());
-            depResult.put("mainDependencies", dependencies.main());
-            depResult.put("springBootDependencies", dependencies.springBoot());
-            depResult.put("quarkusDependencies", dependencies.quarkus());
-            results.put("dependencies", depResult);
+        Map<String, Object> output = new LinkedHashMap<>();
+        output.put(KEY_SUCCESS, true);
+        output.put("factories", results);
+        Map<String, Object> dependencyCleanup = removeStoredForageDependencies(editor);
+        if (!dependencyCleanup.isEmpty()) {
+            output.put("dependencyCleanup", dependencyCleanup);
         }
-
-        // Output result
-        if (results.size() == 1) {
-            printer()
-                    .println(OBJECT_MAPPER
-                            .writerWithDefaultPrettyPrinter()
-                            .writeValueAsString(results.values().iterator().next()));
-        } else {
-            Map<String, Object> output = new LinkedHashMap<>();
-            output.put(KEY_SUCCESS, true);
-            output.put("factories", results);
-            printer().println(OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(output));
-        }
+        printer().println(OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(output));
 
         return 0;
+    }
+
+    /**
+     * The JSON result of writing the configuration of one factory.
+     */
+    private Map<String, Object> toFactoryResult(
+            String factoryTypeKey, FactoryConfig factoryConfig, EditResult written) {
+        FileChange first = written.changes().get(0);
+        String operation = first.created() ? "create" : "update";
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put(KEY_SUCCESS, true);
+        result.put("propertiesFile", first.file().getAbsolutePath());
+        if (written.changes().size() > 1) {
+            result.put(
+                    "propertiesFiles",
+                    written.changes().stream()
+                            .map(change -> change.file().getAbsolutePath())
+                            .toList());
+        }
+        result.put("operation", operation);
+        result.put(
+                "message",
+                "Successfully " + operation + "d configuration for " + getFactoryDisplayName(factoryTypeKey));
+        if (factoryConfig.beanName() != null) {
+            result.put("beanName", factoryConfig.beanName());
+        }
+        if (factoryConfig.kind() != null) {
+            result.put("kind", factoryConfig.kind());
+        }
+        if (!written.warnings().isEmpty()) {
+            result.put("warnings", written.warnings());
+        }
+        return result;
     }
 
     // Property keys that contain the bean name (not written to output, used for prefixing)
@@ -209,6 +204,7 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
      * - Without forage prefix: "jdbc.url", "jms.broker.url", "ollama.model.name"
      * The bean name is extracted from "forage.bean.name" or "bean.name" property.
      * The kind is extracted from "kind" or "forage.kind" property to identify the bean type.
+     * The properties are keyed as for the default instance, without the {@code forage.} prefix (e.g. "jdbc.url").
      */
     private Map<String, FactoryConfig> groupByFactory(Map<String, String> configMap) {
         ForagePropertyParser parser = new ForagePropertyParser(catalog);
@@ -321,14 +317,11 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
                 }
             }
 
-            // Build the full property key with forage prefix and optional bean name
-            // Use the normalized key (without forage. prefix) to build the final key
-            String fullPropertyKey = buildPropertyKey(beanName, normalizedKey);
-
+            // Keyed as for the default instance: the editor adds the instance name
             final String finalKind = kindForFactory;
             FactoryConfig config = factoryConfigs.computeIfAbsent(
                     factoryTypeKey, k -> new FactoryConfig(beanName, finalKind, new LinkedHashMap<>()));
-            config.properties().put(fullPropertyKey, value);
+            config.properties().put(normalizedKey, value);
         }
 
         return factoryConfigs;
@@ -358,118 +351,10 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
         return parsed.map(ParsedProperty::factoryType);
     }
 
-    /**
-     * Builds the full property key with forage prefix and optional bean name.
-     * Input: "jdbc.url", beanName: "ds1" -> Output: "forage.ds1.jdbc.url"
-     * Input: "jdbc.url", beanName: null -> Output: "forage.jdbc.url"
-     */
-    private String buildPropertyKey(String beanName, String inputKey) {
-        StringBuilder sb = new StringBuilder(FORAGE_PREFIX);
-        if (beanName != null && !beanName.isEmpty()) {
-            sb.append(beanName).append(".");
-        }
-        sb.append(inputKey);
-        return sb.toString();
-    }
-
-    /**
-     * Collects dependencies from the catalog for all factory configs.
-     * For each factory, collects:
-     * - Bean GAV (e.g., forage-jdbc-postgresql) -> base dependencies
-     * - Factory variant GAVs for each runtime (base, springboot, quarkus)
-     */
-    private Dependencies collectDependencies(Map<String, FactoryConfig> factoryConfigs) {
-        ForageDependencyResolver resolver = new ForageDependencyResolver(catalog);
-        Dependencies dependencies = new Dependencies();
-
-        for (Map.Entry<String, FactoryConfig> entry : factoryConfigs.entrySet()) {
-            FactoryConfig factoryConfig = entry.getValue();
-            // The factory itself, even when only its name property was given
-            resolver.addFactory(dependencies, entry.getKey());
-            // The kind given as metadata (e.g. "kind": "postgresql")
-            resolver.addBean(dependencies, factoryConfig.kind());
-            // Everything the written properties need, using the same rule as the delete cleanup
-            dependencies.addAll(resolver.resolve(factoryConfig.properties()));
-        }
-
-        return dependencies;
-    }
-
-    // Dependency property keys
-    private static final String CAMEL_JBANG_DEPENDENCIES = "camel.jbang.dependencies";
-    private static final String CAMEL_JBANG_DEPENDENCIES_MAIN = "camel.jbang.dependencies.main";
-    private static final String CAMEL_JBANG_DEPENDENCIES_SPRING_BOOT = "camel.jbang.dependencies.spring-boot";
-    private static final String CAMEL_JBANG_DEPENDENCIES_QUARKUS = "camel.jbang.dependencies.quarkus";
-
-    /**
-     * Updates the application.properties file with dependencies.
-     * Merges new forage dependencies with existing ones without removing existing dependencies.
-     */
-    private void updateDependencies(File propertiesFile, Dependencies newDeps) throws IOException {
-        PropertiesDocument document = PropertiesDocument.read(propertiesFile);
-        Map<String, Set<String>> dependencies = readDependencies(document);
-
-        dependencies.get(CAMEL_JBANG_DEPENDENCIES).addAll(newDeps.base());
-        dependencies.get(CAMEL_JBANG_DEPENDENCIES_MAIN).addAll(newDeps.main());
-        dependencies.get(CAMEL_JBANG_DEPENDENCIES_SPRING_BOOT).addAll(newDeps.springBoot());
-        dependencies.get(CAMEL_JBANG_DEPENDENCIES_QUARKUS).addAll(newDeps.quarkus());
-
-        PropertiesDocument.write(propertiesFile, document.withValues(toPropertyValues(dependencies)));
-    }
-
-    /**
-     * Reads the GAVs of every {@code camel.jbang.dependencies*} property, whichever separator and line layout they
-     * were written with.
-     */
-    private static Map<String, Set<String>> readDependencies(PropertiesDocument document) {
-        Map<String, Set<String>> dependencies = newDependencyMap();
-        for (PropertiesDocument.Entry entry : document.entries()) {
-            Set<String> gavs = dependencies.get(entry.key());
-            if (gavs != null) {
-                for (String gav : entry.value().split(",")) {
-                    if (!gav.isBlank()) {
-                        gavs.add(gav.trim());
-                    }
-                }
-            }
-        }
-        return dependencies;
-    }
-
-    /**
-     * The property values to write for the dependency lists; an empty list removes its property.
-     */
-    private static Map<String, String> toPropertyValues(Map<String, Set<String>> dependencies) {
-        Map<String, String> values = new LinkedHashMap<>();
-        dependencies.forEach((key, gavs) -> values.put(key, gavs.isEmpty() ? null : String.join(",", gavs)));
-        return values;
-    }
-
-    private static Map<String, Set<String>> newDependencyMap() {
-        Map<String, Set<String>> existingDeps = new LinkedHashMap<>();
-        existingDeps.put(CAMEL_JBANG_DEPENDENCIES, new LinkedHashSet<>());
-        existingDeps.put(CAMEL_JBANG_DEPENDENCIES_MAIN, new LinkedHashSet<>());
-        existingDeps.put(CAMEL_JBANG_DEPENDENCIES_SPRING_BOOT, new LinkedHashSet<>());
-        existingDeps.put(CAMEL_JBANG_DEPENDENCIES_QUARKUS, new LinkedHashSet<>());
-        return existingDeps;
-    }
-
     private String getFactoryDisplayName(String factoryTypeKey) {
         return catalog.getFactoryMetadata(factoryTypeKey)
                 .map(ForageCatalogReader.FactoryMetadata::factoryName)
                 .orElse(factoryTypeKey + " factory");
-    }
-
-    private void writePropertiesFile(File file, Map<String, String> newProperties, String factoryTypeKey)
-            throws IOException {
-        // A new file starts with a header; an existing one is updated in place, preserving order and comments
-        PropertiesDocument document = file.exists()
-                ? PropertiesDocument.read(file)
-                : PropertiesDocument.of(List.of(
-                        "# Forage " + getFactoryDisplayName(factoryTypeKey) + " Configuration",
-                        "# Generated by Forage JBang Plugin",
-                        ""));
-        PropertiesDocument.write(file, document.withValues(newProperties));
     }
 
     private int handleDelete() throws IOException {
@@ -477,72 +362,32 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
             return outputError("Instance name (--name) is required for delete operation.");
         }
 
-        ForagePropertyParser parser = new ForagePropertyParser(catalog);
-        ForageDependencyResolver resolver = new ForageDependencyResolver(catalog, parser);
-
-        // Read every file before modifying any: the files to delete from (the ones `config read` lists for this
-        // strategy, plus the files overriding them) and every file whose instances may still need dependencies,
-        // whatever the active profile
-        Set<File> deletionFiles = new LinkedHashSet<>(strategy.findDeletionFiles(directory));
-        Set<File> files = new LinkedHashSet<>(ForagePropertyScanner.findAllConfigurationFiles(directory, catalog));
-        files.addAll(deletionFiles);
-        Map<File, PropertiesDocument> documents = new LinkedHashMap<>();
-        for (File file : files) {
-            documents.put(file, PropertiesDocument.read(file));
+        ForageConfigurationEditor editor = new ForageConfigurationEditor(catalog, directory, strategy);
+        EditResult deleted;
+        try {
+            deleted = editor.delete(instanceName);
+        } catch (ConfigurationEditException e) {
+            return outputError(e.getMessage());
         }
-
-        // Each entry is parsed once, to tell whether it belongs to the instance and which dependencies it needs.
-        // Entries are kept per file, since the same key can have another value in another file.
-        Map<File, List<PropertiesDocument.Entry>> deletedByFile = new LinkedHashMap<>();
-        Dependencies deletedDependencies = new Dependencies();
-        Dependencies remainingDependencies = new Dependencies();
-        for (Map.Entry<File, PropertiesDocument> document : documents.entrySet()) {
-            for (PropertiesDocument.Entry entry : document.getValue().entries()) {
-                Optional<ParsedProperty> parsed = parser.parse(entry.key());
-                boolean deleted = deletionFiles.contains(document.getKey())
-                        && belongsToInstance(parser, entry.key(), parsed, instanceName);
-                if (deleted) {
-                    deletedByFile
-                            .computeIfAbsent(document.getKey(), file -> new ArrayList<>())
-                            .add(entry);
-                }
-                Dependencies dependencies = deleted ? deletedDependencies : remainingDependencies;
-                parsed.ifPresent(property -> resolver.add(dependencies, property, entry.value()));
-            }
-        }
-
-        if (deletedByFile.isEmpty()) {
-            return outputError("No configuration found for instance '" + instanceName + "'");
-        }
-
-        // Dependencies the deleted instance needed, minus those still needed by what remains in any file
-        Set<String> gavsToRemove = deletedDependencies.all();
-        gavsToRemove.removeAll(remainingDependencies.all());
+        deleted.write();
 
         Map<String, Object> results = new LinkedHashMap<>();
-        for (Map.Entry<File, List<PropertiesDocument.Entry>> entry : deletedByFile.entrySet()) {
-            File propertiesFile = entry.getKey();
-            PropertiesDocument.write(
-                    propertiesFile, documents.get(propertiesFile).without(entry.getValue()));
-            results.put(
-                    propertiesFile.getName(),
-                    Map.of(
-                            KEY_SUCCESS,
-                            true,
-                            "propertiesFile",
-                            propertiesFile.getAbsolutePath(),
-                            "deletedProperties",
-                            entry.getValue().size(),
-                            "message",
-                            "Deleted configuration for instance '" + instanceName + "'"));
+        for (FileChange change : deleted.changes()) {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put(KEY_SUCCESS, true);
+            result.put("propertiesFile", change.file().getAbsolutePath());
+            result.put("deletedProperties", change.removedEntries());
+            if (change.writtenEntries() > 0) {
+                // Lists of instance names that referred to the instance (e.g. forage.multi.agent.names)
+                result.put("updatedProperties", change.writtenEntries());
+            }
+            result.put("message", "Deleted configuration for instance '" + instanceName + "'");
+            results.put(change.file().getName(), result);
         }
 
-        File appPropertiesFile = new File(directory, ForagePropertyScanner.APPLICATION_PROPERTIES);
-        if (!gavsToRemove.isEmpty() && appPropertiesFile.exists()) {
-            Map<String, Object> dependencyCleanupResult = removeDependencies(appPropertiesFile, gavsToRemove);
-            if (!dependencyCleanupResult.isEmpty()) {
-                results.put("dependencyCleanup", dependencyCleanupResult);
-            }
+        Map<String, Object> dependencyCleanup = removeStoredForageDependencies(editor);
+        if (!dependencyCleanup.isEmpty()) {
+            results.put("dependencyCleanup", dependencyCleanup);
         }
 
         Map<String, Object> output = new LinkedHashMap<>();
@@ -556,64 +401,21 @@ public class ConfigWriteCommand extends AbstractConfigCommand {
     }
 
     /**
-     * Whether a property belongs to the instance. Keys are parsed like {@code config read} does, which reads a key
-     * that is itself a catalog entry, or that starts with a bean prefix, as the default instance's. A key under
-     * {@code forage.<instance>.} also belongs to the instance when the rest of it reads as a default-instance key:
-     * a catalog entry (e.g. {@code forage.azure.openai.api.key} for an OpenAI instance named {@code azure},
-     * although it is also the default Azure OpenAI entry) or a key of a known factory or bean (e.g. the typo
-     * {@code forage.ollama.agent.modle.nmae} for an agent named {@code ollama}). Genuine default-instance keys
-     * ({@code forage.ollama.model.name}) and dotted instance names ({@code forage.my.ds.*} for {@code my}) do not
-     * qualify, since their rest does not read as a default-instance key. A key under the prefix that nothing
-     * recognises (e.g. {@code forage.myPG.jdbcc.url}) belongs to the instance too.
-     */
-    private static boolean belongsToInstance(
-            ForagePropertyParser parser, String key, Optional<ParsedProperty> parsed, String instanceName) {
-        if (parsed.isPresent() && instanceName.equals(parsed.get().instanceName())) {
-            return true;
-        }
-        String instancePrefix = FORAGE_PREFIX + instanceName + ".";
-        if (!key.startsWith(instancePrefix)) {
-            return false;
-        }
-        Optional<ParsedProperty> rest = parser.parse(FORAGE_PREFIX + key.substring(instancePrefix.length()));
-        if (rest.isPresent()) {
-            return rest.get().instanceName() == null;
-        }
-        return parsed.isEmpty();
-    }
-
-    /**
-     * Removes specified GAVs from all dependency properties in the application.properties file.
+     * Removes the Forage dependencies older versions of this command stored in application.properties: the Forage
+     * plugin resolves them whenever the project runs or is exported.
      *
-     * @param appPropertiesFile the application.properties file
-     * @param gavsToRemove the GAVs to remove
-     * @return result map with information about removed dependencies
+     * @return the removed dependencies, empty if there were none
      */
-    private Map<String, Object> removeDependencies(File appPropertiesFile, Set<String> gavsToRemove)
+    private static Map<String, Object> removeStoredForageDependencies(ForageConfigurationEditor editor)
             throws IOException {
-        PropertiesDocument document = PropertiesDocument.read(appPropertiesFile);
-        Map<String, Set<String>> dependencies = readDependencies(document);
-
-        Set<String> removedGavs = new LinkedHashSet<>();
-        for (Set<String> gavs : dependencies.values()) {
-            for (String gav : gavs) {
-                if (gavsToRemove.contains(gav)) {
-                    removedGavs.add(gav);
-                }
-            }
-            gavs.removeAll(gavsToRemove);
-        }
-
-        if (removedGavs.isEmpty()) {
+        EditResult removed = editor.removeStoredForageDependencies();
+        if (removed.removedDependencies().isEmpty()) {
             return Map.of();
         }
-
-        // An emptied dependency property is removed
-        PropertiesDocument.write(appPropertiesFile, document.withValues(toPropertyValues(dependencies)));
-
+        removed.write();
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("removedDependencies", new ArrayList<>(removedGavs));
-        result.put("count", removedGavs.size());
+        result.put("removedDependencies", removed.removedDependencies());
+        result.put("count", removed.removedDependencies().size());
         return result;
     }
 

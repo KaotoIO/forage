@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import io.kaoto.forage.catalog.model.ConditionalBeanGroup;
 import io.kaoto.forage.catalog.model.ConfigEntry;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
+import io.kaoto.forage.config.editor.ForagePropertyParser;
+import io.kaoto.forage.config.editor.PropertyKeys;
 import io.kaoto.forage.core.common.ExportCustomizer;
 import io.kaoto.forage.core.common.RuntimeType;
 
@@ -150,9 +152,9 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
     /**
      * A bean is configured when one of its own config entries, or one of the factory config entries listed
-     * in its {@code enabledBy}, is set in any instance. {@link ForageDependencyResolver} uses the same rule.
+     * in its {@code enabledBy}, is set in any instance.
      */
-    static boolean isConfigured(
+    private static boolean isConfigured(
             io.kaoto.forage.catalog.model.ForageBean bean,
             String factoryTypeKey,
             Map<String, List<String>> factoryProperties) {

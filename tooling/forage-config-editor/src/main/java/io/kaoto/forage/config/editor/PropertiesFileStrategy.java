@@ -1,4 +1,4 @@
-package io.kaoto.forage.plugin.config;
+package io.kaoto.forage.config.editor;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,16 +39,17 @@ public interface PropertiesFileStrategy {
     List<File> findPropertiesFiles(File directory) throws IOException;
 
     /**
-     * Finds the existing properties files {@code config write --delete} removes an instance from: the files
-     * returned by {@link #findPropertiesFiles(File)} plus any file that overrides them at runtime, so that a
-     * deleted instance does not come back, partly configured, through an override.
+     * Finds the existing properties files that can override the configuration of the files returned by
+     * {@link #findPropertiesFiles(File)}, such as the {@code application-<profile>.properties} files. Deleting an
+     * instance found in this strategy's files also removes it from these files, so that it does not come back,
+     * partly configured, through an override.
      *
      * @param directory the directory to scan (never {@code null})
      * @return the existing properties files, never {@code null}
      * @throws IOException if the directory cannot be scanned
      */
-    default List<File> findDeletionFiles(File directory) throws IOException {
-        return findPropertiesFiles(directory);
+    default List<File> findOverrideFiles(File directory) throws IOException {
+        return List.of();
     }
 
     /**
@@ -60,4 +61,16 @@ public interface PropertiesFileStrategy {
      *         caller must then report an error instead of writing the configuration
      */
     String getPropertiesFileName(String factoryTypeKey);
+
+    /**
+     * Resolves the properties file name a property of a given factory type and bean should be written to.
+     *
+     * @param factoryTypeKey the factory type key (e.g., {@code "jdbc"}, {@code "agent"})
+     * @param beanName the bean the property configures (e.g., {@code "ollama"}), or {@code null} for a factory
+     *     property
+     * @return the file name, or {@code null} if this strategy has no file for the factory type
+     */
+    default String getPropertiesFileName(String factoryTypeKey, String beanName) {
+        return getPropertiesFileName(factoryTypeKey);
+    }
 }

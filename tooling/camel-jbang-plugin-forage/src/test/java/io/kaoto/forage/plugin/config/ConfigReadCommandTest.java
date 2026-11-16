@@ -2,11 +2,13 @@ package io.kaoto.forage.plugin.config;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.lang.reflect.Field;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import org.apache.camel.dsl.jbang.core.common.StringPrinter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import static io.kaoto.forage.plugin.config.ConfigCommandTestSupport.setField;
+import static io.kaoto.forage.plugin.config.ConfigCommandTestSupport.setStrategy;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,7 +68,7 @@ class ConfigReadCommandTest {
         // Create and execute the command - following Camel JBang test pattern
         ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode = command.doCall();
 
@@ -249,7 +251,7 @@ class ConfigReadCommandTest {
         // Create and execute the command with filter
         ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
         setField(command, "filter", "jdbc");
 
         int exitCode = command.doCall();
@@ -332,7 +334,7 @@ class ConfigReadCommandTest {
 
         ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         assertThat(command.doCall()).isEqualTo(0);
 
@@ -375,7 +377,7 @@ class ConfigReadCommandTest {
 
         ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         assertThat(command.doCall()).isEqualTo(0);
 
@@ -430,7 +432,7 @@ class ConfigReadCommandTest {
 
         ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         assertThat(command.doCall()).isEqualTo(0);
 
@@ -455,7 +457,7 @@ class ConfigReadCommandTest {
         // Create an empty temp directory (no properties files)
         ConfigReadCommand command = new ConfigReadCommand(new CamelJBangMain().withPrinter(printer));
         setField(command, "directory", tempDir);
-        setField(command, "strategy", "application");
+        setStrategy(command, PropertiesFileStrategyType.APPLICATION);
 
         int exitCode = command.doCall();
 
@@ -467,14 +469,5 @@ class ConfigReadCommandTest {
         assertThat(result.get("success").asBoolean()).isTrue();
         assertThat(result.get("message").asText()).contains("No Forage properties files found");
         assertThat(result.get("beanCount").asInt()).isEqualTo(0);
-    }
-
-    /**
-     * Helper method to set private fields on the command object using reflection.
-     */
-    private static void setField(Object target, String fieldName, Object value) throws Exception {
-        Field field = target.getClass().getDeclaredField(fieldName);
-        field.setAccessible(true);
-        field.set(target, value);
     }
 }

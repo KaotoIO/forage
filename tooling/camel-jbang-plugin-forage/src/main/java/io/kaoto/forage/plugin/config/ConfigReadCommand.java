@@ -3,27 +3,20 @@ package io.kaoto.forage.plugin.config;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
-import org.apache.camel.dsl.jbang.core.commands.CamelCommand;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import io.kaoto.forage.catalog.model.ConditionalBeanGroup;
 import io.kaoto.forage.catalog.model.ConditionalBeanInfo;
 import io.kaoto.forage.catalog.model.ConfigEntry;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
+import io.kaoto.forage.plugin.ForagePropertyParser;
+import io.kaoto.forage.plugin.ForagePropertyParser.ParsedProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import picocli.CommandLine;
 
 /**
@@ -32,16 +25,7 @@ import picocli.CommandLine;
  * by providing a machine-readable view of configured beans.
  */
 @CommandLine.Command(name = "read", description = "Read Forage configuration and list beans that would be created")
-public class ConfigReadCommand extends CamelCommand {
-
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
-    // Pattern to match forage properties: forage.{factoryTypeKey}.{property} or
-    // forage.{instanceName}.{factoryTypeKey}.{property}
-    private static final Pattern FORAGE_PROPERTY_PATTERN = Pattern.compile("^forage\\.(.+)$");
-
-    // Properties that indicate the bean kind/type
-    private static final Set<String> KIND_PROPERTIES = Set.of("db.kind", "kind");
+public class ConfigReadCommand extends AbstractConfigCommand {
 
     private static final String FORAGE_PROPERTIES_PREFIX = "forage.";
 
@@ -55,33 +39,17 @@ public class ConfigReadCommand extends CamelCommand {
             description = "Filter by factory type (e.g., 'jdbc', 'jms', 'agent'). If not specified, shows all.")
     private String filter;
 
-    @CommandLine.Option(
-            names = {"--strategy", "-s"},
-            description = "Property file strategy: 'application' reads from application.properties (default), "
-                    + "'forage' reads from forage-*.properties files.",
-            defaultValue = "application")
-    private String strategy;
-
-    private ForageCatalogReader catalog;
-
     public ConfigReadCommand(CamelJBangMain main) {
         super(main);
-    }
-
-    /**
-     * Checks if the given key is a known factory type key by querying the catalog.
-     *
-     * @param key the key to check
-     * @return true if the key is a known factory type, false otherwise
-     */
-    private boolean isKnownFactoryKey(String key) {
-        return catalog.getFactoryMetadata(key).isPresent();
     }
 
     @Override
     public Integer doCall() throws Exception {
         try {
-            catalog = ForageCatalogReader.getInstance();
+            Optional<String> strategyError = initCatalogAndStrategy();
+            if (strategyError.isPresent()) {
+                return outputError(strategyError.get());
+            }
 
             if (directory == null) {
                 directory = new File(System.getProperty("user.dir"));
@@ -92,7 +60,7 @@ public class ConfigReadCommand extends CamelCommand {
             }
 
             // Find all properties files
-            List<File> propertiesFiles = findPropertiesFiles(directory);
+            List<File> propertiesFiles = strategy.findPropertiesFiles(directory);
             if (propertiesFiles.isEmpty()) {
                 return outputResult(List.of(), "No Forage properties files found");
             }
@@ -117,53 +85,6 @@ public class ConfigReadCommand extends CamelCommand {
         }
     }
 
-    private List<File> findPropertiesFiles(File dir) throws IOException {
-        List<File> result = new ArrayList<>();
-
-        // Determine which files to search based on strategy
-        final Set<String> targetFileNames = determineTargetFileNames();
-
-        // Search for matching properties files
-        try (Stream<Path> paths = Files.walk(dir.toPath())) {
-            paths.filter(Files::isRegularFile)
-                    .filter(p -> {
-                        String fileName = p.getFileName().toString();
-                        // Match exact file names from catalog or forage-*.properties pattern
-                        if (targetFileNames.contains(fileName)) {
-                            return true;
-                        }
-                        // Also match any forage-*.properties files for extensibility
-                        if (!"application".equalsIgnoreCase(strategy)
-                                && fileName.startsWith("forage-")
-                                && fileName.endsWith(".properties")) {
-                            return true;
-                        }
-                        return false;
-                    })
-                    .forEach(p -> result.add(p.toFile()));
-        }
-
-        return result;
-    }
-
-    private Set<String> determineTargetFileNames() {
-        Set<String> targetFileNames = new java.util.HashSet<>();
-
-        if ("application".equalsIgnoreCase(strategy)) {
-            // Only search in application.properties
-            targetFileNames.add("application.properties");
-        } else {
-            // Get properties file names from the catalog
-            for (ForageCatalogReader.FactoryMetadata metadata : catalog.getAllFactories()) {
-                String propsFile = metadata.propertiesFileName();
-                if (propsFile != null && !propsFile.isEmpty()) {
-                    targetFileNames.add(propsFile);
-                }
-            }
-        }
-        return targetFileNames;
-    }
-
     private List<BeanInfo> parsePropertiesFile(File file) throws IOException {
         Properties props = new Properties();
         try (FileInputStream fis = new FileInputStream(file)) {
@@ -173,14 +94,9 @@ public class ConfigReadCommand extends CamelCommand {
         // Group properties by factory type and instance name
         Map<String, InstanceProperties> instances = new LinkedHashMap<>();
 
+        ForagePropertyParser parser = new ForagePropertyParser(catalog);
         for (String key : props.stringPropertyNames()) {
-            Matcher matcher = FORAGE_PROPERTY_PATTERN.matcher(key);
-            if (!matcher.matches()) {
-                continue;
-            }
-
-            String remainder = matcher.group(1);
-            ParsedProperty parsed = parsePropertyKey(remainder);
+            ParsedProperty parsed = parser.parse(key).orElse(null);
             if (parsed == null) {
                 continue;
             }
@@ -189,12 +105,13 @@ public class ConfigReadCommand extends CamelCommand {
             String instanceKey = buildInstanceKey(parsed);
 
             InstanceProperties instance = instances.computeIfAbsent(
-                    instanceKey, k -> new InstanceProperties(parsed.factoryType, parsed.instanceName, parsed.beanType));
+                    instanceKey,
+                    k -> new InstanceProperties(parsed.factoryType(), parsed.instanceName(), parsed.beanType()));
             // Update bean type if not set (in case first property didn't have it)
-            if (instance.beanType == null && parsed.beanType != null) {
-                instance.beanType = parsed.beanType;
+            if (instance.beanType == null && parsed.beanType() != null) {
+                instance.beanType = parsed.beanType();
             }
-            instance.properties.put(parsed.propertyName, props.getProperty(key));
+            instance.properties.put(parsed.propertyName(), props.getProperty(key));
         }
 
         // Convert instances to BeanInfo
@@ -210,133 +127,15 @@ public class ConfigReadCommand extends CamelCommand {
     }
 
     /**
-     * Parses a property key (after removing the "forage." prefix) to extract
-     * instance name, factory type, bean type, and property name.
-     *
-     * Examples:
-     * - "jdbc.url" -> factoryType=jdbc, instanceName=null, propertyName=url
-     * - "ds1.jdbc.url" -> factoryType=jdbc, instanceName=ds1, propertyName=url
-     * - "jms.broker.url" -> factoryType=jms, instanceName=null, propertyName=broker.url
-     * - "cf1.jms.broker.url" -> factoryType=jms, instanceName=cf1, propertyName=broker.url
-     * - "ollama.model.name" -> factoryType=multi, beanType=ollama, instanceName=null, propertyName=model.name
-     * - "test.ollama.model.name" -> factoryType=multi, beanType=ollama, instanceName=test, propertyName=model.name
-     * - "myMemory.infinispan.server-list" -> factoryType=multi, beanType=infinispan, instanceName=myMemory
-     * - "postgresql.jdbc.url" -> factoryType=jdbc, instanceName=postgresql, propertyName=url
-     * - "my.ds.jdbc.url" -> factoryType=jdbc, instanceName=my.ds, propertyName=url
-     */
-    private ParsedProperty parsePropertyKey(String key) {
-        ParsedProperty fromConfigEntries = parseUsingConfigEntries(key);
-        if (fromConfigEntries != null) {
-            return fromConfigEntries;
-        }
-
-        // Fall back to segment heuristics for keys that match no catalog config entry (e.g., typos)
-        String[] parts = key.split("\\.", 2);
-        if (parts.length < 2) {
-            return null;
-        }
-
-        String firstPart = parts[0];
-        String restOfKey = parts[1];
-
-        // Check if the first part is a known factory type key
-        if (isKnownFactoryKey(firstPart)) {
-            return new ParsedProperty(firstPart, null, null, restOfKey);
-        }
-
-        // Check if the first part is a known bean type (e.g., ollama, infinispan)
-        Optional<String> beanFactoryOpt = catalog.findFactoryTypeKeyForBeanName(firstPart);
-        if (beanFactoryOpt.isPresent()) {
-            // e.g., "ollama.model.name" -> factoryType=multi, beanType=ollama, propertyName=model.name
-            return new ParsedProperty(beanFactoryOpt.get(), null, firstPart, restOfKey);
-        }
-
-        // Otherwise, the first part might be an instance name
-        // Check the second segment for a factory type or bean type
-        String[] restParts = restOfKey.split("\\.", 2);
-        if (restParts.length >= 1) {
-            String secondPart = restParts[0];
-            String propertyName = restParts.length > 1 ? restParts[1] : "";
-
-            // Check if second part is a known factory type key
-            if (isKnownFactoryKey(secondPart)) {
-                return new ParsedProperty(secondPart, firstPart, null, propertyName);
-            }
-
-            // Check if second part is a known bean type (e.g., "test.ollama.model.name")
-            Optional<String> beanFactoryOpt2 = catalog.findFactoryTypeKeyForBeanName(secondPart);
-            if (beanFactoryOpt2.isPresent()) {
-                return new ParsedProperty(beanFactoryOpt2.get(), firstPart, secondPart, propertyName);
-            }
-        }
-
-        // Could be a bean-specific property like "forage.google.api.key" (for agent factory)
-        // Try to match using the catalog's property prefix mapping
-        Optional<String> factoryTypeOpt = catalog.findFactoryTypeKeyForPropertyPrefix(firstPart);
-        return factoryTypeOpt.map(s -> new ParsedProperty(s, null, null, key)).orElse(null);
-    }
-
-    /**
-     * Parses a property key the way the runtime resolves it: "forage.&lt;instance&gt;.&lt;config entry&gt;",
-     * where the instance name is optional and may contain dots. Tries the shortest instance name first,
-     * so a key that is itself a config entry belongs to the default instance.
-     *
-     * @return the parsed property, or null when no suffix of the key is a catalog config entry
-     */
-    private ParsedProperty parseUsingConfigEntries(String key) {
-        String instanceName = null;
-        String entryKey = key;
-        while (true) {
-            Optional<ForageCatalogReader.ConfigEntryOwner> owner =
-                    catalog.findConfigEntryOwner(FORAGE_PROPERTIES_PREFIX + entryKey);
-            if (owner.isPresent()) {
-                return toParsedProperty(instanceName, entryKey, owner.get());
-            }
-            int dot = entryKey.indexOf('.');
-            if (dot < 0) {
-                return null;
-            }
-            String segment = entryKey.substring(0, dot);
-            instanceName = instanceName == null ? segment : instanceName + "." + segment;
-            entryKey = entryKey.substring(dot + 1);
-        }
-    }
-
-    private ParsedProperty toParsedProperty(
-            String instanceName, String entryKey, ForageCatalogReader.ConfigEntryOwner owner) {
-        String factoryTypeKey = owner.factoryTypeKey();
-        String factoryPrefix = factoryTypeKey + ".";
-        // Factory-level property (e.g., "jdbc.url", "jms.artemis.reconnect.attempts"), unless the
-        // factory key is really a bean prefix (e.g., the security policy factory keyed as "keycloak")
-        if (entryKey.startsWith(factoryPrefix)
-                && catalog.findBeanNameForPropertyPrefix(factoryTypeKey).isEmpty()) {
-            return new ParsedProperty(factoryTypeKey, instanceName, null, entryKey.substring(factoryPrefix.length()));
-        }
-        // Bean property (e.g., "ollama.model.name", "azure.openai.api.key")
-        if (owner.beanName() != null) {
-            Optional<String> beanPrefix = catalog.findBeanPropertyPrefix(owner.beanName(), entryKey);
-            if (beanPrefix.isPresent()) {
-                return new ParsedProperty(
-                        factoryTypeKey,
-                        instanceName,
-                        owner.beanName(),
-                        entryKey.substring(beanPrefix.get().length() + 1));
-            }
-        }
-        // Factory property outside the factory namespace (e.g., "multi.agent.names", "guardrail.*")
-        return new ParsedProperty(factoryTypeKey, instanceName, null, entryKey);
-    }
-
-    /**
      * Builds a unique instance key for grouping properties.
      * Format: factoryType:instanceName:beanType (with defaults for null values)
      */
     private String buildInstanceKey(ParsedProperty parsed) {
-        StringBuilder key = new StringBuilder(parsed.factoryType);
+        StringBuilder key = new StringBuilder(parsed.factoryType());
         key.append(":");
-        key.append(parsed.instanceName != null ? parsed.instanceName : "default");
-        if (parsed.beanType != null) {
-            key.append(":").append(parsed.beanType);
+        key.append(parsed.instanceName() != null ? parsed.instanceName() : "default");
+        if (parsed.beanType() != null) {
+            key.append(":").append(parsed.beanType());
         }
         return key.toString();
     }
@@ -429,7 +228,7 @@ public class ConfigReadCommand extends CamelCommand {
         }
 
         // Look for kind/type properties in the config values
-        for (String kindProp : KIND_PROPERTIES) {
+        for (String kindProp : ForagePropertyParser.KIND_PROPERTIES) {
             String value = instance.properties.get(kindProp);
             if (value != null && !value.isEmpty()) {
                 return value;
@@ -597,17 +396,7 @@ public class ConfigReadCommand extends CamelCommand {
         return 0;
     }
 
-    private int outputError(String message) throws JsonProcessingException {
-        Map<String, Object> error = new HashMap<>();
-        error.put("success", false);
-        error.put("error", message);
-        printer().println(OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(error));
-        return 1;
-    }
-
     // Helper classes
-
-    private record ParsedProperty(String factoryType, String instanceName, String beanType, String propertyName) {}
 
     private static class InstanceProperties {
         final String factoryType;

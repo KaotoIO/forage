@@ -15,12 +15,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.apache.camel.dsl.jbang.core.commands.CamelCommand;
 import org.apache.camel.dsl.jbang.core.commands.CamelJBangMain;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
+import io.kaoto.forage.plugin.ForageDependencyResolver;
+import io.kaoto.forage.plugin.ForagePropertyParser;
+import io.kaoto.forage.plugin.ForagePropertyScanner;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import picocli.CommandLine;
 
 /**
@@ -28,11 +29,9 @@ import picocli.CommandLine;
  * This command creates, updates, or merges properties files based on JSON input from the Kaoto wizard.
  */
 @CommandLine.Command(name = "write", description = "Write Forage configuration from JSON input to properties files")
-public class ConfigWriteCommand extends CamelCommand {
+public class ConfigWriteCommand extends AbstractConfigCommand {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final String KEY_SUCCESS = "success";
-    private static final String APPLICATION_PROPERTIES = "application.properties";
     private static final String FORAGE_PREFIX = "forage.";
 
     @CommandLine.Option(
@@ -55,15 +54,6 @@ public class ConfigWriteCommand extends CamelCommand {
             description = "Instance name to delete (used with --delete).")
     private String instanceName;
 
-    @CommandLine.Option(
-            names = {"--strategy", "-s"},
-            description = "Property file strategy: 'application' writes to application.properties (default), "
-                    + "'forage' writes to forage-*.properties files.",
-            defaultValue = "application")
-    private String strategy;
-
-    private ForageCatalogReader catalog;
-
     public ConfigWriteCommand(CamelJBangMain main) {
         super(main);
     }
@@ -71,14 +61,13 @@ public class ConfigWriteCommand extends CamelCommand {
     @Override
     public Integer doCall() throws Exception {
         try {
-            catalog = ForageCatalogReader.getInstance();
+            Optional<String> strategyError = initCatalogAndStrategy();
+            if (strategyError.isPresent()) {
+                return outputError(strategyError.get());
+            }
 
             if (directory == null) {
                 directory = new File(System.getProperty("user.dir"));
-            }
-
-            if (!directory.exists() && !directory.mkdirs()) {
-                return outputError("Failed to create directory: " + directory.getAbsolutePath());
             }
 
             if (delete) {
@@ -135,17 +124,25 @@ public class ConfigWriteCommand extends CamelCommand {
                     + "(e.g., 'forage.jdbc.url', 'jdbc.url', 'forage.jms.broker.url', 'jms.broker.url').");
         }
 
+        // Fail before writing anything if a factory has no target file under the selected strategy
+        for (String factoryTypeKey : factoryConfigs.keySet()) {
+            if (strategy.getPropertiesFileName(factoryTypeKey) == null) {
+                return outputError(getFactoryDisplayName(factoryTypeKey)
+                        + " has no dedicated properties file; use --strategy application to configure it.");
+            }
+        }
+
+        if (!directory.exists() && !directory.mkdirs()) {
+            return outputError("Failed to create directory: " + directory.getAbsolutePath());
+        }
+
         // Process each factory type
         Map<String, Object> results = new LinkedHashMap<>();
         for (Map.Entry<String, FactoryConfig> entry : factoryConfigs.entrySet()) {
             String factoryTypeKey = entry.getKey();
             FactoryConfig factoryConfig = entry.getValue();
 
-            String propertiesFileName = getPropertiesFileName(factoryTypeKey);
-            if (propertiesFileName == null) {
-                continue;
-            }
-
+            String propertiesFileName = strategy.getPropertiesFileName(factoryTypeKey);
             File propertiesFile = new File(directory, propertiesFileName);
             String operation = propertiesFile.exists() ? "update" : "create";
 
@@ -170,7 +167,7 @@ public class ConfigWriteCommand extends CamelCommand {
         // Collect and write dependencies to application.properties
         DependencyInfo dependencies = collectDependencies(factoryConfigs);
         if (hasDependencies(dependencies)) {
-            File appPropertiesFile = new File(directory, APPLICATION_PROPERTIES);
+            File appPropertiesFile = new File(directory, ForagePropertyScanner.APPLICATION_PROPERTIES);
             updateDependencies(appPropertiesFile, dependencies);
 
             // Add dependency info to results
@@ -370,13 +367,6 @@ public class ConfigWriteCommand extends CamelCommand {
         return sb.toString();
     }
 
-    private String getPropertiesFileName(String factoryTypeKey) {
-        if ("application".equalsIgnoreCase(strategy)) {
-            return APPLICATION_PROPERTIES;
-        }
-        return catalog.getPropertiesFileName(factoryTypeKey).orElse(null);
-    }
-
     /**
      * Collects dependencies from the catalog for all factory configs.
      * For each factory, collects:
@@ -384,28 +374,25 @@ public class ConfigWriteCommand extends CamelCommand {
      * - Factory variant GAVs for each runtime (base, springboot, quarkus)
      */
     private DependencyInfo collectDependencies(Map<String, FactoryConfig> factoryConfigs) {
-        Set<String> baseDeps = new HashSet<>();
-        Set<String> mainDeps = new HashSet<>();
-        Set<String> springBootDeps = new HashSet<>();
-        Set<String> quarkusDeps = new HashSet<>();
+        ForageDependencyResolver resolver = new ForageDependencyResolver(catalog);
+        ForageDependencyResolver.Dependencies dependencies = new ForageDependencyResolver.Dependencies();
 
         for (Map.Entry<String, FactoryConfig> entry : factoryConfigs.entrySet()) {
-            String factoryTypeKey = entry.getKey();
             FactoryConfig factoryConfig = entry.getValue();
-            String kind = factoryConfig.kind();
-
-            // Add bean GAV if kind is specified
-            if (kind != null && !kind.isEmpty()) {
-                baseDeps.addAll(catalog.getBeanGavs(kind));
-            }
-
-            // Add factory variant GAVs
-            catalog.getFactoryVariantGav(factoryTypeKey, "base").ifPresent(mainDeps::add);
-            catalog.getFactoryVariantGav(factoryTypeKey, "springboot").ifPresent(springBootDeps::add);
-            catalog.getFactoryVariantGav(factoryTypeKey, "quarkus").ifPresent(quarkusDeps::add);
+            // The factory itself, even when only its name property was given
+            resolver.addFactory(dependencies, entry.getKey());
+            // The kind given as metadata (e.g. "kind": "postgresql")
+            resolver.addBean(dependencies, factoryConfig.kind());
+            // Everything the written properties need, using the same rule as the delete cleanup
+            ForageDependencyResolver.Dependencies written = resolver.resolve(factoryConfig.properties());
+            dependencies.base().addAll(written.base());
+            dependencies.main().addAll(written.main());
+            dependencies.springBoot().addAll(written.springBoot());
+            dependencies.quarkus().addAll(written.quarkus());
         }
 
-        return new DependencyInfo(baseDeps, mainDeps, springBootDeps, quarkusDeps);
+        return new DependencyInfo(
+                dependencies.base(), dependencies.main(), dependencies.springBoot(), dependencies.quarkus());
     }
 
     /**
@@ -621,43 +608,82 @@ public class ConfigWriteCommand extends CamelCommand {
             return outputError("Instance name (--name) is required for delete operation.");
         }
 
-        Map<String, Object> results = new LinkedHashMap<>();
-        Set<String> allDeletedTypes = new HashSet<>();
-        Set<String> allDeletedFactoryTypeKeys = new HashSet<>();
+        ForagePropertyParser parser = new ForagePropertyParser(catalog);
+        ForageDependencyResolver resolver = new ForageDependencyResolver(catalog, parser);
 
-        // Determine which properties files to scan based on strategy
-        final Set<File> propertiesFilesToScan = determineScanableProperties();
-
-        // Delete instance configuration from all relevant files
-        for (File propertiesFile : propertiesFilesToScan) {
-            DeletedConfigInfo deletedInfo = deleteInstanceConfiguration(propertiesFile, instanceName);
-            if (!deletedInfo.deletedPropertyKeys().isEmpty()) {
-                allDeletedTypes.addAll(deletedInfo.deletedTypes());
-                allDeletedFactoryTypeKeys.addAll(deletedInfo.deletedFactoryTypeKeys());
-                results.put(
-                        propertiesFile.getName(),
-                        Map.of(
-                                KEY_SUCCESS,
-                                true,
-                                "propertiesFile",
-                                propertiesFile.getAbsolutePath(),
-                                "deletedProperties",
-                                deletedInfo.deletedPropertyKeys().size(),
-                                "message",
-                                "Deleted configuration for instance '" + instanceName + "'"));
+        // Read every file before modifying any: the files to delete from (the ones `config read` lists for this
+        // strategy) and every file whose instances may still need dependencies, whatever the active profile
+        List<File> targetFiles = strategy.findPropertiesFiles(directory);
+        Map<File, LoadedFile> allFiles = new LinkedHashMap<>();
+        for (File file : ForagePropertyScanner.findAllConfigurationFiles(directory, catalog)) {
+            allFiles.put(file, LoadedFile.load(file));
+        }
+        for (File file : targetFiles) {
+            if (!allFiles.containsKey(file)) {
+                allFiles.put(file, LoadedFile.load(file));
             }
         }
 
-        if (results.isEmpty()) {
+        Map<File, Map<String, String>> deletedByFile = new LinkedHashMap<>();
+        for (File file : targetFiles) {
+            LoadedFile loaded = allFiles.get(file);
+            Map<String, String> deleted = new LinkedHashMap<>();
+            loaded.properties().forEach((key, value) -> {
+                if (belongsToInstance(parser, key, instanceName)) {
+                    deleted.put(key, value);
+                }
+            });
+            if (!deleted.isEmpty()) {
+                deletedByFile.put(file, deleted);
+            }
+        }
+
+        if (deletedByFile.isEmpty()) {
             return outputError("No configuration found for instance '" + instanceName + "'");
         }
 
-        // After deletion, clean up dependencies that are no longer needed
-        File appPropertiesFile = new File(directory, APPLICATION_PROPERTIES);
-        Map<String, Object> dependencyCleanupResult =
-                cleanupUnusedDependencies(appPropertiesFile, allDeletedTypes, allDeletedFactoryTypeKeys);
-        if (!dependencyCleanupResult.isEmpty()) {
-            results.put("dependencyCleanup", dependencyCleanupResult);
+        // Dependencies the deleted instance needed, minus those still needed by what remains in any file
+        Map<String, String> deletedProperties = new LinkedHashMap<>();
+        deletedByFile.values().forEach(deletedProperties::putAll);
+        Map<String, String> remainingProperties = new LinkedHashMap<>();
+        allFiles.forEach((file, loaded) -> {
+            Set<String> deletedKeys = deletedByFile.getOrDefault(file, Map.of()).keySet();
+            loaded.properties().forEach((key, value) -> {
+                if (!deletedKeys.contains(key)) {
+                    remainingProperties.put(key, value);
+                }
+            });
+        });
+        Set<String> gavsToRemove = resolver.resolve(deletedProperties).all();
+        gavsToRemove.removeAll(resolver.resolve(remainingProperties).all());
+
+        Map<String, Object> results = new LinkedHashMap<>();
+        for (Map.Entry<File, Map<String, String>> entry : deletedByFile.entrySet()) {
+            File propertiesFile = entry.getKey();
+            writeLines(
+                    propertiesFile,
+                    computeRemovableLines(
+                            allFiles.get(propertiesFile).lines(),
+                            entry.getValue().keySet()));
+            results.put(
+                    propertiesFile.getName(),
+                    Map.of(
+                            KEY_SUCCESS,
+                            true,
+                            "propertiesFile",
+                            propertiesFile.getAbsolutePath(),
+                            "deletedProperties",
+                            entry.getValue().size(),
+                            "message",
+                            "Deleted configuration for instance '" + instanceName + "'"));
+        }
+
+        File appPropertiesFile = new File(directory, ForagePropertyScanner.APPLICATION_PROPERTIES);
+        if (!gavsToRemove.isEmpty() && appPropertiesFile.exists()) {
+            Map<String, Object> dependencyCleanupResult = removeDependencies(appPropertiesFile, gavsToRemove);
+            if (!dependencyCleanupResult.isEmpty()) {
+                results.put("dependencyCleanup", dependencyCleanupResult);
+            }
         }
 
         Map<String, Object> output = new LinkedHashMap<>();
@@ -670,105 +696,14 @@ public class ConfigWriteCommand extends CamelCommand {
         return 0;
     }
 
-    private Set<File> determineScanableProperties() {
-        Set<File> propertiesFilesToScan = new HashSet<>();
-        if ("application".equalsIgnoreCase(strategy)) {
-            File appProps = new File(directory, APPLICATION_PROPERTIES);
-            if (appProps.exists()) {
-                propertiesFilesToScan.add(appProps);
-            }
-        } else {
-            for (ForageCatalogReader.FactoryMetadata metadata : catalog.getAllFactories()) {
-                String propertiesFileName = getPropertiesFileName(metadata.factoryTypeKey());
-                if (propertiesFileName != null) {
-                    File propertiesFile = new File(directory, propertiesFileName);
-                    if (propertiesFile.exists()) {
-                        propertiesFilesToScan.add(propertiesFile);
-                    }
-                }
-            }
-        }
-        return propertiesFilesToScan;
-    }
-
-    // Property key suffixes that contain the bean kind (e.g., *.db.kind, *.kind)
-    private static final Set<String> KIND_PROPERTY_SUFFIXES = Set.of(".db.kind", ".kind");
-
     /**
-     * Deletes all configuration properties for a given instance name.
-     * Properties matching the pattern forage.{instanceName}.* are deleted.
-     *
-     * @param file the properties file to modify
-     * @param instanceName the instance name to delete
-     * @return information about what was deleted
+     * Whether a property belongs to the given instance, using the same parsing as {@code config read}. Keys the
+     * parser does not recognise (e.g. typos) fall back to the {@code forage.<instanceName>.} prefix.
      */
-    private DeletedConfigInfo deleteInstanceConfiguration(File file, String instanceName) throws IOException {
-        Set<String> deletedPropertyKeys = new HashSet<>();
-        Set<String> deletedTypes = new HashSet<>();
-        Set<String> deletedFactoryTypeKeys = new HashSet<>();
-
-        // Read existing file preserving order and comments
-        List<String> lines = java.nio.file.Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
-
-        // Find keys to remove matching the instance prefix
-        // Pattern: forage.{instanceName}.*
-        String prefixToMatch = FORAGE_PREFIX + instanceName + ".";
-
-        for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
-                continue;
-            }
-            int equalsIndex = line.indexOf('=');
-            if (equalsIndex > 0) {
-                String key = line.substring(0, equalsIndex).trim();
-                String value = line.substring(equalsIndex + 1).trim();
-
-                if (key.startsWith(prefixToMatch)) {
-                    deletedPropertyKeys.add(key);
-
-                    // Extract the type segment (third part after forage.{instanceName}.)
-                    String afterPrefix = key.substring(prefixToMatch.length());
-                    int dotIndex = afterPrefix.indexOf('.');
-                    if (dotIndex > 0) {
-                        String typeSegment = afterPrefix.substring(0, dotIndex);
-                        deletedTypes.add(typeSegment);
-
-                        // Check if this is a known factory type key
-                        if (catalog.getFactoryMetadata(typeSegment).isPresent()) {
-                            deletedFactoryTypeKeys.add(typeSegment);
-                        }
-                    }
-
-                    // Also extract kind from property VALUES (e.g., *.db.kind=postgresql, *.kind=artemis)
-                    for (String kindSuffix : KIND_PROPERTY_SUFFIXES) {
-                        if (key.endsWith(kindSuffix) && !value.isEmpty()) {
-                            // Add the bean kind (e.g., "postgresql", "artemis", "ollama") to deleted types
-                            deletedTypes.add(value.toLowerCase());
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (deletedPropertyKeys.isEmpty()) {
-            return new DeletedConfigInfo(Set.of(), Set.of(), Set.of());
-        }
-
-        // Filter out lines with keys to remove, preserving order
-        final List<String> updatedLines = computeRemovableLines(lines, deletedPropertyKeys);
-
-        // Write the updated content
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            StringBuilder content = new StringBuilder();
-            for (String line : updatedLines) {
-                content.append(line).append("\n");
-            }
-            fos.write(content.toString().getBytes(StandardCharsets.UTF_8));
-        }
-
-        return new DeletedConfigInfo(deletedPropertyKeys, deletedTypes, deletedFactoryTypeKeys);
+    private static boolean belongsToInstance(ForagePropertyParser parser, String key, String instanceName) {
+        return parser.parse(key)
+                .map(parsed -> instanceName.equals(parsed.instanceName()))
+                .orElseGet(() -> key.startsWith(FORAGE_PREFIX + instanceName + "."));
     }
 
     private static List<String> computeRemovableLines(List<String> lines, Set<String> deletedPropertyKeys) {
@@ -796,108 +731,36 @@ public class ConfigWriteCommand extends CamelCommand {
         return updatedLines;
     }
 
-    /**
-     * Scans all properties files to find what types are still configured.
-     * This includes both type segments from property keys (e.g., "jdbc", "jms")
-     * and kind values from property values (e.g., "postgresql", "artemis").
-     *
-     * @return set of type segments still in use (e.g., "jdbc", "ollama", "postgresql")
-     */
-    private Set<String> findConfiguredTypes() throws IOException {
-        Set<String> configuredTypes = new HashSet<>();
-
-        final Set<File> propertiesFilesToScan = determineScanableProperties();
-
-        for (File propertiesFile : propertiesFilesToScan) {
-            List<String> lines = java.nio.file.Files.readAllLines(propertiesFile.toPath(), StandardCharsets.UTF_8);
-            for (String line : lines) {
-                String trimmed = line.trim();
-                if (trimmed.isEmpty() || trimmed.startsWith("#")) {
-                    continue;
-                }
-                int equalsIndex = line.indexOf('=');
-                if (equalsIndex > 0) {
-                    String key = line.substring(0, equalsIndex).trim();
-                    String value = line.substring(equalsIndex + 1).trim();
-
-                    // Parse forage.{instanceName}.{type}.* pattern
-                    if (key.startsWith(FORAGE_PREFIX)) {
-                        String afterForage = key.substring(FORAGE_PREFIX.length());
-                        // Skip to second segment (after instanceName)
-                        int firstDot = afterForage.indexOf('.');
-                        if (firstDot > 0) {
-                            String afterInstanceName = afterForage.substring(firstDot + 1);
-                            int secondDot = afterInstanceName.indexOf('.');
-                            if (secondDot > 0) {
-                                String typeSegment = afterInstanceName.substring(0, secondDot);
-                                configuredTypes.add(typeSegment);
-                            }
-                        }
-
-                        // Also extract kind values from properties like *.db.kind, *.kind
-                        for (String kindSuffix : KIND_PROPERTY_SUFFIXES) {
-                            if (key.endsWith(kindSuffix) && !value.isEmpty()) {
-                                configuredTypes.add(value.toLowerCase());
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
+    private static void writeLines(File file, List<String> lines) throws IOException {
+        StringBuilder content = new StringBuilder();
+        for (String line : lines) {
+            content.append(line).append("\n");
         }
-
-        return configuredTypes;
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(content.toString().getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     /**
-     * Cleans up dependencies that are no longer needed after configuration deletion.
-     *
-     * @param appPropertiesFile the application.properties file
-     * @param deletedTypes the types that were deleted (e.g., "ollama", "postgresql")
-     * @param deletedFactoryTypeKeys the factory type keys that were deleted (e.g., "jdbc", "agent")
-     * @return result map with information about removed dependencies
+     * A properties file read once: its raw lines (to rewrite it preserving comments and order) and its
+     * {@code key=value} entries, parsed with the same line rules used to remove them.
      */
-    private Map<String, Object> cleanupUnusedDependencies(
-            File appPropertiesFile, Set<String> deletedTypes, Set<String> deletedFactoryTypeKeys) throws IOException {
+    private record LoadedFile(List<String> lines, Map<String, String> properties) {
 
-        if (!appPropertiesFile.exists()) {
-            return Map.of();
-        }
-
-        // Find what types are still configured after deletion
-        Set<String> remainingTypes = findConfiguredTypes();
-
-        // Determine which GAVs to remove
-        Set<String> gavsToRemove = new HashSet<>();
-
-        for (String deletedType : deletedTypes) {
-            if (!remainingTypes.contains(deletedType)) {
-                // This type is no longer configured, remove its dependency
-                gavsToRemove.addAll(catalog.getBeanGavs(deletedType));
+        static LoadedFile load(File file) throws IOException {
+            List<String> lines = java.nio.file.Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+            Map<String, String> properties = new LinkedHashMap<>();
+            for (String line : lines) {
+                String trimmed = line.trim();
+                int equalsIndex = line.indexOf('=');
+                if (!trimmed.isEmpty() && !trimmed.startsWith("#") && equalsIndex > 0) {
+                    properties.put(
+                            line.substring(0, equalsIndex).trim(),
+                            line.substring(equalsIndex + 1).trim());
+                }
             }
+            return new LoadedFile(lines, properties);
         }
-
-        // Check factory type keys - if no instances remain for a factory, remove its variant GAVs
-        for (String factoryTypeKey : deletedFactoryTypeKeys) {
-            boolean factoryStillInUse = remainingTypes.stream()
-                    .anyMatch(type -> type.equals(factoryTypeKey)
-                            || catalog.findFactoryTypeKeyForBeanName(type)
-                                    .map(ftk -> ftk.equals(factoryTypeKey))
-                                    .orElse(false));
-
-            if (!factoryStillInUse) {
-                catalog.getFactoryVariantGav(factoryTypeKey, "base").ifPresent(gavsToRemove::add);
-                catalog.getFactoryVariantGav(factoryTypeKey, "springboot").ifPresent(gavsToRemove::add);
-                catalog.getFactoryVariantGav(factoryTypeKey, "quarkus").ifPresent(gavsToRemove::add);
-            }
-        }
-
-        if (gavsToRemove.isEmpty()) {
-            return Map.of();
-        }
-
-        // Remove the GAVs from dependency properties
-        return removeDependencies(appPropertiesFile, gavsToRemove);
     }
 
     /**
@@ -989,14 +852,6 @@ public class ConfigWriteCommand extends CamelCommand {
         return result;
     }
 
-    private int outputError(String message) throws JsonProcessingException {
-        Map<String, Object> error = new HashMap<>();
-        error.put(KEY_SUCCESS, false);
-        error.put("error", message);
-        printer().println(OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(error));
-        return 1;
-    }
-
     /**
      * Record to hold factory configuration including bean name and properties.
      */
@@ -1010,10 +865,4 @@ public class ConfigWriteCommand extends CamelCommand {
             Set<String> mainDependencies,
             Set<String> springBootDependencies,
             Set<String> quarkusDependencies) {}
-
-    /**
-     * Record to hold information about deleted configuration.
-     */
-    private record DeletedConfigInfo(
-            Set<String> deletedPropertyKeys, Set<String> deletedTypes, Set<String> deletedFactoryTypeKeys) {}
 }

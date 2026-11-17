@@ -11,7 +11,7 @@
     <name>Forage :: Library :: JDBC :: MariaDB</name>
 
     <properties>
-        <mariadb.version>3.5.10</mariadb.version>
+        <mariadb.version>3.5.11</mariadb.version>
     </properties>
 
     <dependencies>

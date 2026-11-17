@@ -87,10 +87,29 @@ class CatalogDrivenExportCustomizerTest {
         Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS);
         // Should include quarkus variant GAV
         assertThat(deps).anyMatch(d -> d.contains("forage-quarkus-jdbc"));
-        // Should include camel-quarkus-sql (additional dependency)
-        assertThat(deps).anyMatch(d -> d.contains("camel-quarkus-sql"));
+        // Should include the Camel Quarkus extensions (additional dependencies) in the form Camel JBang
+        // uses for the components of a route, so that the exported pom.xml declares each of them once
+        assertThat(deps).contains("camel:sql", "camel:jdbc");
+        assertThat(deps).noneMatch(d -> d.contains("camel-quarkus-"));
         // Should include quarkus-jdbc-postgresql (bean runtime dependency)
         assertThat(deps).anyMatch(d -> d.contains("quarkus-jdbc-postgresql"));
+    }
+
+    @Test
+    void testToJBangDependency() {
+        assertThat(CatalogDrivenExportCustomizer.toJBangDependency("mvn:org.apache.camel.quarkus:camel-quarkus-sql"))
+                .isEqualTo("camel:sql");
+        assertThat(CatalogDrivenExportCustomizer.toJBangDependency("org.apache.camel.quarkus:camel-quarkus-cxf-soap"))
+                .isEqualTo("camel:cxf-soap");
+        // An explicit version is kept
+        assertThat(CatalogDrivenExportCustomizer.toJBangDependency(
+                        "mvn:org.apache.camel.quarkus:camel-quarkus-sql:3.40.0"))
+                .isEqualTo("mvn:org.apache.camel.quarkus:camel-quarkus-sql:3.40.0");
+        assertThat(CatalogDrivenExportCustomizer.toJBangDependency("io.quarkus:quarkus-jdbc-h2"))
+                .isEqualTo("mvn:io.quarkus:quarkus-jdbc-h2");
+        assertThat(CatalogDrivenExportCustomizer.toJBangDependency("mvn:io.kaoto.forage:forage-jdbc:1.0"))
+                .isEqualTo("mvn:io.kaoto.forage:forage-jdbc:1.0");
+        assertThat(CatalogDrivenExportCustomizer.toJBangDependency(null)).isNull();
     }
 
     @Test
@@ -123,8 +142,8 @@ class CatalogDrivenExportCustomizerTest {
         Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS);
         // Should include quarkus JMS variant GAV
         assertThat(deps).anyMatch(d -> d.contains("forage-quarkus-jms"));
-        // Should include camel-quarkus-jms (additional dependency)
-        assertThat(deps).anyMatch(d -> d.contains("camel-quarkus-jms"));
+        // Should include camel-quarkus-jms (additional dependency) as camel:jms
+        assertThat(deps).contains("camel:jms");
         // Should include quarkus-artemis-jms (bean runtime dependency)
         assertThat(deps).anyMatch(d -> d.contains("quarkus-artemis-jms"));
     }

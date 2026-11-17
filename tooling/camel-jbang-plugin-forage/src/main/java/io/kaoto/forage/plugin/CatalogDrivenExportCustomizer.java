@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -26,6 +27,8 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
     private static final Logger LOG = LoggerFactory.getLogger(CatalogDrivenExportCustomizer.class);
     private static final String FORAGE_PREFIX = "forage.";
+    private static final String MVN_PREFIX = "mvn:";
+    private static final String CAMEL_QUARKUS_EXTENSION_PREFIX = "org.apache.camel.quarkus:camel-quarkus-";
 
     private Map<String, Map<String, List<String>>> scannedProperties;
     private Boolean enabled;
@@ -52,17 +55,19 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
             // 1. Add the factory variant GAV (or fall back to base if variant doesn't exist)
             var variantGav = catalog.getFactoryVariantGav(factoryTypeKey, variantName);
             if (variantGav.isPresent()) {
-                dependencies.add(toMvnGav(variantGav.get()));
+                dependencies.add(toJBangDependency(variantGav.get()));
             } else {
                 // No variant-specific module; use base
                 catalog.getFactoryVariantGav(factoryTypeKey, "base")
-                        .map(CatalogDrivenExportCustomizer::toMvnGav)
+                        .map(CatalogDrivenExportCustomizer::toJBangDependency)
                         .ifPresent(dependencies::add);
             }
 
-            // 2. Add variant additional dependencies (e.g., camel-quarkus-sql)
+            // 2. Add variant additional dependencies (e.g., camel:sql for camel-quarkus-sql)
             List<String> additionalDeps = catalog.getVariantAdditionalDependencies(factoryTypeKey, variantName);
-            additionalDeps.stream().map(CatalogDrivenExportCustomizer::toMvnGav).forEach(dependencies::add);
+            additionalDeps.stream()
+                    .map(CatalogDrivenExportCustomizer::toJBangDependency)
+                    .forEach(dependencies::add);
 
             // 3. Find bean-name config entries and resolve bean GAVs
             catalog.getFactoryMetadata(factoryTypeKey).ifPresent(metadata -> {
@@ -84,13 +89,13 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
                                     // Add bean GAVs
                                     Collection<String> beanGavs = catalog.getBeanGavs(kind);
                                     beanGavs.stream()
-                                            .map(CatalogDrivenExportCustomizer::toMvnGav)
+                                            .map(CatalogDrivenExportCustomizer::toJBangDependency)
                                             .forEach(dependencies::add);
 
                                     // Add bean runtime dependencies for this variant
                                     List<String> beanDeps = catalog.getBeanRuntimeDependencies(kind, variantName);
                                     beanDeps.stream()
-                                            .map(CatalogDrivenExportCustomizer::toMvnGav)
+                                            .map(CatalogDrivenExportCustomizer::toJBangDependency)
                                             .forEach(dependencies::add);
                                 }
                             }
@@ -114,7 +119,7 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
                     List<String> conditionalDeps =
                             catalog.getConditionalRuntimeDependencies(factoryTypeKey, group.getId(), variantName);
                     conditionalDeps.stream()
-                            .map(CatalogDrivenExportCustomizer::toMvnGav)
+                            .map(CatalogDrivenExportCustomizer::toJBangDependency)
                             .forEach(dependencies::add);
                 }
             }
@@ -137,13 +142,13 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
                 continue;
             }
             if (bean.getGav() != null && !bean.getGav().isBlank()) {
-                dependencies.add(toMvnGav(bean.getGav()));
+                dependencies.add(toJBangDependency(bean.getGav()));
             }
             if (bean.getRuntimeDependencies() != null) {
                 List<String> beanDependencies = bean.getRuntimeDependencies().get(variantName);
                 if (beanDependencies != null) {
                     beanDependencies.stream()
-                            .map(CatalogDrivenExportCustomizer::toMvnGav)
+                            .map(CatalogDrivenExportCustomizer::toJBangDependency)
                             .forEach(dependencies::add);
                 }
             }
@@ -227,15 +232,35 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
     }
 
     /**
-     * Ensures a GAV string has the "mvn:" prefix required by Camel JBang.
-     * Catalog GAVs are stored as "groupId:artifactId:version", but Camel JBang
-     * expects "mvn:groupId:artifactId:version".
+     * Converts a catalog GAV to the dependency form Camel JBang expects.
+     * <p>
+     * Catalog GAVs are stored as "groupId:artifactId[:version]", and Camel JBang expects them with the "mvn:"
+     * prefix, except for the Camel Quarkus extensions that {@link #toCamelComponent(String)} recognises.
      */
-    private static String toMvnGav(String gav) {
+    static String toJBangDependency(String gav) {
         if (gav == null) {
             return null;
         }
-        return gav.startsWith("mvn:") ? gav : "mvn:" + gav;
+        String rawGav = gav.startsWith(MVN_PREFIX) ? gav.substring(MVN_PREFIX.length()) : gav;
+        return toCamelComponent(rawGav).orElse(MVN_PREFIX + rawGav);
+    }
+
+    /**
+     * Returns the "camel:" form of a Camel Quarkus extension without a version (e.g. "camel:sql" for
+     * "org.apache.camel.quarkus:camel-quarkus-sql"), or empty for any other GAV.
+     * <p>
+     * Camel JBang declares the components a route uses in that form and maps them to the Camel Quarkus
+     * extensions on export, so the same extension would otherwise be declared twice in the generated pom.xml.
+     */
+    private static Optional<String> toCamelComponent(String rawGav) {
+        if (!rawGav.startsWith(CAMEL_QUARKUS_EXTENSION_PREFIX)) {
+            return Optional.empty();
+        }
+        String component = rawGav.substring(CAMEL_QUARKUS_EXTENSION_PREFIX.length());
+        if (component.isEmpty() || component.indexOf(':') >= 0) {
+            return Optional.empty();
+        }
+        return Optional.of("camel:" + component);
     }
 
     /**

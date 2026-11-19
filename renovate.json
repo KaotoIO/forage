@@ -3,8 +3,9 @@
   "extends": [
     "github>KaotoIO/renovate-config"
   ],
-  "baseBranchPatterns": ["main", "camel-4.18.x"],
+  "baseBranchPatterns": ["main", "camel-4.18.x", "camel-latest"],
   "schedule": ["before 6am on monday"],
+  "osvVulnerabilityAlerts": true,
   "packageRules": [
     {
       "description": "Camel, and everything version-paired with it (Quarkus, Spring Boot/Framework, CXF, langchain4j), is bumped manually alongside camel.version as part of the Camel-version alignment process — see CLAUDE.md's Branching and Versioning Strategy",
@@ -21,6 +22,12 @@
         "io.quarkiverse.cxf:*"
       ],
       "enabled": false
+    },
+    {
+      "description": "camel-latest is reset to main's tree on every Camel release, so routine bumps there would be overwritten: they wait for approval on the Dependency Dashboard. Security fixes still open PRs right away, because vulnerability rules force dependencyDashboardApproval off.",
+      "matchBaseBranches": ["camel-latest"],
+      "matchPackageNames": ["*"],
+      "dependencyDashboardApproval": true
     }
   ]
 }

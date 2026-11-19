@@ -29,6 +29,12 @@
       "matchBaseBranches": ["camel-latest"],
       "matchPackageNames": ["*"],
       "dependencyDashboardApproval": true
+    },
+    {
+      "description": "camel-4.18.x is the maintenance branch for the previous Camel LTS: patch and minor updates only, no major upgrades",
+      "matchBaseBranches": ["camel-4.18.x"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     }
   ]
 }

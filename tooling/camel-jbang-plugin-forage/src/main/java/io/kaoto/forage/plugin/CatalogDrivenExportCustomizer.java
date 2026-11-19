@@ -2,6 +2,7 @@ package io.kaoto.forage.plugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -26,8 +27,18 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
     private static final String FORAGE_PREFIX = "forage.";
     private static final String FORAGE_GAV_PREFIX = "mvn:io.kaoto.forage:";
 
+    private final QuarkusConfigExport.Result quarkusExport;
     private Map<String, Map<String, List<String>>> scannedProperties;
     private Boolean enabled;
+
+    public CatalogDrivenExportCustomizer() {
+        this(null);
+    }
+
+    /** @param quarkusExport what the Quarkus export translated, or {@code null} to translate the project directory */
+    CatalogDrivenExportCustomizer(QuarkusConfigExport.Result quarkusExport) {
+        this.quarkusExport = quarkusExport;
+    }
 
     @Override
     public boolean isEnabled() {
@@ -44,7 +55,10 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
         Map<String, Map<String, List<String>>> properties = getScannedProperties();
 
         String variantName = mapRuntimeToVariant(runtime);
-        QuarkusConfigExport.Result quarkusExport = runtime == RuntimeType.QUARKUS ? quarkusConfigExport() : null;
+        // ForagePlugin passes what the run or the export translated (see ForagePlugin.dependencies)
+        QuarkusConfigExport.Result quarkusExport = runtime != RuntimeType.QUARKUS
+                ? null
+                : this.quarkusExport != null ? this.quarkusExport : quarkusConfigExport();
         Set<String> quarkusModules = quarkusExport != null ? quarkusExport.modules() : Set.of();
 
         for (String factoryTypeKey : properties.keySet()) {
@@ -214,7 +228,7 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
     private static QuarkusConfigExport.Result quarkusConfigExport() {
         try {
             return QuarkusConfigExport.translate(
-                    QuarkusConfigExport.load(workingDir().toPath()));
+                    QuarkusConfigExport.load(workingDir().toPath(), StandardCharsets.ISO_8859_1));
         } catch (IOException e) {
             LOG.warn("Failed to read forage properties: {}", e.getMessage());
             return null;

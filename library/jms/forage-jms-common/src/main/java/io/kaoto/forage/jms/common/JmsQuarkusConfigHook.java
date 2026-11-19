@@ -40,11 +40,13 @@ public final class JmsQuarkusConfigHook implements QuarkusConfigHook<ConnectionF
 
     @Override
     public Set<String> adjust(ConnectionFactoryConfig config, Map<String, String> translated) {
-        // pooling is on by default: quarkus-pooled-jms must be added, or its keys dropped
+        // pooling is on by default: quarkus-pooled-jms must be added
         if (config.poolEnabled()) {
             return Set.of(POOL_GROUP);
         }
+        // switched off explicitly: quarkus-pooled-jms may still come from another dependency
         translated.keySet().removeIf(key -> key.startsWith("quarkus.pooled-jms."));
+        translated.put("quarkus.pooled-jms.pooling.enabled", "false");
         return Set.of();
     }
 }

@@ -24,7 +24,12 @@ public final class ExportHelper {
     }
 
     public static Stream<ExportCustomizer> getAllCustomizers() {
-        return Stream.of(new CatalogDrivenExportCustomizer());
+        return getAllCustomizers(null);
+    }
+
+    /** @param quarkusExport what the Quarkus export translated, or {@code null} */
+    static Stream<ExportCustomizer> getAllCustomizers(QuarkusConfigExport.Result quarkusExport) {
+        return Stream.of(new CatalogDrivenExportCustomizer(quarkusExport));
     }
 
     /**

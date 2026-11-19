@@ -27,4 +27,10 @@ public final class JdbcQuarkusConfigHook implements QuarkusConfigHook<DataSource
                 "pool.leak.timeout.minutes",
                 "properties.");
     }
+
+    @Override
+    public Set<String> dependencyKeys() {
+        // the JDBC driver is added for the Forage db.kind
+        return Set.of("db-kind");
+    }
 }

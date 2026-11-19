@@ -23,6 +23,14 @@ public interface QuarkusConfigHook<C extends Config> {
         return null;
     }
 
+    /**
+     * The translated keys ({@code x} matches keys ending with {@code .x}) the module's dependencies are chosen from.
+     * When {@code application.properties} sets one to another value, the configuration stays forage.*.
+     */
+    default Set<String> dependencyKeys() {
+        return Set.of();
+    }
+
     /** Adjusts the translated properties and returns the catalog groups they enable. */
     default Set<String> adjust(C config, Map<String, String> translated) {
         return Set.of();

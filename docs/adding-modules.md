@@ -500,7 +500,9 @@ On `camel export --runtime=quarkus`, a module is written as `quarkus.*` properti
 Without one the module stays `forage.*`. The keys come from `descriptor().translateProperties`; return a reason from
 `unsupported(name, config)` to keep a configuration on `forage.*`, and use `adjust` to tweak keys or enable catalog
 groups. `covered()` must list every key `translateProperties` fully covers: any other key present keeps the whole
-module on `forage.*`, so the export never drops configuration. See `JdbcQuarkusConfigHook` and `JmsQuarkusConfigHook`.
+module on `forage.*`, so the export never drops configuration. List in `dependencyKeys()` the translated keys the
+module's dependencies follow (JDBC: `db-kind`): a different `quarkus.*` value in `application.properties` keeps the
+configuration on `forage.*`. See `JdbcQuarkusConfigHook` and `JmsQuarkusConfigHook`.
 
 ---
 

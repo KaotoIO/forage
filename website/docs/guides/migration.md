@@ -10,7 +10,11 @@ This guide covers both version-to-version upgrade notes and migrating from frame
 
 #### Quarkus export writes JDBC and JMS configuration as Quarkus properties
 
-`camel export --runtime=quarkus` now writes plain JDBC datasources and the default Artemis connection factory as `quarkus.*` properties, without the Forage artifacts. For these configurations, `FORAGE_*` / `-Dforage.*` values set at export or at runtime are no longer read: use the `QUARKUS_*` names the export prints. JMS pooling (on by default) adds `quarkus-pooled-jms`. A module is translated only when every one of its `forage.*` keys has a Quarkus translation; otherwise it stays `forage.*` with the Forage artifacts, and the export names the keys that blocked it.
+`camel export --runtime=quarkus` now writes plain JDBC datasources and the default Artemis connection factory as `quarkus.*` properties, without the Forage artifacts. A module is translated only when every one of its `forage.*` keys has a Quarkus translation; otherwise it stays `forage.*` and the export names the blocking keys. For translated configurations, `FORAGE_*` / `-Dforage.*` values and Forage files outside the exported project are no longer read: use the `QUARKUS_*` names the export prints. JMS pooling off writes `quarkus.pooled-jms.pooling.enabled=false`.
+
+The export fails instead of changing a value: an empty JDBC/JMS value or one with `${`, `$$` or `\$` (Quarkus reads them differently), in any `%profile`; a `forage.*` value in `application.properties` or `--property` that Camel JBang writes differently (backslash, leading space, line break, blank value: set it in the module's `forage-*.properties` file); a `forage.*` key in `application-<profile>.properties` (not supported: use `%<profile>.forage.*` in `application.properties`); an export that reuses earlier run data (use `--fresh`).
+
+Known limitations, as before: the exported `pom.xml` can list a Camel Quarkus extension twice when the route uses a component Forage also adds (e.g. `camel-quarkus-sql`), remove the duplicate; a `camel export` that does not list the module files does not ship `forage-*.properties`. Forage reads property files as ISO-8859-1: write non-ASCII characters as `\uXXXX` to get the same value everywhere.
 
 ---
 

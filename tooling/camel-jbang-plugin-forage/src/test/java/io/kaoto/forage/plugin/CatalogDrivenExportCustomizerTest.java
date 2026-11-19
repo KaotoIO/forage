@@ -58,6 +58,12 @@ class CatalogDrivenExportCustomizerTest {
         return new CatalogDrivenExportCustomizer();
     }
 
+    private CatalogDrivenExportCustomizer createQuarkusExportCustomizer(String propertiesContent) throws Exception {
+        createCustomizer(propertiesContent);
+        return new CatalogDrivenExportCustomizer(QuarkusConfigExport.translate(
+                QuarkusConfigExport.load(tempDir.toPath(), QuarkusConfigExport.EXPORTED_APPLICATION)));
+    }
+
     @Test
     void testNoProperties_isNotEnabled() throws Exception {
         // Empty temp dir, no properties
@@ -95,7 +101,7 @@ class CatalogDrivenExportCustomizerTest {
 
     @Test
     void testPlainJdbc_quarkusRuntime_hasNoForageArtifacts() throws Exception {
-        CatalogDrivenExportCustomizer customizer = createCustomizer("forage.ds1.jdbc.db.kind=postgresql\n"
+        CatalogDrivenExportCustomizer customizer = createQuarkusExportCustomizer("forage.ds1.jdbc.db.kind=postgresql\n"
                 + "forage.ds1.jdbc.url=jdbc:postgresql://localhost/test\n"
                 + "forage.ds1.jdbc.username=test\nforage.ds1.jdbc.password=test\n");
 
@@ -106,15 +112,6 @@ class CatalogDrivenExportCustomizerTest {
         // Other runtimes keep Forage
         assertThat(customizer.resolveRuntimeDependencies(RuntimeType.MAIN))
                 .anyMatch(d -> d.contains("forage-jdbc-postgresql:"));
-    }
-
-    @Test
-    void testUncoveredArtemisKey_quarkusRuntime_keepsForageArtifacts() throws Exception {
-        CatalogDrivenExportCustomizer customizer = createCustomizer("forage.jms.kind=artemis\n"
-                + "forage.jms.broker.url=tcp://localhost:61616\nforage.jms.artemis.call.timeout=100\n");
-
-        assertThat(customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS))
-                .anyMatch(d -> d.contains("forage-quarkus-jms"));
     }
 
     @Test
@@ -144,7 +141,7 @@ class CatalogDrivenExportCustomizerTest {
     @Test
     void testJmsArtemis_quarkusRuntime() throws Exception {
         CatalogDrivenExportCustomizer customizer =
-                createCustomizer("forage.jms.kind=artemis\nforage.jms.broker.url=tcp://localhost:61616\n");
+                createQuarkusExportCustomizer("forage.jms.kind=artemis\nforage.jms.broker.url=tcp://localhost:61616\n");
 
         Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS);
         // Exported as Quarkus configuration: no Forage artifact

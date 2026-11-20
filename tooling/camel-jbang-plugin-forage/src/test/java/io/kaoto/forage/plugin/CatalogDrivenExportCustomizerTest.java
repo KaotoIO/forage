@@ -58,6 +58,12 @@ class CatalogDrivenExportCustomizerTest {
         return new CatalogDrivenExportCustomizer();
     }
 
+    private CatalogDrivenExportCustomizer createQuarkusExportCustomizer(String propertiesContent) throws Exception {
+        createCustomizer(propertiesContent);
+        return new CatalogDrivenExportCustomizer(QuarkusConfigExport.translate(
+                QuarkusConfigExport.load(tempDir.toPath(), QuarkusConfigExport.EXPORTED_APPLICATION)));
+    }
+
     @Test
     void testNoProperties_isNotEnabled() throws Exception {
         // Empty temp dir, no properties
@@ -94,6 +100,21 @@ class CatalogDrivenExportCustomizerTest {
     }
 
     @Test
+    void testPlainJdbc_quarkusRuntime_hasNoForageArtifacts() throws Exception {
+        CatalogDrivenExportCustomizer customizer = createQuarkusExportCustomizer("forage.ds1.jdbc.db.kind=postgresql\n"
+                + "forage.ds1.jdbc.url=jdbc:postgresql://localhost/test\n"
+                + "forage.ds1.jdbc.username=test\nforage.ds1.jdbc.password=test\n");
+
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS);
+        assertThat(deps).noneMatch(d -> d.startsWith("mvn:io.kaoto.forage:"));
+        assertThat(deps).anyMatch(d -> d.contains("camel-quarkus-jdbc"));
+        assertThat(deps).anyMatch(d -> d.contains("quarkus-jdbc-postgresql"));
+        // Other runtimes keep Forage
+        assertThat(customizer.resolveRuntimeDependencies(RuntimeType.MAIN))
+                .anyMatch(d -> d.contains("forage-jdbc-postgresql:"));
+    }
+
+    @Test
     void testJdbcWithTransaction_quarkusRuntime() throws Exception {
         CatalogDrivenExportCustomizer customizer =
                 createCustomizer("forage.jdbc.db.kind=postgresql\nforage.jdbc.url=jdbc:postgresql://localhost/test\n"
@@ -102,6 +123,8 @@ class CatalogDrivenExportCustomizerTest {
         Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS);
         // Should include narayana-jta for quarkus transactions
         assertThat(deps).anyMatch(d -> d.contains("quarkus-narayana-jta"));
+        // Transactions need the Forage extension
+        assertThat(deps).anyMatch(d -> d.contains("forage-quarkus-jdbc"));
     }
 
     @Test
@@ -118,11 +141,13 @@ class CatalogDrivenExportCustomizerTest {
     @Test
     void testJmsArtemis_quarkusRuntime() throws Exception {
         CatalogDrivenExportCustomizer customizer =
-                createCustomizer("forage.jms.kind=artemis\nforage.jms.broker.url=tcp://localhost:61616\n");
+                createQuarkusExportCustomizer("forage.jms.kind=artemis\nforage.jms.broker.url=tcp://localhost:61616\n");
 
         Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS);
-        // Should include quarkus JMS variant GAV
-        assertThat(deps).anyMatch(d -> d.contains("forage-quarkus-jms"));
+        // Exported as Quarkus configuration: no Forage artifact
+        assertThat(deps).noneMatch(d -> d.startsWith("mvn:io.kaoto.forage:"));
+        // Pooling is on by default
+        assertThat(deps).anyMatch(d -> d.contains("quarkus-pooled-jms"));
         // Should include camel-quarkus-jms (additional dependency)
         assertThat(deps).anyMatch(d -> d.contains("camel-quarkus-jms"));
         // Should include quarkus-artemis-jms (bean runtime dependency)

@@ -112,7 +112,7 @@ After the plugin reload completes, Camel proceeds to reload routes, which pick u
 
 ## Exporting to Production
 
-Export your project to Spring Boot or Quarkus with all Forage dependencies included:
+Export your project to Spring Boot or Quarkus with the Forage dependencies it needs:
 
 === "Spring Boot"
 
@@ -125,6 +125,8 @@ Export your project to Spring Boot or Quarkus with all Forage dependencies inclu
     ```bash
     camel export --runtime=quarkus --directory=./my-app
     ```
+
+On Quarkus, plain JDBC datasources and the default Artemis connection factory are written at export time as `quarkus.*` properties to `application.properties`, and their Forage artifacts are left out. Override them with the `QUARKUS_*` names the export prints. Other modules and configurations keep `forage.*` and the Forage extension.
 
 ## Testing Connections
 

@@ -1,0 +1,18 @@
+- route:
+    id: translated-route
+    from:
+      id: translated-timer
+      uri: timer
+      parameters:
+        period: "1000"
+        timerName: translated
+      steps:
+        - to:
+            id: translated-sql
+            uri: sql
+            parameters:
+              dataSource: "#ds1"
+              query: select * from bar
+        - log:
+            id: translated-log
+            message: from translated ds1 - ${body}

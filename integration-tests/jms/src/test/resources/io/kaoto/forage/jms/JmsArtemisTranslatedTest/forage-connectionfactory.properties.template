@@ -1,0 +1,7 @@
+# Default Artemis connection factory without transactions: on Quarkus, the export translates all its properties to
+# quarkus.artemis.* and quarkus.pooled-jms.*
+forage.jms.kind=artemis
+forage.jms.broker.url=tcp://localhost:61616  # Overridden by test with testcontainer URL
+forage.jms.username=artemis
+forage.jms.password=artemis
+forage.jms.pool.max.connections=5

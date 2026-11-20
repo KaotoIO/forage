@@ -32,7 +32,7 @@ For cloud-native deployments with fast startup and low memory. Export your proje
 camel export --runtime=quarkus --directory=./my-app
 ```
 
-Forage provides Quarkus deployment extensions that process configuration at build time. This enables GraalVM native compilation for minimal container images.
+Forage provides Quarkus extensions: a config source translates Forage properties to Quarkus configuration whenever Quarkus loads its configuration (at build time and again when the application starts), and deployment processors register the beans at build time. This enables GraalVM native compilation for minimal container images.
 
 ## Same Configuration, Every Runtime
 
@@ -102,7 +102,7 @@ While the configuration is the same, there are a few runtime-specific behaviors 
 | Property placeholders | `{{env:KEY}}` + `{{secret:...}}`, vaults | `{{env:KEY}}` + `{{secret:...}}`, vaults + `${KEY}` | `{{env:KEY}}` + `${KEY}` |
 {% endraw %}
 
-In Spring Boot, Forage properties are available through Spring's `@Value` and `@ConditionalOnProperty` annotations. In Quarkus, Forage properties are translated to Quarkus-native configuration at build time.
+In Spring Boot, Forage properties are available through Spring's `@Value` and `@ConditionalOnProperty` annotations. In Quarkus, the Forage extension translates Forage properties to Quarkus configuration at build time and again when the application starts. With `camel export --runtime=quarkus`, plain JDBC datasources and the default Artemis connection factory are translated at export time instead, into `quarkus.*` properties without the Forage artifacts, but only when every `forage.*` key of the module has a Quarkus translation.
 
 For most use cases, you don't need to think about these differences — Forage handles the integration transparently.
 

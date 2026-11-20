@@ -59,7 +59,7 @@ Runtime adapters bridge Forage with each Camel runtime:
 
 - **Camel JBang** — The `camel-jbang-plugin-forage` plugin handles dependency resolution and property validation
 - **Spring Boot** — Auto-configuration classes discover Forage properties and register beans as Spring beans
-- **Quarkus** — Build-time processors translate Forage properties to Quarkus-native configuration
+- **Quarkus** — A config source translates Forage properties to Quarkus configuration (at build time and again at application start); build-time processors register the beans
 
 The same properties files work across all three runtimes — only the dependencies change.
 

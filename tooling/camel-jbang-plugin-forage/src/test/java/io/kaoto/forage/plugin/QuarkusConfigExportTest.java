@@ -13,6 +13,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import io.kaoto.forage.core.util.config.ConfigStore;
 import io.smallrye.config.PropertiesConfigSource;
 import io.smallrye.config.SmallRyeConfigBuilder;
@@ -23,7 +24,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class QuarkusConfigExportTest {
 
@@ -98,35 +98,82 @@ class QuarkusConfigExportTest {
         assertThat(result.messages()).singleElement().asString().contains("stays as forage.*", reason);
     }
 
-    /** Quarkus reads empty values as not set and expands ${, $$ and \$: translated or not, in any profile. */
+    /**
+     * Copied as they are: Quarkus reads an empty value as not set and expands ${, $$ and \\$, as it reads the Forage
+     * values of an export without translation.
+     */
     @ParameterizedTest
     @CsvSource(
             delimiter = '|',
             value = {
-                "forage.ds1.jdbc.properties.ssl= | empty value of forage.ds1.jdbc.properties.ssl ",
-                "forage.ds1.jdbc.transaction.enabled=true;forage.ds1.jdbc.username= | empty value of forage.ds1.jdbc.username ",
-                "%dev.forage.ds1.jdbc.url=ok;%prod.forage.ds1.jdbc.url= | empty value of %prod.forage.ds1.jdbc.url ",
-                "forage.jms.kind=artemis;forage.jms.password= | empty value of forage.jms.password ",
-                "forage.ds1.jdbc.url=x${user.home}y | read forage.ds1.jdbc.url differently",
-                "forage.ds1.jdbc.transaction.enabled=true;forage.ds1.jdbc.url=a$$b | read forage.ds1.jdbc.url differently",
-                "forage.ds1.jdbc.url=a\\\\$b | read forage.ds1.jdbc.url differently",
-                "%prod.forage.ds1.jdbc.url=ok;%dev,test.forage.ds1.jdbc.url=${x} | read %dev,test.forage.ds1.jdbc.url differently",
-                "forage.mq1.jms.kind=artemis;forage.mq1.jms.password=${x} | read forage.mq1.jms.password differently"
+                "forage.ds1.jdbc.properties.ssl= | quarkus.datasource.\"ds1\".jdbc.additional-jdbc-properties.\"ssl\" | ''",
+                "forage.ds1.jdbc.url=x${x:dflt}y | quarkus.datasource.\"ds1\".jdbc.url | x${x:dflt}y",
+                "forage.ds1.jdbc.url=a$$b | quarkus.datasource.\"ds1\".jdbc.url | a$$b",
+                "forage.ds1.jdbc.url=a\\\\$b | quarkus.datasource.\"ds1\".jdbc.url | a\\$b",
+                "@forage.jms.kind=artemis;forage.jms.broker.url=${x};forage.jms.password= | quarkus.artemis.url | ${x}"
             })
-    void failsOnValuesQuarkusReadsDifferently(String lines, String message) {
-        assertThatThrownBy(() -> translate(DS1 + lines.replace(";", "\n")))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining(message);
+    void translatesEmptyAndExpressionValues(String lines, String key, String value) {
+        String application = lines.startsWith("@") ? lines.substring(1) : DS1 + lines;
+        QuarkusConfigExport.Result result = translate(application.replace(";", "\n"));
+
+        assertThat(result.properties()).containsEntry(key, value);
     }
 
+    /** The JDBC translation leaves an empty password out: not set, as Quarkus reads the empty value. */
     @Test
-    void failsOnAForageValueOfAProfileFile() throws IOException {
-        Files.writeString(dir.resolve("application-prod.properties"), "forage.ds1.jdbc.url=x\n");
+    void translatesAnEmptyPassword() {
+        QuarkusConfigExport.Result result = translate(DS1.replace("password=secret", "password="));
 
-        assertThatThrownBy(() -> exported(dir))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("forage.* keys in application-prod.properties: move [forage.ds1.jdbc.url] to"
-                        + " application.properties with a %prod. prefix");
+        assertThat(result.modules()).containsExactly("jdbc");
+        assertThat(result.properties()).doesNotContainKey("quarkus.datasource.\"ds1\".password");
+    }
+
+    /** Values that would be translated do not change a module that stays forage.* (e.g. an XA datasource). */
+    @ParameterizedTest
+    @CsvSource(
+            delimiter = '|',
+            value = {
+                "forage.ds1.jdbc.transaction.enabled=true;forage.ds1.jdbc.username= | ds1' uses forage.ds1.jdbc.transaction",
+                "forage.ds1.jdbc.transaction.enabled=true;forage.ds1.jdbc.url=a$$b | ds1' uses forage.ds1.jdbc.transaction",
+                "%dev.forage.ds1.jdbc.url=ok;%prod.forage.ds1.jdbc.url= | profile-specific",
+                "%prod.forage.ds1.jdbc.url=ok;%dev,test.forage.ds1.jdbc.url=${x} | profile-specific",
+                "forage.mq1.jms.kind=artemis;forage.mq1.jms.password=${x} | named configurations"
+            })
+    void keepsModuleWithSuchValuesOnForage(String lines, String reason) {
+        QuarkusConfigExport.Result result = translate(DS1 + lines.replace(";", "\n"));
+
+        assertThat(result.messages()).anySatisfy(m -> assertThat(m).contains("stays as forage.*", reason));
+    }
+
+    /** As %profile. keys: the module of a forage.* key in application-<profile>.properties stays forage.*. */
+    @Test
+    void keepsModuleOfAProfileFileOnForage() throws IOException {
+        Files.writeString(dir.resolve(MODULE), DS1);
+        Files.writeString(dir.resolve("application-dev.properties"), "forage.ds1.jdbc.url=jdbc:h2:mem:dev\n");
+        Files.writeString(dir.resolve("application-prod.properties"), "forage.jms.broker.url=x\n");
+
+        QuarkusConfigExport.Result result = QuarkusConfigExport.translate(exported(dir));
+
+        assertThat(result.modules()).isEmpty();
+        assertThat(result.properties()).isEmpty();
+        assertThat(result.messages())
+                .singleElement()
+                .asString()
+                .contains("jdbc stays as forage.*", "profile-specific values in application-dev.properties");
+    }
+
+    /** Only the files the export ships: not a profile or module file left in the project directory. */
+    @Test
+    void readsOnlyTheGivenFiles() throws IOException {
+        Files.writeString(dir.resolve("application.properties"), DS1);
+        Files.writeString(dir.resolve(MODULE), "forage.ds1.jdbc.transaction.enabled=true\n");
+        Files.writeString(dir.resolve("application-dev.properties"), "forage.ds1.jdbc.url=jdbc:h2:mem:dev\n");
+
+        QuarkusConfigExport.Project project =
+                QuarkusConfigExport.load(dir, QuarkusConfigExport.EXPORTED_APPLICATION, Set.of());
+
+        assertThat(project.files()).isEmpty();
+        assertThat(QuarkusConfigExport.translate(project).modules()).containsExactly("jdbc");
     }
 
     /** application.properties wins over the module file; user keys stay; other files are not Forage's. */
@@ -194,6 +241,20 @@ class QuarkusConfigExportTest {
         assertThat(application.stringPropertyNames()).noneMatch(key -> key.startsWith("forage."));
         assertThat(Files.readString(dir.resolve("application.properties"), StandardCharsets.US_ASCII))
                 .isEqualTo(Files.readString(dir.resolve("application.properties"), StandardCharsets.UTF_8));
+    }
+
+    /** Empty and expression values are written as they are; Quarkus expands them as without translation. */
+    @Test
+    void writeKeepsEmptyAndExpressionValues() throws IOException {
+        Files.writeString(
+                dir.resolve("application.properties"),
+                DS1.replace("localhost", "${host:localhost}") + "forage.ds1.jdbc.properties.ssl=\n");
+
+        QuarkusConfigExport.write(QuarkusConfigExport.translate(exported(dir)), dir);
+
+        assertThat(read(dir.resolve("application.properties")))
+                .containsEntry("quarkus.datasource.\"ds1\".jdbc.url", "jdbc:postgresql://${host:localhost}:5432/db")
+                .containsEntry("quarkus.datasource.\"ds1\".jdbc.additional-jdbc-properties.\"ssl\"", "");
     }
 
     /**

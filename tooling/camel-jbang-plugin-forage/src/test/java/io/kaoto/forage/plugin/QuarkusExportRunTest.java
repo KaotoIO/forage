@@ -28,7 +28,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * {@code camel export --runtime=quarkus}: the silent run translates the project directory with the {@code --property}
  * values, Camel JBang writes the exported {@code application.properties} without escaping, then the export call writes
- * the translation. Every value is either kept exactly or the export fails.
+ * the translation. The exported app reads every value as an export from {@code main} (without translation), or the
+ * export fails.
  */
 class QuarkusExportRunTest {
 
@@ -41,7 +42,7 @@ class QuarkusExportRunTest {
             forage.ds1.jdbc.url=jdbc:postgresql://localhost:5432/db
             forage.ds1.jdbc.username=test
             """;
-    /** Keeps the datasource on forage.* */
+    /** Keeps the datasource on forage.* (an XA datasource) */
     private static final String TRANSACTIONS = "forage.ds1.jdbc.transaction.enabled=true\n";
 
     @TempDir
@@ -49,6 +50,10 @@ class QuarkusExportRunTest {
 
     @TempDir
     Path resources;
+
+    /** The exported resources before the export call: what an export from {@code main} ships. */
+    @TempDir
+    Path main;
 
     @BeforeEach
     void setUp() {
@@ -66,17 +71,19 @@ class QuarkusExportRunTest {
     /**
      * The value (as written in a properties file) in application.properties, with --property or in the module file
      * ({@code app}, {@code prop}, {@code file}), translated or kept on forage.* ({@code -forage}): the exported app
-     * reads the very value, or the export fails in the listed modes.
+     * reads the value an export from {@code main} reads, or the export fails in the listed modes.
      */
     @ParameterizedTest(name = "{0}")
     @CsvSource(
             delimiter = '|',
             value = {
-                "a\\\\b | app,prop,app-forage,prop-forage | without escaping",
-                // Camel JBang drops blank values
-                "'\\ ' | app,prop,app-forage,prop-forage | without escaping",
-                "'' | app,prop,file,app-forage,prop-forage,file-forage | reads the empty value of " + PASSWORD,
-                "x${user.home}y | app,prop,file,app-forage,prop-forage,file-forage | Quarkus would read " + PASSWORD,
+                "a\\\\b | app,prop | without escaping",
+                // Camel JBang drops blank values: the exported app does not read them
+                "'\\ ' | | ",
+                "'' | | ",
+                "x${user.home}y | | ",
+                "x${x:dflt}y | | ",
+                "a$$b | | ",
                 "päss | | ",
                 "'a=b:c #x! $y ' | | "
             })
@@ -106,26 +113,27 @@ class QuarkusExportRunTest {
                         .hasMessageContaining(message);
             } else {
                 runAndExport(runProperties);
-                assertThat(exportedReads(null)).as(mode).isEqualTo(value);
+                assertThat(reads(resources, null)).as(mode).isEqualTo(reads(main, null));
                 if (!forage) {
                     assertThat(QuarkusConfigExportTest.read(resources.resolve("application.properties")))
                             .doesNotContainKey(PASSWORD);
+                } else {
+                    assertSameAsMain();
                 }
             }
             assertThat(System.getProperty(ForagePlugin.RUN_PROPERTIES_KEY)).isNull();
         }
     }
 
-    /** Each profile value is compared on its own: a --property value Camel JBang changes fails the export. */
+    /** A profile value keeps the module on forage.*: the export is the one of {@code main}, as Camel JBang wrote it. */
     @Test
-    void failsOnAProfileValueItCannotKeep() throws IOException {
+    void exportsAProfileValueAsMain() throws IOException {
         Files.writeString(project.resolve(MODULE), DS1 + PASSWORD + "=base\n");
         Files.writeString(project.resolve("application.properties"), "%dev." + PASSWORD + "=ok\n");
-        Properties runProperties = properties("%prod." + PASSWORD + "=a\\\\b");
 
-        assertThatThrownBy(() -> runAndExport(runProperties))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("changes %prod." + PASSWORD + ": expected 'a\\b', found 'ab'");
+        runAndExport(properties("%prod." + PASSWORD + "=a\\\\b"));
+
+        assertSameAsMain();
     }
 
     /** Profile values keep the datasource on forage.*: every profile of the exported app reads the Forage value. */
@@ -147,7 +155,7 @@ class QuarkusExportRunTest {
         runAndExport(runProperties);
 
         for (String profile : List.of("dev", "test", "prod", "custom")) {
-            assertThat(exportedReads(profile))
+            assertThat(reads(resources, profile))
                     .as(profile)
                     .isEqualTo(expected.getProperty("%" + profile + "." + PASSWORD, "base"));
         }
@@ -175,6 +183,62 @@ class QuarkusExportRunTest {
                 .containsEntry("quarkus.pooled-jms.pooling.enabled", "false")
                 .containsEntry("quarkus.artemis.url", "tcp://localhost:61616")
                 .doesNotContainKey("forage.jms.pool.enabled");
+    }
+
+    /** The empty H2 password of the JDBC test plan: translated, Quarkus reads it as not set. */
+    @Test
+    void translatesAnEmptyPassword() throws IOException {
+        Files.writeString(
+                project.resolve(MODULE),
+                "forage.ds1.jdbc.db.kind=h2\nforage.ds1.jdbc.url=jdbc:h2:mem:db\nforage.ds1.jdbc.username=sa\n"
+                        + PASSWORD + "=\n");
+
+        runAndExport(new Properties());
+
+        // the JDBC translation leaves an empty password out: not set, as Quarkus reads the empty value
+        assertThat(QuarkusConfigExportTest.read(resources.resolve("application.properties")))
+                .doesNotContainKey(QUARKUS_PASSWORD)
+                .containsEntry("quarkus.datasource.\"ds1\".jdbc.url", "jdbc:h2:mem:db");
+        assertThat(resources.resolve(MODULE)).doesNotExist();
+        assertThat(reads(resources, null)).isEqualTo(reads(main, null)).isNull();
+    }
+
+    /**
+     * A forage.* key in a shipped application-<profile>.properties keeps the module on forage.*: the export is the one
+     * of {@code main}. A profile file the export does not ship is ignored.
+     */
+    @ParameterizedTest
+    @CsvSource({"true, ''", "false, quarkus.datasource.\"ds1\".jdbc.url"})
+    void keepsModuleOfAProfileFileOnForage(boolean shipped, String translatedKey) throws IOException {
+        Files.writeString(project.resolve(MODULE), DS1 + PASSWORD + "=secret\n");
+        Files.writeString(project.resolve("application-dev.properties"), "forage.ds1.jdbc.url=jdbc:h2:mem:dev\n");
+        if (shipped) {
+            Files.copy(project.resolve("application-dev.properties"), resources.resolve("application-dev.properties"));
+        }
+
+        runAndExport(new Properties());
+
+        if (shipped) {
+            assertSameAsMain();
+        } else {
+            assertThat(QuarkusConfigExportTest.read(resources.resolve("application.properties")))
+                    .containsKey(translatedKey);
+        }
+    }
+
+    /** A module file in the project directory that the export does not ship is not translated. */
+    @Test
+    void ignoresAModuleFileTheExportDoesNotShip() throws IOException {
+        Files.writeString(project.resolve(MODULE), DS1 + PASSWORD + "=secret\n");
+        Files.writeString(project.resolve("application.properties"), "camel.main.name=demo\n");
+
+        ForagePlugin.runStarted(new Properties());
+        ForagePlugin.dependencies(RuntimeType.QUARKUS, resources);
+        Files.writeString(resources.resolve("application.properties"), "camel.main.name=demo\n");
+        ForagePlugin.dependencies(RuntimeType.QUARKUS, resources);
+
+        assertThat(Files.readString(resources.resolve("application.properties")))
+                .isEqualTo("camel.main.name=demo\n");
     }
 
     @Test
@@ -212,7 +276,26 @@ class QuarkusExportRunTest {
             throw e;
         }
         camelExport(runProperties);
+        try (Stream<Path> files = Files.list(resources)) {
+            for (Path file : files.toList()) {
+                Files.copy(file, main.resolve(file.getFileName()));
+            }
+        }
         ForagePlugin.dependencies(RuntimeType.QUARKUS, resources);
+    }
+
+    /** The export call changed nothing: the exported resources are the ones of an export from {@code main}. */
+    private void assertSameAsMain() throws IOException {
+        try (Stream<Path> files = Files.list(main)) {
+            for (Path file : files.toList()) {
+                assertThat(resources.resolve(file.getFileName()))
+                        .as(file.getFileName().toString())
+                        .hasSameBinaryContentAs(file);
+            }
+        }
+        try (Stream<Path> files = Files.list(resources)) {
+            assertThat(files.count()).isEqualTo(Files.list(main).count());
+        }
     }
 
     /**
@@ -239,31 +322,33 @@ class QuarkusExportRunTest {
     }
 
     /**
-     * The password of the exported app as Quarkus reads it with a profile: SmallRye expands the exported
-     * application.properties, then the Forage keys (the module file as written).
+     * The password of the exported app as Quarkus reads it with a profile, from the translated key or the Forage key:
+     * SmallRye expands the exported application.properties, then the module file without its %profile keys (Forage's
+     * config source hands it to Quarkus). An empty value is not set.
      */
-    private String exportedReads(String profile) throws IOException {
+    private static String reads(Path exported, String profile) throws IOException {
+        Properties module = new Properties();
+        if (Files.exists(exported.resolve(MODULE))) {
+            try (InputStream in = Files.newInputStream(exported.resolve(MODULE))) {
+                module.load(in);
+            }
+            module.keySet().removeIf(key -> key.toString().startsWith("%"));
+        }
         SmallRyeConfigBuilder builder = new SmallRyeConfigBuilder()
                 .addDefaultInterceptors()
                 .withSources(new PropertiesConfigSource(
-                        QuarkusConfigExportTest.read(resources.resolve("application.properties")), "app", 250));
+                        QuarkusConfigExportTest.read(exported.resolve("application.properties")), "app", 250))
+                .withSources(new PropertiesConfigSource(module, "module", 200));
         SmallRyeConfig config = (profile == null ? builder : builder.withProfile(profile)).build();
         String value = config.getConfigValue(QUARKUS_PASSWORD).getValue();
-        if (value == null) {
+        if (value == null || value.isEmpty()) {
             value = config.getConfigValue(PASSWORD).getValue();
         }
-        if (value == null && Files.exists(resources.resolve(MODULE))) {
-            Properties module = new Properties();
-            try (InputStream in = Files.newInputStream(resources.resolve(MODULE))) {
-                module.load(in);
-            }
-            value = module.getProperty(PASSWORD);
-        }
-        return value;
+        return value == null || value.isEmpty() ? null : value;
     }
 
     private void clean() throws IOException {
-        for (Path dir : List.of(project, resources)) {
+        for (Path dir : List.of(project, resources, main)) {
             try (Stream<Path> files = Files.list(dir)) {
                 for (Path file : files.toList()) {
                     Files.delete(file);

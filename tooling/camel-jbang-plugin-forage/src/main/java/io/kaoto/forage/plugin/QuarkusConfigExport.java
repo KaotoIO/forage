@@ -34,9 +34,6 @@ import io.kaoto.forage.core.util.config.ConfigResolver;
 import io.kaoto.forage.core.util.config.ConfigStore;
 import io.kaoto.forage.core.util.config.MissingConfigException;
 import io.kaoto.forage.core.util.config.PropertyFileLocator;
-import io.smallrye.config.PropertiesConfigSource;
-import io.smallrye.config.SmallRyeConfig;
-import io.smallrye.config.SmallRyeConfigBuilder;
 
 /**
  * Translates, for {@code camel export --runtime=quarkus}, the Forage configurations that Quarkus extensions fully
@@ -44,7 +41,8 @@ import io.smallrye.config.SmallRyeConfigBuilder;
  *
  * <p>A module is translated all or nothing: if any of its configurations needs Forage at runtime (transactions,
  * auxiliary repositories, {@code {{...}}} placeholders, profile-specific values, ...), the whole module stays
- * {@code forage.*}. Modules opt in with a {@link QuarkusConfigHook}. A value the export cannot keep fails it.
+ * {@code forage.*}. Modules opt in with a {@link QuarkusConfigHook}. Values are copied as they are: Quarkus reads
+ * them as it reads the Forage values of an export without translation (empty as not set, {@code ${...}} expanded).
  */
 final class QuarkusConfigExport {
 
@@ -80,7 +78,7 @@ final class QuarkusConfigExport {
         }
     }
 
-    /** {@code application.properties}, and the other {@code *.properties} files by name. */
+    /** {@code application.properties}, and the other {@code *.properties} files (also profile files) by name. */
     record Project(Properties application, Map<String, Properties> files) {}
 
     /** The translation of the project, and the {@code forage.*} values of application.properties and --property. */
@@ -90,8 +88,33 @@ final class QuarkusConfigExport {
 
     /** Translates the project directory with the {@code --property} values, as the Forage runtime reads them. */
     static Run run(Path dir, Properties runProperties) throws IOException {
-        Project project = load(dir, StandardCharsets.ISO_8859_1);
+        return run(dir, runProperties, null);
+    }
+
+    /**
+     * As {@link #run(Path, Properties)}, for the exported resources (or {@code null}): reads only the files the export
+     * ships, and drops the blank {@code forage.*} values the exported {@code application.properties} does not hold.
+     */
+    static Run run(Path dir, Properties runProperties, Path resources) throws IOException {
+        Set<String> shipped = null;
+        if (resources != null) {
+            try (Stream<Path> files = Files.list(resources)) {
+                shipped = files.map(f -> f.getFileName().toString()).collect(Collectors.toSet());
+            }
+        }
+        Project project = load(dir, StandardCharsets.ISO_8859_1, shipped);
         project.application().putAll(runProperties);
+        if (resources != null) {
+            // Camel JBang drops blank values: the exported app does not read them
+            Path file = resources.resolve(APPLICATION);
+            Map<String, String> exported =
+                    forageValues(Files.exists(file) ? read(file, EXPORTED_APPLICATION) : new Properties());
+            forageValues(project.application()).forEach((key, value) -> {
+                if (value.isBlank() && !exported.containsKey(key)) {
+                    project.application().remove(key);
+                }
+            });
+        }
         return new Run(translate(project), forageValues(project.application()));
     }
 
@@ -111,8 +134,8 @@ final class QuarkusConfigExport {
     }
 
     /**
-     * Fails if the exported {@code application.properties} does not hold the {@code forage.*} values the run read:
-     * Camel JBang writes it without escaping and drops blank values.
+     * Fails if the exported {@code application.properties} does not hold the translated {@code forage.*} values the run
+     * read: Camel JBang writes it without escaping. Keys that stay {@code forage.*} are not checked: the export keeps them.
      */
     static void checkExported(Run run, Path resources) throws IOException {
         Path file = resources.resolve(APPLICATION);
@@ -120,13 +143,14 @@ final class QuarkusConfigExport {
                 forageValues(Files.exists(file) ? read(file, EXPORTED_APPLICATION) : new Properties());
         Set<String> keys = new TreeSet<>(run.application().keySet());
         keys.addAll(exported.keySet());
+        keys.retainAll(run.result().forageKeys());
         for (String key : keys) {
             String expected = run.application().get(key);
             String found = exported.get(key);
             if (!Objects.equals(expected, found)) {
                 throw new IllegalStateException("The exported " + APPLICATION + " changes " + key + ": expected "
                         + quote(expected) + ", found " + quote(found) + ". Camel JBang writes it without escaping"
-                        + " and drops blank values: change the value, or set it in the module's forage-*.properties"
+                        + ": change the value, or set it in the module's forage-*.properties"
                         + " file (copied as it is, without %profile keys) and pass that file to camel export.");
             }
         }
@@ -138,10 +162,14 @@ final class QuarkusConfigExport {
 
     /**
      * Loads the {@code *.properties} files of a directory as ISO-8859-1, as the Forage runtime reads them, except
-     * {@code application.properties} (Camel JBang exports it as UTF-8). Fails on a {@code forage.*} key in
-     * {@code application-<profile>.properties}: the export does not support them there.
+     * {@code application.properties} (Camel JBang exports it as UTF-8).
      */
     static Project load(Path dir, Charset application) throws IOException {
+        return load(dir, application, null);
+    }
+
+    /** As {@link #load(Path, Charset)}, with {@code application.properties} and the given files only ({@code null}: all). */
+    static Project load(Path dir, Charset application, Set<String> names) throws IOException {
         Project project = new Project(new Properties(), new TreeMap<>());
         if (!Files.isDirectory(dir)) {
             return project;
@@ -150,16 +178,14 @@ final class QuarkusConfigExport {
             for (Path file :
                     files.filter(f -> f.toString().endsWith(".properties")).toList()) {
                 String name = file.getFileName().toString();
+                if (!name.equals(APPLICATION) && names != null && !names.contains(name)) {
+                    continue;
+                }
                 Properties props = read(file, name.equals(APPLICATION) ? application : StandardCharsets.ISO_8859_1);
                 if (name.equals(APPLICATION)) {
                     project.application().putAll(props);
-                } else if (!name.startsWith("application-")) {
+                } else {
                     project.files().put(name, props);
-                } else if (!forageValues(props).isEmpty()) {
-                    String profile = name.substring("application-".length(), name.length() - ".properties".length());
-                    throw new IllegalStateException("The Quarkus export does not support forage.* keys in " + name
-                            + ": move " + forageValues(props).keySet() + " to " + APPLICATION + " with a %" + profile
-                            + ". prefix.");
                 }
             }
         }
@@ -188,8 +214,7 @@ final class QuarkusConfigExport {
                     }
                 });
                 values.putAll(project.application());
-                if (translate(hook, project.application(), values, result)
-                        && project.files().containsKey(file)) {
+                if (translate(hook, project, values, result) && project.files().containsKey(file)) {
                     result.files().add(file);
                 }
             }
@@ -201,19 +226,22 @@ final class QuarkusConfigExport {
     }
 
     /** Adds the module's translation to the result, or the reason it stays {@code forage.*}. */
-    private static boolean translate(
-            QuarkusConfigHook<?> hook, Properties application, Properties values, Result result) {
+    private static boolean translate(QuarkusConfigHook<?> hook, Project project, Properties values, Result result) {
+        Properties application = project.application();
         String module = hook.descriptor().modulePrefix();
         String namedRegexp = ConfigHelper.getNamedPropertyRegexp(module);
         String defaultRegexp = ConfigHelper.getDefaultPropertyRegexp(module);
-        boolean profiled = false;
-        for (String key : values.stringPropertyNames()) {
-            String unprofiled = unprofiled(key);
-            if (unprofiled.matches(namedRegexp) || unprofiled.matches(defaultRegexp)) {
-                checkValue(key, values.getProperty(key));
-                profiled |= !key.equals(unprofiled);
-            }
-        }
+        boolean profiled = values.stringPropertyNames().stream()
+                .anyMatch(key ->
+                        isModuleKey(unprofiled(key), namedRegexp, defaultRegexp) && !key.equals(unprofiled(key)));
+        // Quarkus reads application-<profile>.properties for its profile, as %<profile>. keys
+        String profileFile = project.files().entrySet().stream()
+                .filter(file -> file.getKey().startsWith("application-"))
+                .filter(file -> file.getValue().stringPropertyNames().stream()
+                        .anyMatch(key -> isModuleKey(unprofiled(key), namedRegexp, defaultRegexp)))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
         Set<String> named = PropertyFileLocator.readPrefixes(values, namedRegexp);
         boolean hasDefault =
                 !PropertyFileLocator.readPrefixes(values, defaultRegexp).isEmpty();
@@ -223,7 +251,9 @@ final class QuarkusConfigExport {
 
         String reason = profiled
                 ? "profile-specific values"
-                : !named.isEmpty() && hasDefault ? "default and named configurations together" : null;
+                : profileFile != null
+                        ? "profile-specific values in " + profileFile
+                        : !named.isEmpty() && hasDefault ? "default and named configurations together" : null;
         Result translation = new Result();
         for (String name : named.isEmpty() ? Collections.<String>singletonList(null) : named) {
             if (reason == null) {
@@ -242,16 +272,8 @@ final class QuarkusConfigExport {
         return true;
     }
 
-    /** Quarkus reads an empty value as not set and expands {@code ${...}}, {@code $$} and {@code \$}: Forage not. */
-    private static void checkValue(String key, String value) {
-        if (value.isEmpty()) {
-            throw new IllegalStateException("Quarkus reads the empty value of " + key + " as not set, the Forage"
-                    + " runtime uses it: set a value, or remove " + key + ".");
-        }
-        if (value.contains("${") || value.contains("$$") || value.contains("\\$")) {
-            throw new IllegalStateException("Quarkus would read " + key + " differently: it expands ${...}, $$ and"
-                    + " \\$ in values, the Forage runtime does not. Change the value.");
-        }
+    private static boolean isModuleKey(String key, String namedRegexp, String defaultRegexp) {
+        return key.matches(namedRegexp) || key.matches(defaultRegexp);
     }
 
     /** Translates one configuration ({@code name} is {@code null} for the default one), or returns why it cannot. */
@@ -426,13 +448,10 @@ final class QuarkusConfigExport {
                         throw new IllegalStateException("Could not remove " + key + " from the exported " + file);
                     });
         }
-        // as Quarkus reads application.properties (UTF-8), expanding expressions
-        SmallRyeConfig quarkus = new SmallRyeConfigBuilder()
-                .addDefaultInterceptors()
-                .withSources(new PropertiesConfigSource(read(application, StandardCharsets.UTF_8), APPLICATION, 250))
-                .build();
+        // as Quarkus reads application.properties (UTF-8), before it expands expressions
+        Properties quarkus = read(application, StandardCharsets.UTF_8);
         written.forEach((key, value) -> {
-            if (!value.equals(quarkus.getConfigValue(key).getValue())) {
+            if (!value.equals(quarkus.getProperty(key))) {
                 throw new IllegalStateException("The exported " + APPLICATION + " does not keep " + key);
             }
         });

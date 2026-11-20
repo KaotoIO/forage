@@ -159,13 +159,16 @@ public class ForagePlugin implements Plugin {
             }
             Properties decoded = new Properties();
             decoded.load(new StringReader(runProperties));
-            QuarkusConfigExport.Run run = translateProject(decoded);
-            if (Files.isDirectory(resources)) {
-                QuarkusConfigExport.checkExported(run, resources);
-                QuarkusConfigExport.write(run.result(), resources);
-                Printer printer = new Printer.SystemOutPrinter();
-                run.result().messages().forEach(printer::println);
+            if (!Files.isDirectory(resources)) {
+                return translateProject(decoded).result();
             }
+            // the files the export ships, not every file of the project directory
+            QuarkusConfigExport.Run run = QuarkusConfigExport.run(
+                    CatalogDrivenExportCustomizer.workingDir().toPath(), decoded, resources);
+            QuarkusConfigExport.checkExported(run, resources);
+            QuarkusConfigExport.write(run.result(), resources);
+            Printer printer = new Printer.SystemOutPrinter();
+            run.result().messages().forEach(printer::println);
             return run.result();
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to write the Quarkus properties of the exported project", e);

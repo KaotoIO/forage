@@ -29,6 +29,13 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
     private Map<String, Map<String, List<String>>> scannedProperties;
     private Boolean enabled;
+    private Set<String> quarkusModules = Set.of();
+
+    /** The modules exported as quarkus.* configuration: their Forage artifacts are not added. */
+    CatalogDrivenExportCustomizer quarkusModules(Set<String> modules) {
+        this.quarkusModules = modules;
+        return this;
+    }
 
     @Override
     public boolean isEnabled() {
@@ -40,7 +47,7 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
     @Override
     public Set<String> resolveRuntimeDependencies(RuntimeType runtime) {
-        Set<String> dependencies = new LinkedHashSet<>();
+        Set<String> all = new LinkedHashSet<>();
         ForageCatalogReader catalog = ForageCatalogReader.getInstance();
         Map<String, Map<String, List<String>>> properties = getScannedProperties();
 
@@ -48,6 +55,7 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
         for (String factoryTypeKey : properties.keySet()) {
             Map<String, List<String>> factoryProperties = properties.get(factoryTypeKey);
+            Set<String> dependencies = new LinkedHashSet<>();
 
             // 1. Add the factory variant GAV (or fall back to base if variant doesn't exist)
             var variantGav = catalog.getFactoryVariantGav(factoryTypeKey, variantName);
@@ -118,12 +126,17 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
                             .forEach(dependencies::add);
                 }
             }
+
+            if (quarkusModules.contains(factoryTypeKey)) {
+                dependencies.removeIf(dependency -> dependency.startsWith("mvn:io.kaoto.forage:"));
+            }
+            all.addAll(dependencies);
         }
 
-        LOG.debug("Resolved {} dependencies for runtime {}", dependencies.size(), runtime);
-        dependencies.forEach(dep -> LOG.debug("  Dependency: {}", dep));
+        LOG.debug("Resolved {} dependencies for runtime {}", all.size(), runtime);
+        all.forEach(dep -> LOG.debug("  Dependency: {}", dep));
 
-        return dependencies;
+        return all;
     }
 
     private static void addConfiguredBeanDependencies(

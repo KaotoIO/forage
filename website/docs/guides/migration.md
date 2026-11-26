@@ -4,6 +4,24 @@ This guide covers both version-to-version upgrade notes and migrating from frame
 
 ---
 
+## Upgrading to 1.6.3
+
+### Changes
+
+#### Quarkus export writes JDBC and JMS configuration as Quarkus keys
+
+`camel export --runtime=quarkus` now adds `quarkus.*` keys for plain JDBC datasources (kinds with a Quarkus driver in the catalog: PostgreSQL, MySQL, MariaDB, H2) and the default Artemis connection factory, and leaves out their Forage artifacts. The `forage.*` keys stay. Each key is written as `${forage.<key>:<value>}`, and `quarkus.config.locations` lists the module files, so `FORAGE_*`, `-Dforage.*` and `forage-*.properties` files still override it. `quarkus-pooled-jms` is added only for `forage.jms.pool.enabled=true`, as before.
+
+Keys without effect on Quarkus (catalog `quarkusIgnored`, today `forage.jms.pool.connection.timeout.millis`, which no runtime applies) do not block the translation; the export lists them in a note.
+
+The other modules (agent, CXF, InfluxDB, Spring RabbitMQ, security policies, TLS) stay `forage.*` with their Forage artifacts: no Quarkus extension builds the same bean from `quarkus.*` keys alone. For each one configured, the export prints a note with the module's reason (catalog `quarkusUnsupported`).
+
+A module stays `forage.*`, with a note, when any of its keys has no Quarkus equivalent (`transaction.*`, `ssl.*`, repositories, named or non-Artemis JMS, ...), a value contains `{` or `}`, it uses `%profile` keys or `application-<profile>.properties`, its module file is not ASCII or is in `~/.forage` / `FORAGE_CONFIG_DIR`, or the export reuses earlier run data. Set `FORAGE_QUARKUS_TRANSLATION_SKIP=true` (or `-Dforage.quarkus.translation.skip=true`) to keep everything on `forage.*`.
+
+Differences for translated modules: a datasource name or `properties.*` key defined only at runtime by `FORAGE_*` / `-Dforage.*` is not picked up, nor a `~/.forage` file added later; when both `FORAGE_X` and `-Dforage.x` are set, `-Dforage.x` wins; Quarkus merges the module files per key, Forage reads only the first file found.
+
+---
+
 ## Upgrading to 1.5.0
 
 ### Breaking Changes

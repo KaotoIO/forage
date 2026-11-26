@@ -19,6 +19,11 @@ public class AgentModuleDescriptor implements ForageModuleDescriptor<AgentConfig
         return "agent";
     }
 
+    /** Why the Quarkus export keeps this module on {@code forage.*}. Read by the catalog build. */
+    public String quarkusUnsupportedReason() {
+        return "quarkus-langchain4j provides only the ChatModel, not the Agent bean (memory, RAG, guardrails, tools)";
+    }
+
     @Override
     public AgentConfig createConfig(String prefix) {
         return prefix == null ? new AgentConfig() : new AgentConfig(prefix);

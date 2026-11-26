@@ -14,6 +14,7 @@ public class ScanResult {
     private final List<ScannedFactory> factories = new ArrayList<>();
     private final List<ConfigEntry> configProperties = new ArrayList<>();
     private final Map<String, String> configClasses = new HashMap<>();
+    private final List<String> moduleDescriptors = new ArrayList<>();
 
     public List<ScannedBean> getBeans() {
         return beans;
@@ -29,5 +30,9 @@ public class ScanResult {
 
     public Map<String, String> getConfigClasses() {
         return configClasses;
+    }
+
+    public List<String> getModuleDescriptors() {
+        return moduleDescriptors;
     }
 }

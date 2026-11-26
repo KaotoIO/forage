@@ -51,6 +51,34 @@ public class ConfigEntry {
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     private boolean multiValue;
 
+    /**
+     * The Quarkus key the export writes for this entry ({@code {name}}: the quoted configuration name; ending with
+     * {@code .}: a map). Only written for entries with a plain Quarkus equivalent.
+     */
+    @JsonProperty("quarkusProperty")
+    private String quarkusProperty;
+
+    /** The unit appended to the Quarkus value ({@code S} or {@code M}). Only written when there is one. */
+    @JsonProperty("quarkusUnit")
+    private String quarkusUnit;
+
+    /** The entry has no effect on Quarkus: the export leaves it untranslated. Only written when {@code true}. */
+    @JsonProperty("quarkusIgnored")
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    private boolean quarkusIgnored;
+
+    /**
+     * The entry has no Quarkus key of its own but the export handles it (e.g. a catalog condition). Only written when
+     * {@code true}.
+     */
+    @JsonProperty("quarkusHandled")
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    private boolean quarkusHandled;
+
+    /** The entry selects the bean (the kind) of a module the export translates. Only written on that entry. */
+    @JsonProperty("quarkusSelector")
+    private QuarkusSelector quarkusSelector;
+
     public ConfigEntry() {}
 
     public ConfigEntry(String name, String type, String description, boolean required) {
@@ -146,5 +174,45 @@ public class ConfigEntry {
 
     public void setMultiValue(boolean multiValue) {
         this.multiValue = multiValue;
+    }
+
+    public String getQuarkusProperty() {
+        return quarkusProperty;
+    }
+
+    public void setQuarkusProperty(String quarkusProperty) {
+        this.quarkusProperty = quarkusProperty;
+    }
+
+    public String getQuarkusUnit() {
+        return quarkusUnit;
+    }
+
+    public void setQuarkusUnit(String quarkusUnit) {
+        this.quarkusUnit = quarkusUnit;
+    }
+
+    public boolean isQuarkusIgnored() {
+        return quarkusIgnored;
+    }
+
+    public void setQuarkusIgnored(boolean quarkusIgnored) {
+        this.quarkusIgnored = quarkusIgnored;
+    }
+
+    public boolean isQuarkusHandled() {
+        return quarkusHandled;
+    }
+
+    public void setQuarkusHandled(boolean quarkusHandled) {
+        this.quarkusHandled = quarkusHandled;
+    }
+
+    public QuarkusSelector getQuarkusSelector() {
+        return quarkusSelector;
+    }
+
+    public void setQuarkusSelector(QuarkusSelector quarkusSelector) {
+        this.quarkusSelector = quarkusSelector;
     }
 }

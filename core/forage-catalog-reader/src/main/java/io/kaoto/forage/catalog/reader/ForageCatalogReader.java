@@ -318,6 +318,15 @@ public final class ForageCatalogReader {
     }
 
     /**
+     * Per module (the module descriptor's prefix): why the Quarkus export keeps it on {@code forage.*}.
+     *
+     * @return the reasons; empty if no module declares one
+     */
+    public Map<String, String> getQuarkusUnsupported() {
+        return catalog.getQuarkusUnsupported() == null ? Map.of() : catalog.getQuarkusUnsupported();
+    }
+
+    /**
      * Gets the name of the prefix property for a given factory type.
      * This is the property that contains the instance/bean name.
      *

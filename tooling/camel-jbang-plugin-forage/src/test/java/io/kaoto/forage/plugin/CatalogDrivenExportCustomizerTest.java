@@ -59,6 +59,36 @@ class CatalogDrivenExportCustomizerTest {
     }
 
     @Test
+    void testQuarkusModule_hasNoForageArtifacts() throws Exception {
+        CatalogDrivenExportCustomizer customizer = createCustomizer("forage.ds1.jdbc.db.kind=postgresql\n"
+                        + "forage.ds1.jdbc.url=jdbc:postgresql://localhost/test\n"
+                        + "forage.agent.model.kind=ollama\n")
+                .quarkusModules(Set.of("jdbc"));
+
+        Set<String> deps = customizer.resolveRuntimeDependencies(RuntimeType.QUARKUS);
+        assertThat(deps).noneMatch(d -> d.contains("forage-jdbc") || d.contains("forage-quarkus-jdbc"));
+        assertThat(deps).anyMatch(d -> d.contains("camel-quarkus-jdbc"));
+        assertThat(deps).anyMatch(d -> d.contains("quarkus-jdbc-postgresql"));
+        // other modules keep their Forage artifacts
+        assertThat(deps).anyMatch(d -> d.startsWith("mvn:io.kaoto.forage:") && d.contains("agent"));
+    }
+
+    @Test
+    void testQuarkusJms_addsPooledJmsOnlyForPoolEnabled() throws Exception {
+        String artemis = "forage.jms.kind=artemis\nforage.jms.broker.url=tcp://localhost:61616\n";
+        Set<String> deps =
+                createCustomizer(artemis).quarkusModules(Set.of("jms")).resolveRuntimeDependencies(RuntimeType.QUARKUS);
+        assertThat(deps).noneMatch(d -> d.startsWith("mvn:io.kaoto.forage:") || d.contains("quarkus-pooled-jms"));
+        assertThat(deps).anyMatch(d -> d.contains("quarkus-artemis-jms"));
+
+        deps = createCustomizer(artemis + "forage.jms.pool.enabled=true\n")
+                .quarkusModules(Set.of("jms"))
+                .resolveRuntimeDependencies(RuntimeType.QUARKUS);
+        assertThat(deps).noneMatch(d -> d.startsWith("mvn:io.kaoto.forage:"));
+        assertThat(deps).anyMatch(d -> d.contains("quarkus-pooled-jms"));
+    }
+
+    @Test
     void testNoProperties_isNotEnabled() throws Exception {
         // Empty temp dir, no properties
         System.setProperty("user.dir", tempDir.getAbsolutePath());

@@ -23,6 +23,11 @@ public class SpringSecurityPolicyModuleDescriptor extends SecurityPolicyModuleDe
         return "spring.security";
     }
 
+    /** Why the Quarkus export keeps this module on {@code forage.*}. Read by the catalog build. */
+    public String quarkusUnsupportedReason() {
+        return "no Quarkus extension for camel-spring-security";
+    }
+
     @Override
     public SpringSecurityPolicyConfig createConfig(String prefix) {
         return new SpringSecurityPolicyConfig(prefix);

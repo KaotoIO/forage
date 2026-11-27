@@ -86,6 +86,18 @@ class ForageCatalogReaderTest {
         reader = ForageCatalogReader.fromInputStream(is);
     }
 
+    /** A catalog of a later Forage version may add fields. */
+    @Test
+    void ignoresUnknownFields() throws IOException {
+        String json = TEST_CATALOG_JSON
+                .replaceFirst("\\{", "{\"futureField\": 1,")
+                .replace("\"name\": \"forage.", "\"futureEntryField\": true, \"name\": \"forage.");
+        ForageCatalogReader later =
+                ForageCatalogReader.fromInputStream(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
+
+        assertThat(later.getAllFactories()).hasSameSizeAs(reader.getAllFactories());
+    }
+
     @Test
     void testGetFactoryMetadata() {
         Optional<ForageCatalogReader.FactoryMetadata> metadata = reader.getFactoryMetadata("jdbc");

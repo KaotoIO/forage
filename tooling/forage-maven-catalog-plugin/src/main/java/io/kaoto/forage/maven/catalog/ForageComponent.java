@@ -31,6 +31,8 @@ public class ForageComponent {
 
     private Map<String, String> configClasses; // Not serialized to JSON, just for internal use
 
+    private List<String> moduleDescriptors; // ForageModuleDescriptor classes, internal use
+
     public ForageComponent() {
         // Required by Jackson for deserialization
     }
@@ -97,5 +99,13 @@ public class ForageComponent {
 
     public void setConfigClasses(Map<String, String> configClasses) {
         this.configClasses = configClasses;
+    }
+
+    public List<String> getModuleDescriptors() {
+        return moduleDescriptors;
+    }
+
+    public void setModuleDescriptors(List<String> moduleDescriptors) {
+        this.moduleDescriptors = moduleDescriptors;
     }
 }

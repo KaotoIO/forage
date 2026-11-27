@@ -9,6 +9,11 @@ public class InfluxDBModuleDescriptor implements ForageModuleDescriptor<InfluxDB
         return "influxdb";
     }
 
+    /** Why the Quarkus export keeps this module on {@code forage.*}. Read by the catalog build. */
+    public String quarkusUnsupportedReason() {
+        return "no extension creates the client from config";
+    }
+
     @Override
     public InfluxDBConfig createConfig(String prefix) {
         return new InfluxDBConfig(prefix);

@@ -10,6 +10,11 @@ public class CxfModuleDescriptor implements ForageModuleDescriptor<CxfConfig, Cx
         return "cxf";
     }
 
+    /** Why the Quarkus export keeps this module on {@code forage.*}. Read by the catalog build. */
+    public String quarkusUnsupportedReason() {
+        return "quarkus-cxf configures JAX-WS services, not Camel CxfEndpoint beans";
+    }
+
     @Override
     public CxfConfig createConfig(String prefix) {
         return prefix == null ? new CxfConfig() : new CxfConfig(prefix);

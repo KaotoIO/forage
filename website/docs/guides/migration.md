@@ -4,6 +4,26 @@ This guide covers both version-to-version upgrade notes and migrating from frame
 
 ---
 
+## Upgrading to 1.6.3
+
+### Changes
+
+#### Quarkus export writes JDBC and JMS configuration as Quarkus keys
+
+`camel export --runtime=quarkus` now adds `quarkus.*` keys for plain JDBC datasources (kinds with a Quarkus driver in the catalog: PostgreSQL, MySQL, MariaDB, H2) and the default Artemis connection factory, and leaves out their Forage artifacts. The `forage.*` keys stay. Each key is written as `${FORAGE_<KEY>:${forage.<key>:<value>}}`, so `FORAGE_*`, then `-Dforage.*`, then `forage.*` keys in `application.properties` (also a mounted `config/application.properties`) still override it, in Forage's order. `quarkus-pooled-jms` is added only for `forage.jms.pool.enabled=true`, as before.
+
+Keys without effect on Quarkus (catalog `quarkusIgnored`, today `forage.jms.pool.connection.timeout.millis`, which no runtime applies) do not block the translation; the export lists them in a note.
+
+The other modules (agent, CXF, InfluxDB, Spring RabbitMQ, security policies, TLS) stay `forage.*` with their Forage artifacts: no Quarkus extension builds the same bean from `quarkus.*` keys alone. For each one configured, the export prints a note with the module's reason (catalog `quarkusUnsupported`).
+
+The catalog (version `2.1`) and the configuration catalog (version `1.1`) gain new fields. Forage catalog readers before this release (1.7.x and older) reject unknown fields, so update tools that read the catalog with the Forage reader library together with the catalog; readers from this release on ignore unknown fields.
+
+A module stays `forage.*`, with a note, when any of its keys has no Quarkus equivalent (`transaction.*`, `ssl.*`, repositories, named or non-Artemis JMS, ...), a value contains `{` or `}` or starts with `:`, two files set a key differently, it uses `%profile` keys or `application-<profile>.properties`, its module file (or a bean file such as `forage-jms-artemis.properties`) is in `~/.forage` / `FORAGE_CONFIG_DIR`, or the export reuses earlier run data. Set `FORAGE_QUARKUS_TRANSLATION_SKIP=true` (or `-Dforage.quarkus.translation.skip=true`) to keep everything on `forage.*`.
+
+Differences for translated modules: only the keys the export wrote can be overridden at runtime. A key not in the exported configuration (e.g. `FORAGE_DS1_JDBC_TRANSACTION_ENABLED=true`, a new datasource name or `properties.*` driver key) set only at runtime by `FORAGE_*` / `-Dforage.*` is ignored. `forage-*.properties` files are not read at runtime: a module file mounted in the working directory, `FORAGE_CONFIG_DIR` or `~/.forage` after the export is ignored (the export adds a small `ForageConfigFileWarning` bean that logs a warning at startup naming such a file); set the keys as `FORAGE_*` or in `config/application.properties` instead, or export with the off switch.
+
+---
+
 ## Upgrading to 1.5.0
 
 ### Breaking Changes

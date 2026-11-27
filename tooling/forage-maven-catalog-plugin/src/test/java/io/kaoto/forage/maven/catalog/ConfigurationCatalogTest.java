@@ -56,7 +56,7 @@ public class ConfigurationCatalogTest {
         assertThat(jsonFile).exists();
 
         ForageConfigurationCatalog catalog = objectMapper.readValue(jsonFile, ForageConfigurationCatalog.class);
-        assertThat(catalog.getVersion()).isEqualTo("1.0");
+        assertThat(catalog.getVersion()).isEqualTo("1.1");
         assertThat(catalog.getGeneratedBy()).isEqualTo("forage-maven-catalog-plugin");
         assertThat(catalog.getModules()).hasSize(1);
 

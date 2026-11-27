@@ -78,6 +78,18 @@ class ForageConfigurationCatalogReaderTest {
         reader = ForageConfigurationCatalogReader.fromInputStream(is);
     }
 
+    /** A catalog of a later Forage version may add fields. */
+    @Test
+    void ignoresUnknownFields() throws IOException {
+        String json = TEST_CATALOG_JSON
+                .replaceFirst("\\{", "{\"futureField\": 1,")
+                .replace("\"name\": \"forage.", "\"futureEntryField\": true, \"name\": \"forage.");
+        ForageConfigurationCatalogReader later = ForageConfigurationCatalogReader.fromInputStream(
+                new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)));
+
+        assertThat(later.isValidConfig("forage.openai.api.key")).isTrue();
+    }
+
     @Test
     void testIsValidConfigReturnsTrue() {
         assertThat(reader.isValidConfig("forage.openai.api.key")).isTrue();

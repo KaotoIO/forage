@@ -27,6 +27,13 @@ public class ForageCatalog {
     @JsonProperty("factories")
     private List<ForageFactory> factories;
 
+    /**
+     * Per module (the module descriptor's prefix, e.g. {@code cxf}): why the Quarkus export keeps it on
+     * {@code forage.*}. Only written for modules declaring it.
+     */
+    @JsonProperty("quarkusUnsupported")
+    private Map<String, String> quarkusUnsupported;
+
     public ForageCatalog() {
         // Required by Jackson for deserialization
     }
@@ -69,5 +76,13 @@ public class ForageCatalog {
 
     public void setFactories(List<ForageFactory> factories) {
         this.factories = factories;
+    }
+
+    public Map<String, String> getQuarkusUnsupported() {
+        return quarkusUnsupported;
+    }
+
+    public void setQuarkusUnsupported(Map<String, String> quarkusUnsupported) {
+        this.quarkusUnsupported = quarkusUnsupported;
     }
 }

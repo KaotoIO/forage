@@ -61,6 +61,71 @@ public class JdbcModuleDescriptor implements ForageModuleDescriptor<DataSourceFa
         return config.transactionEnabled();
     }
 
+    /**
+     * A Forage key (after {@code forage.[<name>.]jdbc.}; ending with {@code .}: a map) written as a Quarkus key
+     * ({@code {name}}: the quoted configuration name) with the value of {@code value} and a unit ({@code S},
+     * {@code M} or empty).
+     */
+    public record QuarkusProperty(
+            String forageKey, String quarkusKey, String unit, Function<DataSourceFactoryConfig, Object> value) {}
+
+    private static final List<QuarkusProperty> QUARKUS_PROPERTIES = List.of(
+            new QuarkusProperty("db.kind", "quarkus.datasource.{name}.db-kind", "", DataSourceFactoryConfig::dbKind),
+            new QuarkusProperty(
+                    "password", "quarkus.datasource.{name}.password", "", DataSourceFactoryConfig::password),
+            new QuarkusProperty(
+                    "username", "quarkus.datasource.{name}.username", "", DataSourceFactoryConfig::username),
+            new QuarkusProperty("url", "quarkus.datasource.{name}.jdbc.url", "", DataSourceFactoryConfig::jdbcUrl),
+            new QuarkusProperty(
+                    "pool.initial.size",
+                    "quarkus.datasource.{name}.jdbc.initial-size",
+                    "",
+                    DataSourceFactoryConfig::initialSize),
+            new QuarkusProperty(
+                    "pool.min.size", "quarkus.datasource.{name}.jdbc.min-size", "", DataSourceFactoryConfig::minSize),
+            new QuarkusProperty(
+                    "pool.max.size", "quarkus.datasource.{name}.jdbc.max-size", "", DataSourceFactoryConfig::maxSize),
+            new QuarkusProperty(
+                    "pool.acquisition.timeout.seconds",
+                    "quarkus.datasource.{name}.jdbc.acquisition-timeout",
+                    "S",
+                    DataSourceFactoryConfig::acquisitionTimeoutSeconds),
+            new QuarkusProperty(
+                    "pool.validation.timeout.seconds",
+                    "quarkus.datasource.{name}.jdbc.validation-query-timeout",
+                    "S",
+                    DataSourceFactoryConfig::validationTimeoutSeconds),
+            new QuarkusProperty(
+                    "pool.leak.timeout.minutes",
+                    "quarkus.datasource.{name}.jdbc.leak-detection-interval",
+                    "M",
+                    DataSourceFactoryConfig::leakTimeoutMinutes),
+            new QuarkusProperty(
+                    "properties.",
+                    "quarkus.datasource.{name}.jdbc.additional-jdbc-properties.",
+                    "",
+                    DataSourceFactoryConfig::driverProperties));
+
+    /**
+     * The Forage keys {@link #translateProperties} writes as one Quarkus key each (the transaction keys are not
+     * listed). Read by the catalog build.
+     */
+    public List<QuarkusProperty> quarkusProperties() {
+        return QUARKUS_PROPERTIES;
+    }
+
+    /**
+     * The Forage key (after {@code forage.[<name>.]jdbc.}) selecting the bean, the kinds the export translates with the
+     * Quarkus keys each adds ({@code null}: any kind with a Quarkus driver in the catalog), and whether only the default
+     * configuration is translated.
+     */
+    public record QuarkusSelector(String forageKey, Map<String, Map<String, String>> kinds, boolean defaultOnly) {}
+
+    /** The selector of the Quarkus export. Read by the catalog build. */
+    public QuarkusSelector quarkusSelector() {
+        return new QuarkusSelector("db.kind", null, false);
+    }
+
     @Override
     public Map<String, String> translateProperties(String prefix, DataSourceFactoryConfig config) {
         Map<String, String> props = new HashMap<>();
@@ -69,22 +134,16 @@ public class JdbcModuleDescriptor implements ForageModuleDescriptor<DataSourceFa
         String effectivePrefix = prefix != null ? prefix : defaultBeanName();
         quarkusPrefix += "\"" + effectivePrefix + "\".";
 
-        putIfNotEmpty(props, quarkusPrefix + "db-kind", config.dbKind());
-        putIfNotEmpty(props, quarkusPrefix + "password", config.password());
-        putIfNotEmpty(props, quarkusPrefix + "username", config.username());
-        putIfNotEmpty(props, quarkusPrefix + "jdbc.url", config.jdbcUrl());
-        props.put(quarkusPrefix + "jdbc.initial-size", String.valueOf(config.initialSize()));
-        props.put(quarkusPrefix + "jdbc.min-size", String.valueOf(config.minSize()));
-        props.put(quarkusPrefix + "jdbc.max-size", String.valueOf(config.maxSize()));
-        props.put(quarkusPrefix + "jdbc.acquisition-timeout", config.acquisitionTimeoutSeconds() + "S");
-        props.put(quarkusPrefix + "jdbc.validation-query-timeout", config.validationTimeoutSeconds() + "S");
-        props.put(quarkusPrefix + "jdbc.leak-detection-interval", config.leakTimeoutMinutes() + "M");
-        // Quote the key: driver property names can contain dots (e.g. oracle.jdbc.ReadTimeout)
-        for (Map.Entry<String, String> driverProperty :
-                config.driverProperties().entrySet()) {
-            props.put(
-                    quarkusPrefix + "jdbc.additional-jdbc-properties.\"" + driverProperty.getKey() + "\"",
-                    driverProperty.getValue());
+        String quotedName = "\"" + effectivePrefix + "\"";
+        for (QuarkusProperty property : QUARKUS_PROPERTIES) {
+            String key = property.quarkusKey().replace("{name}", quotedName);
+            Object value = property.value().apply(config);
+            if (value instanceof Map<?, ?> map) {
+                // Quote the key: driver property names can contain dots (e.g. oracle.jdbc.ReadTimeout)
+                map.forEach((k, v) -> props.put(key + "\"" + k + "\"", String.valueOf(v)));
+            } else if (value != null && !String.valueOf(value).isEmpty()) {
+                props.put(key, value + property.unit());
+            }
         }
 
         if (config.transactionEnabled()) {

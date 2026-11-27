@@ -23,6 +23,11 @@ public class SpringRabbitMQModuleDescriptor
         return SpringRabbitMQConstants.MODULE_PREFIX;
     }
 
+    /** Why the Quarkus export keeps this module on {@code forage.*}. Read by the catalog build. */
+    public String quarkusUnsupportedReason() {
+        return "needs a Spring AMQP ConnectionFactory; quarkus-messaging-rabbitmq is a different client";
+    }
+
     @Override
     public SpringRabbitMQConfig createConfig(String prefix) {
         return prefix == null ? new SpringRabbitMQConfig() : new SpringRabbitMQConfig(prefix);

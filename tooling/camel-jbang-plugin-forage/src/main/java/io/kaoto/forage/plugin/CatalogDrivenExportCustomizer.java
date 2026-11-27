@@ -2,6 +2,7 @@ package io.kaoto.forage.plugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -29,6 +30,20 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
     private Map<String, Map<String, List<String>>> scannedProperties;
     private Boolean enabled;
+    private Set<String> quarkusModules = Set.of();
+    private Path scanDir;
+
+    /** The modules exported as quarkus.* configuration: their Forage artifacts are not added. */
+    CatalogDrivenExportCustomizer quarkusModules(Set<String> modules) {
+        this.quarkusModules = modules;
+        return this;
+    }
+
+    /** The directory to scan for Forage properties ({@code null}: forage.config.dir or the working directory). */
+    CatalogDrivenExportCustomizer scanDir(Path dir) {
+        this.scanDir = dir;
+        return this;
+    }
 
     @Override
     public boolean isEnabled() {
@@ -40,7 +55,7 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
     @Override
     public Set<String> resolveRuntimeDependencies(RuntimeType runtime) {
-        Set<String> dependencies = new LinkedHashSet<>();
+        Set<String> all = new LinkedHashSet<>();
         ForageCatalogReader catalog = ForageCatalogReader.getInstance();
         Map<String, Map<String, List<String>>> properties = getScannedProperties();
 
@@ -48,6 +63,7 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
 
         for (String factoryTypeKey : properties.keySet()) {
             Map<String, List<String>> factoryProperties = properties.get(factoryTypeKey);
+            Set<String> dependencies = new LinkedHashSet<>();
 
             // 1. Add the factory variant GAV (or fall back to base if variant doesn't exist)
             var variantGav = catalog.getFactoryVariantGav(factoryTypeKey, variantName);
@@ -118,12 +134,17 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
                             .forEach(dependencies::add);
                 }
             }
+
+            if (quarkusModules.contains(factoryTypeKey)) {
+                dependencies.removeIf(dependency -> dependency.startsWith("mvn:io.kaoto.forage:"));
+            }
+            all.addAll(dependencies);
         }
 
-        LOG.debug("Resolved {} dependencies for runtime {}", dependencies.size(), runtime);
-        dependencies.forEach(dep -> LOG.debug("  Dependency: {}", dep));
+        LOG.debug("Resolved {} dependencies for runtime {}", all.size(), runtime);
+        all.forEach(dep -> LOG.debug("  Dependency: {}", dep));
 
-        return dependencies;
+        return all;
     }
 
     private static void addConfiguredBeanDependencies(
@@ -207,7 +228,9 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
         if (scannedProperties == null) {
             try {
                 String configDir = System.getProperty("forage.config.dir");
-                File workingDir = configDir != null ? new File(configDir) : new File(System.getProperty("user.dir"));
+                File workingDir = scanDir != null
+                        ? scanDir.toFile()
+                        : configDir != null ? new File(configDir) : new File(System.getProperty("user.dir"));
                 ForageCatalogReader catalog = ForageCatalogReader.getInstance();
                 scannedProperties = ForagePropertyScanner.scanProperties(workingDir, catalog);
             } catch (IOException e) {

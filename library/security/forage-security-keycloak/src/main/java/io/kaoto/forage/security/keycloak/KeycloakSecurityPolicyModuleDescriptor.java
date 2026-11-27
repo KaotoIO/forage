@@ -17,6 +17,11 @@ public class KeycloakSecurityPolicyModuleDescriptor
         return "keycloak";
     }
 
+    /** Why the Quarkus export keeps this module on {@code forage.*}. Read by the catalog build. */
+    public String quarkusUnsupportedReason() {
+        return "quarkus-oidc secures HTTP endpoints, it does not create the Camel route policy";
+    }
+
     @Override
     public KeycloakSecurityPolicyConfig createConfig(String prefix) {
         return new KeycloakSecurityPolicyConfig(prefix);

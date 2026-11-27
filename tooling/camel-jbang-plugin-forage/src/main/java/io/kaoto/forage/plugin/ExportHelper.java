@@ -1,6 +1,7 @@
 package io.kaoto.forage.plugin;
 
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.Set;
 import java.util.stream.Stream;
 import io.kaoto.forage.core.common.ExportCustomizer;
@@ -30,7 +31,17 @@ public final class ExportHelper {
 
     /** @param quarkusModules the modules exported as quarkus.* configuration */
     public static Stream<ExportCustomizer> getAllCustomizers(Set<String> quarkusModules) {
-        return Stream.of(new CatalogDrivenExportCustomizer().quarkusModules(quarkusModules));
+        return getAllCustomizers(quarkusModules, null);
+    }
+
+    /**
+     * @param quarkusModules the modules exported as quarkus.* configuration
+     * @param scanDir        the directory to scan for Forage properties ({@code null}: the default one)
+     */
+    static Stream<ExportCustomizer> getAllCustomizers(Set<String> quarkusModules, Path scanDir) {
+        return Stream.of(new CatalogDrivenExportCustomizer()
+                .quarkusModules(quarkusModules)
+                .scanDir(scanDir));
     }
 
     /**

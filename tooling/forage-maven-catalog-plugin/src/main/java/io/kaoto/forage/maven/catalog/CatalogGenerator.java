@@ -212,7 +212,7 @@ public class CatalogGenerator {
         log.info("Generated " + factories.size() + " factories in simplified catalog");
 
         ForageCatalog catalog = new ForageCatalog();
-        catalog.setVersion("2.0");
+        catalog.setVersion("2.1");
         catalog.setFactories(factories);
         catalog.setQuarkusUnsupported(quarkusUnsupported.isEmpty() ? null : quarkusUnsupported);
         catalog.setRuntimeVersions(collectRuntimeVersions(projectProperties));
@@ -839,7 +839,7 @@ public class CatalogGenerator {
         log.info("Generated configuration catalog with " + modules.size() + " modules");
 
         ForageConfigurationCatalog configCatalog = new ForageConfigurationCatalog();
-        configCatalog.setVersion("1.0");
+        configCatalog.setVersion("1.1");
         configCatalog.setGeneratedBy("forage-maven-catalog-plugin");
         configCatalog.setTimestamp(System.currentTimeMillis());
         configCatalog.setModules(modules);

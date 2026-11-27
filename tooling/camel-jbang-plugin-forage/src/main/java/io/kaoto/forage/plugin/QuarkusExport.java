@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -20,6 +21,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import io.kaoto.forage.catalog.model.ConfigEntry;
+import io.kaoto.forage.catalog.model.ForageBean;
 import io.kaoto.forage.catalog.model.QuarkusSelector;
 import io.kaoto.forage.catalog.reader.ForageCatalogReader;
 import io.kaoto.forage.core.util.config.ConfigHelper;
@@ -30,13 +32,14 @@ import io.kaoto.forage.core.util.config.PropertyFileSource;
  * Adds, on {@code camel export --runtime=quarkus}, native {@code quarkus.*} keys for the Forage modules the catalog maps
  * (today the JDBC datasources and the default Artemis JMS connection factory) to the exported
  * {@code application.properties}, so the exported app needs no Forage runtime for them. The {@code forage.*} keys
- * stay; each Quarkus key reads its Forage key as {@code ${forage.<key>:<value>}}, so {@code FORAGE_*} and
- * {@code -Dforage.*} still win. A module with anything the catalog does not map stays {@code forage.*} as before; a
- * configured module the catalog lists in {@code quarkusUnsupported} gets a note with the reason.
+ * stay; each Quarkus key reads its Forage key as {@code ${FORAGE_<KEY>:${forage.<key>:<value>}}}, so {@code FORAGE_*}
+ * and then {@code -Dforage.*} still win, as in Forage. The module files are not read at runtime. A module with anything
+ * the catalog does not map stays {@code forage.*} as before; a configured module the catalog lists in
+ * {@code quarkusUnsupported} gets a note with the reason.
  */
 final class QuarkusExport {
 
-    static final String LOCATIONS = "quarkus.config.locations";
+    private static final String APPLICATION = "application.properties";
 
     /**
      * A Quarkus key ({@code {name}}: the quoted configuration name; ending with {@code .}: a map), and a unit; or none,
@@ -77,8 +80,14 @@ final class QuarkusExport {
         return table;
     }
 
-    /** The added Quarkus properties, and the translated modules (their Forage artifacts are not needed). */
-    record Result(Map<String, String> properties, Set<String> modules, List<String> notes) {}
+    /**
+     * The added Quarkus properties, the translated modules (their Forage artifacts are not needed) and their files (not
+     * read at runtime).
+     */
+    record Result(Map<String, String> properties, Set<String> modules, Set<String> files, List<String> notes) {}
+
+    /** The class the export adds to warn at startup about module files the app does not read. */
+    static final String WARNING_CLASS = "ForageConfigFileWarning";
 
     private QuarkusExport() {}
 
@@ -94,11 +103,13 @@ final class QuarkusExport {
         Result result = translate(resources, existing, allowed);
         Properties added = new Properties();
         result.properties().forEach((key, value) -> {
-            if (key.equals(LOCATIONS) && existing.getProperty(LOCATIONS) != null) {
-                added.setProperty(key, existing.getProperty(LOCATIONS) + "," + value);
-            } else if (existing.stringPropertyNames().stream()
-                    .noneMatch(k -> unquoted(k).equals(unquoted(key)))) {
-                added.setProperty(key, value); // a user quarkus.* key wins, as before
+            if (!existing.containsKey(key)) {
+                // a user quarkus.* key wins, as before; written also as quoted here, else Quarkus misses the datasource
+                String user = existing.stringPropertyNames().stream()
+                        .filter(k -> unquoted(k).equals(unquoted(key)))
+                        .findFirst()
+                        .orElse(null);
+                added.setProperty(key, user == null ? value : existing.getProperty(user));
             }
         });
         if (!added.isEmpty()) {
@@ -128,17 +139,29 @@ final class QuarkusExport {
 
     private static Result translate(Path resources, Properties application, Set<String> allowed) throws IOException {
         ForageCatalogReader catalog = ForageCatalogReader.getInstance();
-        Result result = new Result(new TreeMap<>(), new TreeSet<>(), new ArrayList<>());
-        List<String> locations = new ArrayList<>();
+        Result result = new Result(new TreeMap<>(), new TreeSet<>(), new TreeSet<>(), new ArrayList<>());
         Map<String, Map<String, To>> table = table(catalog);
         for (String module : table.keySet()) {
-            String file = catalog.getPropertiesFileName(module).orElseThrow();
-            Properties moduleFile = read(resources.resolve(file), StandardCharsets.ISO_8859_1);
-            // per configuration name ("" for the default one): the Forage keys, application.properties wins
+            // the factory file and the files of its beans (e.g. forage-jms-artemis.properties)
+            List<String> files = new ArrayList<>(
+                    List.of(catalog.getPropertiesFileName(module).orElseThrow()));
+            catalog.getAllBeansForFactory(module).stream()
+                    .map(ForageBean::getPropertiesFile)
+                    .filter(file -> file != null && !file.isEmpty() && !files.contains(file))
+                    .forEach(files::add);
+            // per configuration name ("" for the default one): the Forage keys, and the file of each key; a key set
+            // differently in two files keeps the module forage.*
             Map<String, Map<String, String>> configs = new TreeMap<>();
-            String reason = collect(module, moduleFile, configs);
+            Map<String, String> origins = new TreeMap<>();
+            String reason = null;
+            for (String file : files) {
+                if (reason == null) {
+                    reason = collect(
+                            module, file, read(resources.resolve(file), StandardCharsets.ISO_8859_1), configs, origins);
+                }
+            }
             if (reason == null) {
-                reason = collect(module, application, configs);
+                reason = collect(module, APPLICATION, application, configs, origins);
             }
             if (configs.isEmpty()) {
                 continue;
@@ -161,7 +184,7 @@ final class QuarkusExport {
                 }
             }
             if (reason == null) {
-                reason = otherFiles(resources, module, file, moduleFile, application);
+                reason = otherFiles(resources, module, files);
             }
             if (reason == null && allowed != null && !allowed.contains(module)) {
                 // the run data of the export holds its Forage artifacts
@@ -173,10 +196,12 @@ final class QuarkusExport {
             }
             result.properties().putAll(translated);
             result.modules().add(module);
-            locations.add(file);
+            result.files().addAll(files);
             result.notes()
-                    .add("Forage " + module + " exported as quarkus.* configuration; FORAGE_* and -Dforage.* still"
-                            + " override it.");
+                    .add("Forage " + module + " exported as quarkus.* configuration: " + String.join(", ", files)
+                            + " not read at runtime, a copy mounted later is ignored; override with FORAGE_*,"
+                            + " -Dforage.* or forage.* keys in config/application.properties, or keep forage.* with"
+                            + " FORAGE_QUARKUS_TRANSLATION_SKIP=true.");
             if (!ignored.isEmpty()) {
                 result.notes()
                         .add("Forage " + module + ": " + String.join(", ", ignored)
@@ -190,18 +215,19 @@ final class QuarkusExport {
                                 + unsupported.getValue() + ".");
             }
         }
-        if (!locations.isEmpty()) {
-            // module files of the working directory, the classpath and FORAGE_CONFIG_DIR are still read
-            locations.addAll(locations.stream()
-                    .map(file -> "${forage.config.dir:none}/" + file)
-                    .toList());
-            result.properties().put(LOCATIONS, String.join(",", locations));
-        }
         return result;
     }
 
-    /** Adds the module's keys to {@code configs}, or returns why the module stays forage.*. */
-    private static String collect(String module, Properties source, Map<String, Map<String, String>> configs) {
+    /**
+     * Adds the module's keys of {@code file} to {@code configs} and their file to {@code origins}, or returns why the
+     * module stays forage.*.
+     */
+    private static String collect(
+            String module,
+            String file,
+            Properties source,
+            Map<String, Map<String, String>> configs,
+            Map<String, String> origins) {
         Pattern named = Pattern.compile(ConfigHelper.getNamedPropertyRegexp(module));
         Pattern unnamed = Pattern.compile(ConfigHelper.getDefaultPropertyRegexp(module));
         for (String key : source.stringPropertyNames()) {
@@ -214,7 +240,11 @@ final class QuarkusExport {
             if (!plain.equals(key)) {
                 return "profile-specific values";
             }
-            configs.computeIfAbsent(name, n -> new TreeMap<>()).put(key, source.getProperty(key));
+            String earlier = configs.computeIfAbsent(name, n -> new TreeMap<>()).put(key, source.getProperty(key));
+            if (earlier != null && !earlier.equals(source.getProperty(key))) {
+                return key + " differs between " + origins.get(key) + " and " + file;
+            }
+            origins.put(key, file);
         }
         return null;
     }
@@ -260,9 +290,11 @@ final class QuarkusExport {
             if (table.containsKey(suffix) && table.get(suffix).ignored()) {
                 ignored.add(entry.getKey());
             }
-            // Quarkus cannot escape { or } inside ${...:<value>}; Forage expands ${...} and {{...}} itself
+            // Quarkus cannot escape { or } inside ${...:<value>}, reads ${...::<value>} as a secret handler; Forage
+            // expands ${...} and {{...}} itself
             if ((entry.getKey() + entry.getValue()).matches("(?s).*[{}].*")
-                    || entry.getKey().contains(":")) {
+                    || entry.getKey().contains(":")
+                    || entry.getValue().startsWith(":")) {
                 return entry.getKey() + " cannot be written as a Quarkus expression";
             }
         }
@@ -304,54 +336,41 @@ final class QuarkusExport {
             if (key.endsWith(".")) {
                 values.forEach((k, v) -> {
                     if (k.startsWith(forageKey)) {
-                        translated.put(
-                                key + "\"" + k.substring(forageKey.length()) + "\"", "${" + k + ":" + escaped(v) + "}");
+                        translated.put(key + "\"" + k.substring(forageKey.length()) + "\"", expression(k, v));
                     }
                 });
             } else {
                 String value = values.getOrDefault(forageKey, defaults.getOrDefault(forageKey, ""));
-                translated.put(key, "${" + forageKey + ":" + escaped(value) + "}" + to.unit());
+                translated.put(key, expression(forageKey, value) + to.unit());
             }
         }
         return null;
     }
 
-    /** Why other files the exported app reads keep the module forage.*, or {@code null}. */
-    private static String otherFiles(
-            Path resources, String module, String file, Properties moduleFile, Properties application)
-            throws IOException {
-        // Forage reads it as ISO-8859-1, Quarkus (quarkus.config.locations) as UTF-8
-        if (Files.isRegularFile(resources.resolve(file))
-                && new String(Files.readAllBytes(resources.resolve(file)), StandardCharsets.ISO_8859_1)
-                        .chars()
-                        .anyMatch(c -> c > 0x7f)) {
-            return file + " is not ASCII";
-        }
-        for (String key : moduleFile.stringPropertyNames()) {
-            if (application.containsKey(key) && !application.getProperty(key).equals(moduleFile.getProperty(key))) {
-                return key + " differs between " + file + " and application.properties";
-            }
-        }
+    /** Why other files keep the module forage.*, or {@code null}. */
+    private static String otherFiles(Path resources, String module, List<String> moduleFiles) throws IOException {
         try (Stream<Path> files = Files.list(resources)) {
             for (Path profileFile : files.filter(f -> f.getFileName().toString().startsWith("application-"))
                     .toList()) {
                 Map<String, Map<String, String>> configs = new TreeMap<>();
-                collect(module, read(profileFile, StandardCharsets.ISO_8859_1), configs);
+                collect(module, "", read(profileFile, StandardCharsets.ISO_8859_1), configs, new TreeMap<>());
                 if (!configs.isEmpty()) {
                     return "profile-specific values in " + profileFile.getFileName();
                 }
             }
         }
-        // read at runtime from outside the project
-        String configDir = System.getenv("FORAGE_CONFIG_DIR");
-        if (configDir != null && Files.isRegularFile(Path.of(configDir, file))) {
-            return file + " is read from FORAGE_CONFIG_DIR";
-        }
-        for (PropertyFileSource source : PropertyFileLocator.getBuiltInSources()) {
-            if (source.name().equals("HomeDirectoryPropertyFileSource")) {
-                try (InputStream in = source.locate(file)) {
-                    if (in != null) {
-                        return file + " is read from the Forage home directory";
+        // read by Forage at runtime from outside the project
+        for (String file : moduleFiles) {
+            String configDir = System.getenv("FORAGE_CONFIG_DIR");
+            if (configDir != null && Files.isRegularFile(Path.of(configDir, file))) {
+                return file + " is read from FORAGE_CONFIG_DIR";
+            }
+            for (PropertyFileSource source : PropertyFileLocator.getBuiltInSources()) {
+                if (source.name().equals("HomeDirectoryPropertyFileSource")) {
+                    try (InputStream in = source.locate(file)) {
+                        if (in != null) {
+                            return file + " is read from the Forage home directory";
+                        }
                     }
                 }
             }
@@ -359,9 +378,75 @@ final class QuarkusExport {
         return null;
     }
 
-    /** A backslash is an escape inside a Quarkus expression. */
-    private static String escaped(String value) {
-        return value.replace("\\", "\\\\");
+    /**
+     * {@code FORAGE_<KEY>}, then {@code forage.<key>}, then the exported value: the order Forage reads them. Quarkus
+     * expands the value as it expands the value the Forage Quarkus runtime translates ({@code $$} is a {@code $}).
+     */
+    private static String expression(String forageKey, String value) {
+        return "${" + forageKey.replace('.', '_').toUpperCase(Locale.ROOT) + ":${" + forageKey + ":" + value + "}}";
+    }
+
+    /**
+     * Writes into {@code javaRoot} a bean that logs one warning at startup when one of {@code files} is in a directory
+     * Forage reads it from: the exported app does not read it.
+     */
+    static Path writeWarning(Path javaRoot, String packageName, Set<String> files) throws IOException {
+        Path dir = javaRoot.resolve(packageName.replace('.', '/'));
+        Files.createDirectories(dir);
+        return Files.writeString(dir.resolve(WARNING_CLASS + ".java"), warningSource(packageName, files));
+    }
+
+    static String warningSource(String packageName, Set<String> files) {
+        return """
+                package %s;
+
+                import java.nio.file.Files;
+                import java.nio.file.Path;
+                import java.util.ArrayList;
+                import java.util.List;
+
+                import io.quarkus.runtime.StartupEvent;
+                import jakarta.enterprise.context.ApplicationScoped;
+                import jakarta.enterprise.event.Observes;
+                import org.jboss.logging.Logger;
+
+                /** Added by the Forage export: the Forage files below are not read, their values are in application.properties. */
+                @ApplicationScoped
+                public class %s {
+
+                    private static final List<String> FILES = List.of(%s);
+
+                    void onStart(@Observes StartupEvent event) {
+                        List<Path> dirs = new ArrayList<>(List.of(Path.of("")));
+                        String configDir = System.getProperty("forage.config.dir", System.getenv("FORAGE_CONFIG_DIR"));
+                        if (configDir != null) {
+                            dirs.add(Path.of(configDir));
+                        }
+                        String homeDir = System.getProperty("forage.home.dir", System.getenv("FORAGE_HOME_DIR"));
+                        dirs.add(homeDir != null ? Path.of(homeDir) : Path.of(System.getProperty("user.home"), ".forage"));
+                        List<String> found = new ArrayList<>();
+                        for (Path dir : dirs) {
+                            for (String file : FILES) {
+                                if (Files.isRegularFile(dir.resolve(file))) {
+                                    found.add(dir.resolve(file).toAbsolutePath().normalize().toString());
+                                }
+                            }
+                        }
+                        if (!found.isEmpty()) {
+                            Logger.getLogger(%s.class).warnf(
+                                    "Forage file(s) %%s not read: exported as quarkus.* configuration. Use FORAGE_*, -Dforage.*"
+                                            + " or config/application.properties, or export with FORAGE_QUARKUS_TRANSLATION_SKIP=true",
+                                    String.join(", ", found));
+                        }
+                    }
+                }
+                """
+                .formatted(
+                        packageName,
+                        WARNING_CLASS,
+                        String.join(
+                                ", ", files.stream().map(f -> "\"" + f + "\"").toList()),
+                        WARNING_CLASS);
     }
 
     private static String unquoted(String key) {

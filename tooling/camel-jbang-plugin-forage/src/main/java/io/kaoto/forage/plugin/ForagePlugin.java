@@ -1,5 +1,6 @@
 package io.kaoto.forage.plugin;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -38,6 +39,8 @@ public class ForagePlugin implements Plugin {
      * data, an export translates only these modules.
      */
     static final String FRESH_RUN = "forage.quarkus.translation.fresh";
+    /** The package of the exported app; Camel JBang adds the source files before it asks for the dependencies. */
+    static final String EXPORT_PACKAGE = "forage.quarkus.translation.package";
 
     @Override
     public void customize(CommandLine commandLine, CamelJBangMain main) {
@@ -78,21 +81,50 @@ public class ForagePlugin implements Plugin {
 
             @Override
             public void addSourceFiles(Path buildDir, String packageName, Printer printer) {
-                // This exporter contributes only runtime dependencies, not source files.
+                // the startup warning of a Quarkus export is written with its translation (getDependencies)
+                if (packageName != null) {
+                    System.setProperty(EXPORT_PACKAGE, packageName);
+                }
             }
         });
     }
 
     static Set<String> dependencies(RuntimeType runtime, Path exportedResources) {
         boolean run = RUN_STARTED.getAndSet(false);
+        try {
+            return dependencies(runtime, exportedResources, run);
+        } finally {
+            if (!run || runtime != RuntimeType.QUARKUS) {
+                // only the silent run of a Quarkus export passes it on, to that export (camel shell runs many)
+                System.clearProperty(FRESH_RUN);
+            }
+            if (!run) {
+                System.clearProperty(EXPORT_PACKAGE);
+            }
+        }
+    }
+
+    private static Set<String> dependencies(RuntimeType runtime, Path exportedResources, boolean run) {
         Set<String> quarkusModules = Set.of();
+        Path scanDir = null;
         if (runtime == RuntimeType.QUARKUS) {
-            // only the silent run of an export has the Quarkus runtime; Camel JBang writes its dependencies into the
-            // run data the export reads back, so it leaves out the Forage artifacts of the translated modules too
-            quarkusModules = run ? runQuarkusModules() : exportQuarkusConfig(exportedResources);
+            if (!run && System.getProperty(FRESH_RUN) == null) {
+                // the export reuses earlier run data, which may lack the Forage artifacts of the modules an earlier
+                // export translated, and has no project directory to scan: add them from the exported resources
+                if (!booleanOverride("forage.quarkus.translation.skip", "FORAGE_QUARKUS_TRANSLATION_SKIP")) {
+                    new Printer.SystemOutPrinter()
+                            .println("Forage configuration stays as forage.* configuration: the export reuses earlier"
+                                    + " run data.");
+                }
+                scanDir = exportedResources;
+            } else {
+                // only the silent run of an export has the Quarkus runtime; Camel JBang writes its dependencies into
+                // the run data the export reads back, so it leaves out the Forage artifacts of the translated modules
+                quarkusModules = run ? runQuarkusModules() : exportQuarkusConfig(exportedResources);
+            }
         }
         // gather dependencies across all (enabled) export customizers for the specific runtime
-        return ExportHelper.getAllCustomizers(quarkusModules)
+        return ExportHelper.getAllCustomizers(quarkusModules, scanDir)
                 .filter(ExportCustomizer::isEnabled)
                 .map(exportCustomizer -> exportCustomizer.resolveRuntimeDependencies(runtime))
                 .flatMap(Set::stream)
@@ -133,15 +165,20 @@ public class ForagePlugin implements Plugin {
             return Set.of();
         }
         Printer printer = new Printer.SystemOutPrinter();
-        String runModules = System.getProperty(FRESH_RUN);
-        if (runModules == null) {
-            printer.println(
-                    "Forage configuration stays as forage.* configuration: the export reuses earlier run data.");
-            return Set.of();
-        }
         try {
-            QuarkusExport.Result result = QuarkusExport.export(resources, Set.of(runModules.split(",")));
+            QuarkusExport.Result result = QuarkusExport.export(
+                    resources, Set.of(System.getProperty(FRESH_RUN).split(",")));
             result.notes().forEach(printer::println);
+            if (!result.modules().isEmpty()) {
+                try {
+                    QuarkusExport.writeWarning(
+                            resources.resolveSibling("java"),
+                            System.getProperty(EXPORT_PACKAGE, "io.kaoto.forage.export"),
+                            result.files());
+                } catch (IOException e) {
+                    printer.println("Forage startup warning about unread module files not added: " + e.getMessage());
+                }
+            }
             return result.modules();
         } catch (Exception e) {
             // never fail where the export without translation works; the message holds no values

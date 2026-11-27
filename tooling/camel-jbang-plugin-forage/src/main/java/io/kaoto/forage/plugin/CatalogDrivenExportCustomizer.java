@@ -2,6 +2,7 @@ package io.kaoto.forage.plugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -30,10 +31,17 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
     private Map<String, Map<String, List<String>>> scannedProperties;
     private Boolean enabled;
     private Set<String> quarkusModules = Set.of();
+    private Path scanDir;
 
     /** The modules exported as quarkus.* configuration: their Forage artifacts are not added. */
     CatalogDrivenExportCustomizer quarkusModules(Set<String> modules) {
         this.quarkusModules = modules;
+        return this;
+    }
+
+    /** The directory to scan for Forage properties ({@code null}: forage.config.dir or the working directory). */
+    CatalogDrivenExportCustomizer scanDir(Path dir) {
+        this.scanDir = dir;
         return this;
     }
 
@@ -220,7 +228,9 @@ public class CatalogDrivenExportCustomizer implements ExportCustomizer {
         if (scannedProperties == null) {
             try {
                 String configDir = System.getProperty("forage.config.dir");
-                File workingDir = configDir != null ? new File(configDir) : new File(System.getProperty("user.dir"));
+                File workingDir = scanDir != null
+                        ? scanDir.toFile()
+                        : configDir != null ? new File(configDir) : new File(System.getProperty("user.dir"));
                 ForageCatalogReader catalog = ForageCatalogReader.getInstance();
                 scannedProperties = ForagePropertyScanner.scanProperties(workingDir, catalog);
             } catch (IOException e) {

@@ -20,6 +20,7 @@ import io.kaoto.forage.catalog.model.FeatureBeans;
 import io.kaoto.forage.catalog.model.ForageBean;
 import io.kaoto.forage.catalog.model.ForageCatalog;
 import io.kaoto.forage.catalog.model.ForageFactory;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -30,7 +31,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public final class ForageCatalogReader {
 
     private static final String CATALOG_RESOURCE = "catalog/forage-catalog.json";
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    // a catalog of a later Forage version may add fields
+    private static final ObjectMapper OBJECT_MAPPER =
+            new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private static volatile ForageCatalogReader instance;
     private final ForageCatalog catalog;

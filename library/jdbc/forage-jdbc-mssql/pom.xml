@@ -4,14 +4,14 @@
     <parent>
         <groupId>io.kaoto.forage</groupId>
         <artifactId>jdbc</artifactId>
-        <version>1.6.3-SNAPSHOT</version>
+        <version>1.7.0</version>
     </parent>
 
     <artifactId>forage-jdbc-mssql</artifactId>
     <name>Forage :: Library :: JDBC :: MSSQL</name>
 
     <properties>
-        <mssql.version>13.4.0.jre11</mssql.version>
+        <mssql.version>13.6.2.jre11</mssql.version>
     </properties>
 
     <dependencies>

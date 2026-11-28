@@ -4,14 +4,14 @@
     <parent>
         <groupId>io.kaoto.forage</groupId>
         <artifactId>jdbc</artifactId>
-        <version>1.6.3-SNAPSHOT</version>
+        <version>1.7.0</version>
     </parent>
 
     <artifactId>forage-jdbc-oracle</artifactId>
     <name>Forage :: Library :: JDBC :: Oracle</name>
 
     <properties>
-        <oracle.version>23.26.0.0.0</oracle.version>
+        <oracle.version>23.26.4.0.0</oracle.version>
     </properties>
 
     <dependencies>
